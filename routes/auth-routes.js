@@ -293,12 +293,15 @@ router.post('/confirm-otp', validateConfirmOTP, async (req, res) => {
   try {
     const { identifier, otp } = req.body;
     
-    // Debug log
-    console.log('Confirming OTP for:', identifier, 'OTP:', otp);
-    console.log('Available OTPs in store:', Object.keys(otpStore));
-    console.log('OTP data for identifier:', otpStore[identifier]);
+    // Normalize email if it's an email identifier
+    const normalizedIdentifier = identifier.includes('@') ? identifier.toLowerCase().trim() : identifier;
     
-    const otpData = otpStore[identifier];
+    // Debug log
+    console.log('Confirming OTP for:', identifier, 'Normalized:', normalizedIdentifier, 'OTP:', otp);
+    console.log('Available OTPs in store:', Object.keys(otpStore));
+    console.log('OTP data for identifier:', otpStore[normalizedIdentifier]);
+    
+    const otpData = otpStore[normalizedIdentifier];
     if (!otpData || !otpData.code) {
       return res.status(400).json({
         status: 'error',
@@ -318,7 +321,7 @@ router.post('/confirm-otp', validateConfirmOTP, async (req, res) => {
       });
     }
     // Optionally, remove OTP after successful confirmation
-    delete otpStore[identifier];
+    delete otpStore[normalizedIdentifier];
     res.status(200).json({
       status: 'success',
       message: 'OTP verified successfully'
