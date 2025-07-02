@@ -54,16 +54,28 @@
 
 ### 5. Confirm OTP
 - **POST** `/api/auth/confirm-otp`
-- **Description:** Confirm an OTP for email or phone verification.
+- **Description:** Confirm an OTP for any email or phone identifier (works for both registered and non-registered users).
 - **Body:**
   - `identifier` (string, required)
   - `otp` (string, required)
 - **Response:**
-  - `200 OK`: Email/Phone verified
+  - `200 OK`: OTP verified successfully
 
 ---
 
-### 6. Login
+### 6. Confirm Login OTP
+- **POST** `/api/auth/confirm-login-otp`
+- **Description:** Confirm an OTP for registered users and return user data with JWT token (like login API).
+- **Body:**
+  - `identifier` (string, required)
+  - `otp` (string, required)
+- **Response:**
+  - `200 OK`: User info + JWT token
+  - `404 Not Found`: User not found
+
+---
+
+### 7. Login
 - **POST** `/api/auth/login`
 - **Description:** Login with email/phone and password.
 - **Body:**
@@ -74,7 +86,7 @@
 
 ---
 
-### 7. Login with OTP
+### 8. Login with OTP
 - **POST** `/api/auth/login-with-otp`
 - **Description:** Request an OTP for login (email or phone).
 - **Body:**
@@ -84,7 +96,7 @@
 
 ---
 
-### 8. Forgot Password
+### 9. Forgot Password
 - **POST** `/api/auth/forgot-password`
 - **Description:** Change password for authenticated user.
 - **Headers:** `Authorization: Bearer <token>`

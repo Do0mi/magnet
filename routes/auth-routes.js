@@ -19,6 +19,9 @@ const {
 } = require('../middleware/validation-middleware');
 const verifyToken = require('../middleware/auth-middleware');
 
+// In-memory OTP store (for demo; use Redis or similar in production)
+const otpStore = {};
+
 // Helper function to generate JWT token
 const generateToken = (user) => {
   return jwt.sign(
@@ -212,8 +215,10 @@ router.post('/send-email-otp', validateSendEmailOTP, async (req, res) => {
     const otp = generateOTP();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-    // Here you would typically store the OTP somewhere (e.g., cache, temp collection)
-    // and send the OTP email. For now, just simulate sending.
+    // Store OTP in memory
+    otpStore[email] = { code: otp, expiresAt };
+
+    // Send OTP email
     const emailResult = await sendOTPEmail(email, otp);
 
     if (!emailResult.success) {
@@ -254,8 +259,10 @@ router.post('/send-phone-otp', validateSendPhoneOTP, async (req, res) => {
     const otp = generateSMSOTP();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-    // Here you would typically store the OTP somewhere (e.g., cache, temp collection)
-    // and send the OTP SMS. For now, just simulate sending.
+    // Store OTP in memory
+    otpStore[phone] = { code: otp, expiresAt };
+
+    // Send OTP SMS
     const smsResult = await sendOTPSMS(phone, otp);
 
     if (!smsResult.success) {
@@ -278,59 +285,34 @@ router.post('/send-phone-otp', validateSendPhoneOTP, async (req, res) => {
   }
 });
 
-// Confirm OTP API
+// Confirm OTP API (for any identifier, not just users in DB)
 router.post('/confirm-otp', validateConfirmOTP, async (req, res) => {
   try {
     const { identifier, otp } = req.body;
-
-    const identifierType = getIdentifierType(identifier);
-    const query = identifierType === 'email' ? { email: identifier } : { phone: identifier };
-
-    // Find user
-    const user = await User.findOne(query);
-    if (!user) {
-      return res.status(404).json({
-        status: 'error',
-        message: 'User not found'
-      });
-    }
-
-    // Check OTP
-    const otpField = identifierType === 'email' ? 'emailOTP' : 'phoneOTP';
-    const verificationField = identifierType === 'email' ? 'isEmailVerified' : 'isPhoneVerified';
-
-    if (!user[otpField] || !user[otpField].code) {
+    const otpData = otpStore[identifier];
+    if (!otpData || !otpData.code) {
       return res.status(400).json({
         status: 'error',
-        message: 'No OTP found for this user'
+        message: 'No OTP found for this identifier'
       });
     }
-
-    if (user[otpField].code !== otp) {
+    if (otpData.code !== otp) {
       return res.status(400).json({
         status: 'error',
         message: 'Invalid OTP'
       });
     }
-
-    if (user[otpField].expiresAt < new Date()) {
+    if (otpData.expiresAt < new Date()) {
       return res.status(400).json({
         status: 'error',
         message: 'OTP has expired'
       });
     }
-
-    // Mark as verified and clear OTP
-    user[verificationField] = true;
-    user[otpField] = null;
-    await user.save();
-
+    // Optionally, remove OTP after successful confirmation
+    delete otpStore[identifier];
     res.status(200).json({
       status: 'success',
-      message: `${identifierType === 'email' ? 'Email' : 'Phone'} verified successfully`,
-      data: {
-        [verificationField]: user[verificationField]
-      }
+      message: 'OTP verified successfully'
     });
   } catch (err) {
     console.error('Confirm OTP error:', err);
@@ -521,6 +503,76 @@ router.post('/forgot-password', validateForgotPassword, verifyToken, async (req,
     res.status(500).json({ 
       status: 'error', 
       message: 'Password update failed' 
+    });
+  }
+});
+
+// Confirm Login OTP API (for existing users, returns user data)
+router.post('/confirm-login-otp', validateConfirmOTP, async (req, res) => {
+  try {
+    const { identifier, otp } = req.body;
+    const identifierType = getIdentifierType(identifier);
+    const query = identifierType === 'email' ? { email: identifier } : { phone: identifier };
+    // Find user
+    const user = await User.findOne(query);
+    if (!user) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'User not found'
+      });
+    }
+    // Check OTP (from user model)
+    const otpField = identifierType === 'email' ? 'emailOTP' : 'phoneOTP';
+    if (!user[otpField] || !user[otpField].code) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'No OTP found for this user'
+      });
+    }
+    if (user[otpField].code !== otp) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Invalid OTP'
+      });
+    }
+    if (user[otpField].expiresAt < new Date()) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'OTP has expired'
+      });
+    }
+    // Mark as verified and clear OTP
+    const verificationField = identifierType === 'email' ? 'isEmailVerified' : 'isPhoneVerified';
+    user[verificationField] = true;
+    user[otpField] = null;
+    await user.save();
+    // Generate token
+    const token = generateToken(user);
+    res.status(200).json({
+      status: 'success',
+      message: `${identifierType === 'email' ? 'Email' : 'Phone'} verified and login successful`,
+      data: {
+        user: {
+          id: user._id,
+          firstname: user.firstname,
+          lastname: user.lastname,
+          email: user.email,
+          phone: user.phone,
+          role: user.role,
+          country: user.country,
+          language: user.language,
+          isEmailVerified: user.isEmailVerified,
+          isPhoneVerified: user.isPhoneVerified,
+          businessInfo: user.businessInfo
+        },
+        token
+      }
+    });
+  } catch (err) {
+    console.error('Confirm Login OTP error:', err);
+    res.status(500).json({ 
+      status: 'error', 
+      message: 'OTP confirmation failed' 
     });
   }
 });
