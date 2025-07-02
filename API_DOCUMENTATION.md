@@ -7,7 +7,7 @@
 ## Auth Routes
 
 ### 1. Register User
-- **POST** `/auth/register`
+- **POST** `/api/auth/register`
 - **Description:** Register a new customer user.
 - **Body:**
   - `firstname` (string, required)
@@ -23,7 +23,7 @@
 ---
 
 ### 2. Register Business
-- **POST** `/auth/business-register`
+- **POST** `/api/auth/business-register`
 - **Description:** Register a new business user (requires approval).
 - **Body:**
   - `firstname`, `lastname`, `email`, `password`, `crNumber`, `vatNumber`, `companyName`, `companyType`, `country`, `city`, `district`, `streetName`, `phone` (all required)
@@ -33,7 +33,7 @@
 ---
 
 ### 3. Send Email OTP
-- **POST** `/auth/send-email-otp`
+- **POST** `/api/auth/send-email-otp`
 - **Description:** Send an OTP to a new email (fails if email already exists).
 - **Body:**
   - `email` (string, required)
@@ -43,7 +43,7 @@
 ---
 
 ### 4. Send Phone OTP
-- **POST** `/auth/send-phone-otp`
+- **POST** `/api/auth/send-phone-otp`
 - **Description:** Send an OTP to a new phone (fails if phone already exists).
 - **Body:**
   - `phone` (string, required)
@@ -53,7 +53,7 @@
 ---
 
 ### 5. Confirm OTP
-- **POST** `/auth/confirm-otp`
+- **POST** `/api/auth/confirm-otp`
 - **Description:** Confirm an OTP for email or phone verification.
 - **Body:**
   - `identifier` (string, required)
@@ -64,7 +64,7 @@
 ---
 
 ### 6. Login
-- **POST** `/auth/login`
+- **POST** `/api/auth/login`
 - **Description:** Login with email/phone and password.
 - **Body:**
   - `identifier` (email or phone, required)
@@ -75,7 +75,7 @@
 ---
 
 ### 7. Login with OTP
-- **POST** `/auth/login-with-otp`
+- **POST** `/api/auth/login-with-otp`
 - **Description:** Request an OTP for login (email or phone).
 - **Body:**
   - `identifier` (email or phone, required)
@@ -85,7 +85,7 @@
 ---
 
 ### 8. Forgot Password
-- **POST** `/auth/forgot-password`
+- **POST** `/api/auth/forgot-password`
 - **Description:** Change password for authenticated user.
 - **Headers:** `Authorization: Bearer <token>`
 - **Body:**
@@ -194,7 +194,7 @@
 ## Product Routes
 
 ### 1. Get Products
-- **GET** `/products`
+- **GET** `/api/products`
 - **Description:** Get all approved products (public, any user can call).
 - **Response:**
   - `200 OK`: List of products
@@ -202,7 +202,7 @@
 ---
 
 ### 2. Add Product
-- **POST** `/products`
+- **POST** `/api/products`
 - **Description:** Business user adds a new product (pending approval).
 - **Headers:** `Authorization: Bearer <token>`
 - **Body:**
@@ -213,7 +213,7 @@
 ---
 
 ### 3. Update Product
-- **PUT** `/products/:productId`
+- **PUT** `/api/products/:productId`
 - **Description:** Business user updates their own product (pending approval).
 - **Headers:** `Authorization: Bearer <token>`
 - **Body:**
@@ -224,7 +224,7 @@
 ---
 
 ### 4. Product Approval
-- **POST** `/products/product-approval`
+- **POST** `/api/products/product-approval`
 - **Description:** Admin/employee approves or rejects a product.
 - **Headers:** `Authorization: Bearer <token>`
 - **Body:**
@@ -236,7 +236,7 @@
 ---
 
 ### 5. Delete Product
-- **DELETE** `/products/:productId`
+- **DELETE** `/api/products/:productId`
 - **Description:** Business user deletes their own product, or admin/employee deletes any product (sends email to business user on delete).
 - **Headers:** `Authorization: Bearer <token>`
 - **Response:**
