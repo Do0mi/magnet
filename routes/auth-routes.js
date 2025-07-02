@@ -215,11 +215,15 @@ router.post('/send-email-otp', validateSendEmailOTP, async (req, res) => {
     const otp = generateOTP();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-    // Store OTP in memory
-    otpStore[email] = { code: otp, expiresAt };
+    // Normalize email (remove dots for Gmail addresses)
+    const normalizedEmail = email.toLowerCase().trim();
+    const emailWithoutDots = normalizedEmail.replace(/\./g, '');
+
+    // Store OTP in memory with normalized email
+    otpStore[emailWithoutDots] = { code: otp, expiresAt };
     
     // Debug log
-    console.log('OTP stored for:', email, 'OTP:', otp, 'Store size:', Object.keys(otpStore).length);
+    console.log('OTP stored for:', email, 'Normalized:', emailWithoutDots, 'OTP:', otp, 'Store size:', Object.keys(otpStore).length);
 
     // Send OTP email
     const emailResult = await sendOTPEmail(email, otp);
@@ -293,8 +297,10 @@ router.post('/confirm-otp', validateConfirmOTP, async (req, res) => {
   try {
     const { identifier, otp } = req.body;
     
-    // Normalize email if it's an email identifier
-    const normalizedIdentifier = identifier.includes('@') ? identifier.toLowerCase().trim() : identifier;
+    // Normalize email if it's an email identifier (remove dots for Gmail addresses)
+    const normalizedIdentifier = identifier.includes('@') ? 
+      identifier.toLowerCase().trim().replace(/\./g, '') : 
+      identifier;
     
     // Debug log
     console.log('Confirming OTP for:', identifier, 'Normalized:', normalizedIdentifier, 'OTP:', otp);
