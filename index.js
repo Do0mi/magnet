@@ -36,7 +36,28 @@ app.use(passport.session());
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/magnet-project')
-  .then(() => console.log('Connected to MongoDB'))
+  .then(async () => {
+    console.log('Connected to MongoDB');
+    
+    // Drop the problematic identifier index if it exists
+    try {
+      const db = mongoose.connection.db;
+      const collections = await db.listCollections().toArray();
+      const usersCollection = collections.find(col => col.name === 'users');
+      
+      if (usersCollection) {
+        const indexes = await db.collection('users').indexes();
+        const identifierIndex = indexes.find(index => index.name === 'identifier_1');
+        
+        if (identifierIndex) {
+          await db.collection('users').dropIndex('identifier_1');
+          console.log('Dropped problematic identifier_1 index');
+        }
+      }
+    } catch (error) {
+      console.log('Index cleanup completed (or no problematic index found)');
+    }
+  })
   .catch(err => console.error('Could not connect to MongoDB', err));
 
 // CORS middleware
