@@ -149,6 +149,11 @@ userSchema.virtual('fullName').get(function() {
   return this.getFullName();
 });
 
+// Virtual for identifier (email or phone)
+userSchema.virtual('identifier').get(function() {
+  return this.email || this.phone || null;
+});
+
 // Ensure virtual fields are serialized
 userSchema.set('toJSON', {
   virtuals: true,
