@@ -6,11 +6,11 @@ const { sendBusinessApprovalNotification } = require('../utils/email-utils');
 
 // Middleware
 const verifyToken = require('../middleware/auth-middleware');
-const { requireAdminOrEmployee, requireAdminEmployeeOrBusiness } = require('../middleware/role-middleware');
+const { requireAdminOrEmployee, requireAdminEmployeeOrBusiness, requireCustomer } = require('../middleware/role-middleware');
 const { validateUpdateProfile, validateBusinessApproval } = require('../middleware/validation-middleware');
 
 // Get current user profile
-router.get('/profile', verifyToken, requireAdminEmployeeOrBusiness, async (req, res) => {
+router.get('/profile', verifyToken, requireCustomer, async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
     
@@ -35,7 +35,7 @@ router.get('/profile', verifyToken, requireAdminEmployeeOrBusiness, async (req, 
 });
 
 // Update user profile
-router.put('/profile', verifyToken, requireAdminEmployeeOrBusiness, validateUpdateProfile, async (req, res) => {
+router.put('/profile', verifyToken, requireCustomer, validateUpdateProfile, async (req, res) => {
   try {
     const { firstname, lastname, email, phone, country, language } = req.body;
 
