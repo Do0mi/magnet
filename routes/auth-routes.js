@@ -217,6 +217,9 @@ router.post('/send-email-otp', validateSendEmailOTP, async (req, res) => {
 
     // Store OTP in memory
     otpStore[email] = { code: otp, expiresAt };
+    
+    // Debug log
+    console.log('OTP stored for:', email, 'OTP:', otp, 'Store size:', Object.keys(otpStore).length);
 
     // Send OTP email
     const emailResult = await sendOTPEmail(email, otp);
@@ -289,6 +292,12 @@ router.post('/send-phone-otp', validateSendPhoneOTP, async (req, res) => {
 router.post('/confirm-otp', validateConfirmOTP, async (req, res) => {
   try {
     const { identifier, otp } = req.body;
+    
+    // Debug log
+    console.log('Confirming OTP for:', identifier, 'OTP:', otp);
+    console.log('Available OTPs in store:', Object.keys(otpStore));
+    console.log('OTP data for identifier:', otpStore[identifier]);
+    
     const otpData = otpStore[identifier];
     if (!otpData || !otpData.code) {
       return res.status(400).json({
