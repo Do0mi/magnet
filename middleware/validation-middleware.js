@@ -27,7 +27,7 @@ const validateRegister = [
     .isLength({ min: 2, max: 50 })
     .withMessage('Last name must be between 2 and 50 characters'),
   body('email')
-    .matches(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)
+    .matches(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/)
     .normalizeEmail()
     .withMessage('Please provide a valid email address'),
   body('phone')
@@ -61,7 +61,7 @@ const validateBusinessRegister = [
     .isLength({ min: 2, max: 50 })
     .withMessage('Last name must be between 2 and 50 characters'),
   body('email')
-    .matches(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)
+    .matches(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/)
     .normalizeEmail()
     .withMessage('Please provide a valid email address'),
   body('password')
@@ -110,7 +110,7 @@ const validateBusinessRegister = [
 // Send email OTP validation
 const validateSendEmailOTP = [
   body('email')
-    .matches(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)
+    .matches(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/)
     .normalizeEmail()
     .withMessage('Please provide a valid email address'),
   handleValidationErrors
@@ -179,7 +179,7 @@ const validateUpdateProfile = [
     .withMessage('Last name must be between 2 and 50 characters'),
   body('email')
     .optional()
-    .matches(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)
+    .matches(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/)
     .normalizeEmail()
     .withMessage('Please provide a valid email address'),
   body('phone')
