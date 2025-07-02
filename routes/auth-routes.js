@@ -215,15 +215,11 @@ router.post('/send-email-otp', validateSendEmailOTP, async (req, res) => {
     const otp = generateOTP();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-    // Normalize email (remove dots for Gmail addresses)
-    const normalizedEmail = email.toLowerCase().trim();
-    const emailWithoutDots = normalizedEmail.replace(/\./g, '');
-
-    // Store OTP in memory with normalized email
-    otpStore[emailWithoutDots] = { code: otp, expiresAt };
+    // Store OTP in memory with original email (as received from frontend)
+    otpStore[email] = { code: otp, expiresAt };
     
     // Debug log
-    console.log('OTP stored for:', email, 'Normalized:', emailWithoutDots, 'OTP:', otp, 'Store size:', Object.keys(otpStore).length);
+    console.log('OTP stored for:', email, 'OTP:', otp, 'Store size:', Object.keys(otpStore).length);
 
     // Send OTP email
     const emailResult = await sendOTPEmail(email, otp);
@@ -297,17 +293,12 @@ router.post('/confirm-otp', validateConfirmOTP, async (req, res) => {
   try {
     const { identifier, otp } = req.body;
     
-    // Normalize email if it's an email identifier (remove dots for Gmail addresses)
-    const normalizedIdentifier = identifier.includes('@') ? 
-      identifier.toLowerCase().trim().replace(/\./g, '') : 
-      identifier;
-    
     // Debug log
-    console.log('Confirming OTP for:', identifier, 'Normalized:', normalizedIdentifier, 'OTP:', otp);
+    console.log('Confirming OTP for:', identifier, 'OTP:', otp);
     console.log('Available OTPs in store:', Object.keys(otpStore));
-    console.log('OTP data for identifier:', otpStore[normalizedIdentifier]);
+    console.log('OTP data for identifier:', otpStore[identifier]);
     
-    const otpData = otpStore[normalizedIdentifier];
+    const otpData = otpStore[identifier];
     if (!otpData || !otpData.code) {
       return res.status(400).json({
         status: 'error',
@@ -327,7 +318,7 @@ router.post('/confirm-otp', validateConfirmOTP, async (req, res) => {
       });
     }
     // Optionally, remove OTP after successful confirmation
-    delete otpStore[normalizedIdentifier];
+    delete otpStore[identifier];
     res.status(200).json({
       status: 'success',
       message: 'OTP verified successfully'
