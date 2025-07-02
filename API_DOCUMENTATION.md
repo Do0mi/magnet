@@ -98,18 +98,20 @@
 ## User Routes
 
 ### 1. Get Current User Profile
-- **GET** `/users/profile`
-- **Description:** Get the profile of the authenticated user.
+- **GET** `/api/user/profile`
+- **Description:** Get the profile of the authenticated user (**customer only**).
 - **Headers:** `Authorization: Bearer <token>`
+- **Role:** customer (requires 'customer' role)
 - **Response:**
   - `200 OK`: User info
 
 ---
 
 ### 2. Update User Profile
-- **PUT** `/users/profile`
-- **Description:** Update the profile of the authenticated user.
+- **PUT** `/api/user/profile`
+- **Description:** Update the profile of the authenticated user (**customer only**).
 - **Headers:** `Authorization: Bearer <token>`
+- **Role:** customer (requires 'customer' role)
 - **Body:**
   - `firstname`, `lastname`, `email`, `phone`, `country`, `language` (all optional)
 - **Response:**
@@ -118,7 +120,7 @@
 ---
 
 ### 3. Get All Business Registration Requests
-- **GET** `/users/business-requests?status=pending&page=1&limit=10`
+- **GET** `/api/user/business-requests?status=pending&page=1&limit=10`
 - **Description:** Get paginated business registration requests (admin/employee only).
 - **Headers:** `Authorization: Bearer <token>`
 - **Query Params:**
@@ -131,7 +133,7 @@
 ---
 
 ### 4. Approve/Reject Business Registration
-- **POST** `/users/business-approval`
+- **POST** `/api/user/business-approval`
 - **Description:** Approve or reject a business registration (admin/employee only).
 - **Headers:** `Authorization: Bearer <token>`
 - **Body:**
@@ -144,7 +146,7 @@
 ---
 
 ### 5. Get Business Details by ID
-- **GET** `/users/business/:businessId`
+- **GET** `/api/user/business/:businessId`
 - **Description:** Get details of a business user by ID (admin/employee only).
 - **Headers:** `Authorization: Bearer <token>`
 - **Params:**
@@ -155,7 +157,7 @@
 ---
 
 ### 6. Get Business Profile (for Business Users)
-- **GET** `/users/business-profile`
+- **GET** `/api/user/business-profile`
 - **Description:** Get the profile of the authenticated business user.
 - **Headers:** `Authorization: Bearer <token>`
 - **Response:**
@@ -164,26 +166,26 @@
 ---
 
 ### 7. Favourites APIs (Customer Only)
-- **POST** `/users/favourites/:productId`
+- **POST** `/api/user/favourites/:productId`
   - **Description:** Add a product to the customer's favourites.
-- **DELETE** `/users/favourites/:productId`
+- **DELETE** `/api/user/favourites/:productId`
   - **Description:** Remove a product from the customer's favourites.
-- **GET** `/users/favourites`
+- **GET** `/api/user/favourites`
   - **Description:** Get all favourite products for the customer.
 - **Headers:** `Authorization: Bearer <token>`
 
 ---
 
 ### 8. Cart APIs (Customer Only)
-- **POST** `/users/cart`
+- **POST** `/api/user/cart`
   - **Description:** Add a product to the customer's cart or increase its quantity.
   - **Body:** `{ productId, quantity }`
-- **DELETE** `/users/cart/:productId`
+- **DELETE** `/api/user/cart/:productId`
   - **Description:** Remove a product from the customer's cart.
-- **PUT** `/users/cart/:productId`
+- **PUT** `/api/user/cart/:productId`
   - **Description:** Update the quantity of a product in the customer's cart.
   - **Body:** `{ quantity }`
-- **GET** `/users/cart`
+- **GET** `/api/user/cart`
   - **Description:** Get all products in the customer's cart.
 - **Headers:** `Authorization: Bearer <token>`
 
@@ -246,6 +248,7 @@
 - All endpoints require authentication unless stated otherwise.
 - Role-based access is enforced for some endpoints (Admin, Employee, Business, Customer).
 - For endpoints that update or approve/reject, validation middleware is used.
+- **The GET and PUT `/api/user/profile` endpoints are protected by the `requireCustomer` middleware, allowing only users with the 'customer' role to access them.**
 
 ---
 
