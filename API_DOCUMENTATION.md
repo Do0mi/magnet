@@ -4,11 +4,38 @@
 
 ---
 
+## Message Format
+
+All API responses now return bilingual messages in both English and Arabic:
+
+```json
+{
+  "status": "success",
+  "message": {
+    "en": "User registered successfully",
+    "ar": "تم تسجيل المستخدم بنجاح"
+  },
+  "data": { ... }
+}
+```
+
+---
+
+## Verification Rules
+
+### Phone Number Verification
+- **If phone number is provided**: Only the phone is verified (`isPhoneVerified = true`, `isEmailVerified = false`)
+- **If no phone number is provided**: Only the email is verified (`isEmailVerified = true`, `isPhoneVerified = false`)
+
+This applies to both customer and business registration.
+
+---
+
 ## Auth Routes
 
 ### 1. Register User
 - **POST** `/api/auth/register`
-- **Description:** Register a new customer user.
+- **Description:** Register a new customer user with automatic verification based on phone number presence.
 - **Body:**
   - `firstname` (string, required)
   - `lastname` (string, required)
@@ -17,18 +44,24 @@
   - `password` (string, required)
   - `country` (string, required)
   - `language` (string, optional, default: 'en')
+- **Verification Logic:**
+  - If `phone` is provided: `isPhoneVerified = true`, `isEmailVerified = false`
+  - If `phone` is not provided: `isEmailVerified = true`, `isPhoneVerified = false`
 - **Response:**
-  - `201 Created`: User info + JWT token
+  - `201 Created`: User info + JWT token with verification status
 
 ---
 
 ### 2. Register Business
 - **POST** `/api/auth/business-register`
-- **Description:** Register a new business user (requires approval).
+- **Description:** Register a new business user (requires approval) with automatic verification based on phone number presence.
 - **Body:**
   - `firstname`, `lastname`, `email`, `password`, `crNumber`, `vatNumber`, `companyName`, `companyType`, `country`, `city`, `district`, `streetName`, `phone` (all required)
+- **Verification Logic:**
+  - If `phone` is provided: `isPhoneVerified = true`, `isEmailVerified = false`
+  - If `phone` is not provided: `isEmailVerified = true`, `isPhoneVerified = false`
 - **Response:**
-  - `201 Created`: Business info (under review)
+  - `201 Created`: Business info (under review) with verification status
 
 ---
 
@@ -38,7 +71,7 @@
 - **Body:**
   - `email` (string, required)
 - **Response:**
-  - `200 OK`: Success message
+  - `200 OK`: Success message (bilingual)
 
 ---
 
@@ -48,7 +81,7 @@
 - **Body:**
   - `phone` (string, required)
 - **Response:**
-  - `200 OK`: Success message
+  - `200 OK`: Success message (bilingual)
 
 ---
 
@@ -59,7 +92,7 @@
   - `identifier` (string, required)
   - `otp` (string, required)
 - **Response:**
-  - `200 OK`: OTP verified successfully
+  - `200 OK`: OTP verified successfully (bilingual message)
 
 ---
 
@@ -70,8 +103,8 @@
   - `identifier` (string, required)
   - `otp` (string, required)
 - **Response:**
-  - `200 OK`: User info + JWT token
-  - `404 Not Found`: User not found
+  - `200 OK`: User info + JWT token (bilingual message)
+  - `404 Not Found`: User not found (bilingual message)
 
 ---
 
@@ -82,7 +115,7 @@
   - `identifier` (email or phone, required)
   - `password` (string, required)
 - **Response:**
-  - `200 OK`: User info + JWT token
+  - `200 OK`: User info + JWT token (bilingual message)
 
 ---
 
@@ -92,7 +125,7 @@
 - **Body:**
   - `identifier` (email or phone, required)
 - **Response:**
-  - `200 OK`: OTP sent
+  - `200 OK`: OTP sent (bilingual message)
 
 ---
 
@@ -103,7 +136,7 @@
 - **Body:**
   - `newPassword` (string, required)
 - **Response:**
-  - `200 OK`: Password updated
+  - `200 OK`: Password updated (bilingual message)
 
 ---
 
@@ -127,7 +160,7 @@
 - **Body:**
   - `firstname`, `lastname`, `email`, `phone`, `country`, `language` (all optional)
 - **Response:**
-  - `200 OK`: Updated user info
+  - `200 OK`: Updated user info (bilingual message)
 
 ---
 
@@ -153,7 +186,7 @@
   - `status` (string, required: 'approved' or 'rejected')
   - `reason` (string, optional, required if status is 'rejected')
 - **Response:**
-  - `200 OK`: Business approval status
+  - `200 OK`: Business approval status (bilingual message)
 
 ---
 
@@ -185,6 +218,7 @@
 - **GET** `/api/user/favourites`
   - **Description:** Get all favourite products for the customer.
 - **Headers:** `Authorization: Bearer <token>`
+- **Response:** All responses include bilingual messages
 
 ---
 
@@ -200,6 +234,7 @@
 - **GET** `/api/user/cart`
   - **Description:** Get all products in the customer's cart.
 - **Headers:** `Authorization: Bearer <token>`
+- **Response:** All responses include bilingual messages
 
 ---
 
@@ -220,7 +255,7 @@
 - **Body:**
   - `title`, `description`, `image`, `price`, `rate`, `amount`, `inStock` (all required except image and rate)
 - **Response:**
-  - `201 Created`: Product info (pending approval)
+  - `201 Created`: Product info (pending approval) with bilingual message
 
 ---
 
@@ -231,7 +266,7 @@
 - **Body:**
   - `title`, `description`, `image`, `price`, `rate`, `amount`, `inStock` (all optional)
 - **Response:**
-  - `200 OK`: Updated product info (pending approval)
+  - `200 OK`: Updated product info (pending approval) with bilingual message
 
 ---
 
@@ -243,7 +278,7 @@
   - `productId` (string, required)
   - `status` (string, required: 'approved' or 'rejected')
 - **Response:**
-  - `200 OK`: Product approval status
+  - `200 OK`: Product approval status with bilingual message
 
 ---
 
@@ -252,7 +287,45 @@
 - **Description:** Business user deletes their own product, or admin/employee deletes any product (sends email to business user on delete).
 - **Headers:** `Authorization: Bearer <token>`
 - **Response:**
-  - `200 OK`: Product deleted
+  - `200 OK`: Product deleted with bilingual message
+
+---
+
+## Response Examples
+
+### Success Response
+```json
+{
+  "status": "success",
+  "message": {
+    "en": "User registered successfully",
+    "ar": "تم تسجيل المستخدم بنجاح"
+  },
+  "data": {
+    "user": {
+      "id": "60f7b3b3b3b3b3b3b3b3b3b3",
+      "firstname": "John",
+      "lastname": "Doe",
+      "email": "john@example.com",
+      "phone": "+966501234567",
+      "isEmailVerified": false,
+      "isPhoneVerified": true
+    },
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  }
+}
+```
+
+### Error Response
+```json
+{
+  "status": "error",
+  "message": {
+    "en": "Email already registered",
+    "ar": "البريد الإلكتروني مسجل بالفعل"
+  }
+}
+```
 
 ---
 
@@ -260,6 +333,8 @@
 - All endpoints require authentication unless stated otherwise.
 - Role-based access is enforced for some endpoints (Admin, Employee, Business, Customer).
 - For endpoints that update or approve/reject, validation middleware is used.
+- **All API responses now include bilingual messages in English and Arabic.**
+- **Verification status is automatically set during registration based on phone number presence.**
 - **The GET and PUT `/api/user/profile` endpoints are protected by the `requireCustomer` middleware, allowing only users with the 'customer' role to access them.**
 
 ---
