@@ -76,6 +76,20 @@ router.post('/register', validateRegister, async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
+    // Determine verification status based on Saudi phone code
+    let isEmailVerified = false;
+    let isPhoneVerified = false;
+    
+    if (phone && isSaudiPhone(phone)) {
+      // If phone starts with Saudi code, only phone is verified
+      isPhoneVerified = true;
+      isEmailVerified = false;
+    } else {
+      // If phone doesn't start with Saudi code or no phone provided, only email is verified
+      isEmailVerified = true;
+      isPhoneVerified = false;
+    }
+
     // Create new user
     const newUser = new User({
       firstname,
@@ -85,7 +99,9 @@ router.post('/register', validateRegister, async (req, res) => {
       password: hashedPassword,
       role: 'customer',
       country,
-      language
+      language,
+      isEmailVerified,
+      isPhoneVerified
     });
 
     await newUser.save();
@@ -151,6 +167,16 @@ router.post('/business-register', validateBusinessRegister, async (req, res) => 
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
+    // Determine verification status based on Saudi phone code
+    let isEmailVerified = false;
+    let isPhoneVerified = false;
+    
+    if (phone) {
+      // If phone starts with Saudi code, only phone is verified
+      isPhoneVerified = true;
+      isEmailVerified = false;
+    } 
+
     // Create new business user
     const newBusiness = new User({
       firstname,
@@ -160,6 +186,8 @@ router.post('/business-register', validateBusinessRegister, async (req, res) => 
       password: hashedPassword,
       role: 'business',
       country,
+      isEmailVerified,
+      isPhoneVerified,
       businessInfo: {
         crNumber,
         vatNumber,

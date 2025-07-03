@@ -125,6 +125,14 @@ const messages = {
     en: 'verified and login successful',
     ar: 'تم التحقق وتسجيل الدخول بنجاح'
   },
+  'saudi_phone_auto_verified': {
+    en: 'Saudi phone number automatically verified',
+    ar: 'تم التحقق من الرقم السعودي تلقائياً'
+  },
+  'email_auto_verified': {
+    en: 'Email automatically verified',
+    ar: 'تم التحقق من البريد الإلكتروني تلقائياً'
+  },
 
   // User messages
   'failed_get_profile': {
