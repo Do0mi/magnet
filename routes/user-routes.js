@@ -3,6 +3,8 @@ const router = express.Router();
 const User = require('../models/user-model');
 const bcrypt = require('bcryptjs');
 const { sendBusinessApprovalNotification } = require('../utils/email-utils');
+const Product = require('../models/product-model');
+const { getBilingualMessage } = require('../utils/messages');
 
 // Middleware
 const verifyToken = require('../middleware/auth-middleware');
@@ -17,7 +19,7 @@ router.get('/profile', verifyToken, requireCustomer, async (req, res) => {
     if (!user) {
       return res.status(404).json({ 
         status: 'error', 
-        message: 'User not found' 
+        message: getBilingualMessage('user_not_found') 
       });
     }
     
@@ -29,7 +31,7 @@ router.get('/profile', verifyToken, requireCustomer, async (req, res) => {
     console.error('Get profile error:', err);
     res.status(500).json({ 
       status: 'error', 
-      message: 'Failed to get profile' 
+      message: getBilingualMessage('failed_get_profile') 
     });
   }
 });
@@ -56,7 +58,7 @@ router.put('/profile', verifyToken, requireCustomer, validateUpdateProfile, asyn
       if (existingEmail) {
         return res.status(400).json({
           status: 'error',
-          message: 'Email already exists'
+          message: getBilingualMessage('email_already_exists')
         });
       }
       updateFields.email = email;
@@ -69,7 +71,7 @@ router.put('/profile', verifyToken, requireCustomer, validateUpdateProfile, asyn
       if (existingPhone) {
         return res.status(400).json({
           status: 'error',
-          message: 'Phone number already exists'
+          message: getBilingualMessage('phone_already_registered')
         });
       }
       updateFields.phone = phone;
@@ -86,20 +88,20 @@ router.put('/profile', verifyToken, requireCustomer, validateUpdateProfile, asyn
     if (!updatedUser) {
       return res.status(404).json({ 
         status: 'error', 
-        message: 'User not found' 
+        message: getBilingualMessage('user_not_found') 
       });
     }
     
     res.status(200).json({
       status: 'success',
-      message: 'Profile updated successfully',
+      message: getBilingualMessage('profile_updated_success'),
       data: { user: updatedUser }
     });
   } catch (err) {
     console.error('Update profile error:', err);
     res.status(500).json({ 
       status: 'error', 
-      message: 'Failed to update profile' 
+      message: getBilingualMessage('failed_update_profile') 
     });
   }
 });
@@ -140,7 +142,7 @@ router.get('/business-requests', verifyToken, requireAdminOrEmployee, async (req
     console.error('Get business requests error:', err);
     res.status(500).json({ 
       status: 'error', 
-      message: 'Failed to get business requests' 
+      message: getBilingualMessage('failed_get_business_requests') 
     });
   }
 });
@@ -156,14 +158,14 @@ router.post('/business-approval', verifyToken, requireAdminOrEmployee, validateB
     if (!business) {
       return res.status(404).json({
         status: 'error',
-        message: 'Business not found'
+        message: getBilingualMessage('business_not_found')
       });
     }
 
     if (business.role !== 'business') {
       return res.status(400).json({
         status: 'error',
-        message: 'User is not a business'
+        message: getBilingualMessage('user_not_business')
       });
     }
 
@@ -189,7 +191,7 @@ router.post('/business-approval', verifyToken, requireAdminOrEmployee, validateB
 
     res.status(200).json({
       status: 'success',
-      message: `Business ${status} successfully`,
+      message: `${getBilingualMessage('business_approved_rejected').en} ${status} ${getBilingualMessage('successfully').en}`,
       data: {
         business: {
           id: business._id,
@@ -203,7 +205,7 @@ router.post('/business-approval', verifyToken, requireAdminOrEmployee, validateB
     console.error('Business approval error:', err);
     res.status(500).json({ 
       status: 'error', 
-      message: 'Failed to process business approval' 
+      message: getBilingualMessage('failed_process_business_approval') 
     });
   }
 });
@@ -219,14 +221,14 @@ router.get('/business/:businessId', verifyToken, requireAdminOrEmployee, async (
     if (!business) {
       return res.status(404).json({
         status: 'error',
-        message: 'Business not found'
+        message: getBilingualMessage('business_not_found')
       });
     }
 
     if (business.role !== 'business') {
       return res.status(400).json({
         status: 'error',
-        message: 'User is not a business'
+        message: getBilingualMessage('user_not_business')
       });
     }
 
@@ -238,7 +240,7 @@ router.get('/business/:businessId', verifyToken, requireAdminOrEmployee, async (
     console.error('Get business details error:', err);
     res.status(500).json({ 
       status: 'error', 
-      message: 'Failed to get business details' 
+      message: getBilingualMessage('failed_get_business_details') 
     });
   }
 });
@@ -251,14 +253,14 @@ router.get('/business-profile', verifyToken, requireAdminEmployeeOrBusiness, asy
     if (!user) {
       return res.status(404).json({ 
         status: 'error', 
-        message: 'User not found' 
+        message: getBilingualMessage('user_not_found') 
       });
     }
 
     if (user.role !== 'business') {
       return res.status(403).json({
         status: 'error',
-        message: 'Access denied. Business profile only.'
+        message: getBilingualMessage('access_denied_business_profile')
       });
     }
     
@@ -270,7 +272,7 @@ router.get('/business-profile', verifyToken, requireAdminEmployeeOrBusiness, asy
     console.error('Get business profile error:', err);
     res.status(500).json({ 
       status: 'error', 
-      message: 'Failed to get business profile' 
+      message: getBilingualMessage('failed_get_business_profile') 
     });
   }
 });

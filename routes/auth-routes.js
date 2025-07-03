@@ -6,6 +6,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { generateVerificationCode, sendVerificationEmail, generateOTP, sendOTPEmail, sendBusinessUnderReviewNotification } = require('../utils/email-utils');
 const { generateSMSVerificationCode, sendSMSVerificationCode, generateOTP: generateSMSOTP, sendOTPSMS } = require('../utils/sms-utils');
+const { getBilingualMessage } = require('../utils/messages');
 const crypto = require('crypto');
 const { 
   validateRegister, 
@@ -56,7 +57,7 @@ router.post('/register', validateRegister, async (req, res) => {
     if (existingEmail) {
       return res.status(400).json({
         status: 'error',
-        message: 'Email already registered'
+        message: getBilingualMessage('email_already_registered')
       });
     }
 
@@ -66,7 +67,7 @@ router.post('/register', validateRegister, async (req, res) => {
       if (existingPhone) {
         return res.status(400).json({
           status: 'error',
-          message: 'Phone number already registered'
+          message: getBilingualMessage('phone_already_registered')
         });
       }
     }
@@ -94,7 +95,7 @@ router.post('/register', validateRegister, async (req, res) => {
 
     res.status(201).json({
       status: 'success',
-      message: 'User registered successfully',
+      message: getBilingualMessage('user_registered_successfully'),
       data: {
         user: {
           id: newUser._id,
@@ -115,7 +116,7 @@ router.post('/register', validateRegister, async (req, res) => {
     console.error('Register error:', err);
     res.status(500).json({ 
       status: 'error', 
-      message: 'Registration failed' 
+      message: getBilingualMessage('registration_failed') 
     });
   }
 });
@@ -133,7 +134,7 @@ router.post('/business-register', validateBusinessRegister, async (req, res) => 
     if (existingEmail) {
       return res.status(400).json({
         status: 'error',
-        message: 'Email already registered'
+        message: getBilingualMessage('email_already_registered')
       });
     }
 
@@ -142,7 +143,7 @@ router.post('/business-register', validateBusinessRegister, async (req, res) => 
     if (existingPhone) {
       return res.status(400).json({
         status: 'error',
-        message: 'Phone number already registered'
+        message: getBilingualMessage('phone_already_registered')
       });
     }
 
@@ -179,7 +180,7 @@ router.post('/business-register', validateBusinessRegister, async (req, res) => 
 
     res.status(201).json({
       status: 'success',
-      message: 'Business registration submitted successfully. Your application is under review.',
+      message: getBilingualMessage('business_registration_submitted'),
       data: {
         business: {
           id: newBusiness._id,
@@ -192,7 +193,7 @@ router.post('/business-register', validateBusinessRegister, async (req, res) => 
     console.error('Business register error:', err);
     res.status(500).json({ 
       status: 'error', 
-      message: 'Business registration failed' 
+      message: getBilingualMessage('business_registration_failed') 
     });
   }
 });
@@ -207,7 +208,7 @@ router.post('/send-email-otp', validateSendEmailOTP, async (req, res) => {
     if (user) {
       return res.status(400).json({
         status: 'error',
-        message: 'Email already exists'
+        message: getBilingualMessage('email_already_exists')
       });
     }
 
@@ -227,19 +228,19 @@ router.post('/send-email-otp', validateSendEmailOTP, async (req, res) => {
     if (!emailResult.success) {
       return res.status(500).json({
         status: 'error',
-        message: 'Failed to send OTP email'
+        message: getBilingualMessage('failed_send_otp_email')
       });
     }
 
     res.status(200).json({
       status: 'success',
-      message: 'OTP sent to your email successfully'
+      message: getBilingualMessage('otp_sent_email_success')
     });
   } catch (err) {
     console.error('Send email OTP error:', err);
     res.status(500).json({ 
       status: 'error', 
-      message: 'Failed to send OTP' 
+      message: getBilingualMessage('failed_send_otp') 
     });
   }
 });
@@ -254,7 +255,7 @@ router.post('/send-phone-otp', validateSendPhoneOTP, async (req, res) => {
     if (user) {
       return res.status(400).json({
         status: 'error',
-        message: 'Phone already exists'
+        message: getBilingualMessage('phone_already_exists')
       });
     }
 
@@ -271,19 +272,19 @@ router.post('/send-phone-otp', validateSendPhoneOTP, async (req, res) => {
     if (!smsResult.success) {
       return res.status(500).json({
         status: 'error',
-        message: 'Failed to send OTP SMS'
+        message: getBilingualMessage('failed_send_otp_sms')
       });
     }
 
     res.status(200).json({
       status: 'success',
-      message: 'OTP sent to your phone successfully'
+      message: getBilingualMessage('otp_sent_phone_success')
     });
   } catch (err) {
     console.error('Send phone OTP error:', err);
     res.status(500).json({ 
       status: 'error', 
-      message: 'Failed to send OTP' 
+      message: getBilingualMessage('failed_send_otp') 
     });
   }
 });
@@ -302,32 +303,32 @@ router.post('/confirm-otp', validateConfirmOTP, async (req, res) => {
     if (!otpData || !otpData.code) {
       return res.status(400).json({
         status: 'error',
-        message: 'No OTP found for this identifier'
+        message: getBilingualMessage('no_otp_found')
       });
     }
     if (otpData.code !== otp) {
       return res.status(400).json({
         status: 'error',
-        message: 'Invalid OTP'
+        message: getBilingualMessage('invalid_otp')
       });
     }
     if (otpData.expiresAt < new Date()) {
       return res.status(400).json({
         status: 'error',
-        message: 'OTP has expired'
+        message: getBilingualMessage('otp_expired')
       });
     }
     // Optionally, remove OTP after successful confirmation
     delete otpStore[identifier];
     res.status(200).json({
       status: 'success',
-      message: 'OTP verified successfully'
+      message: getBilingualMessage('otp_verified_success')
     });
   } catch (err) {
     console.error('Confirm OTP error:', err);
     res.status(500).json({ 
       status: 'error', 
-      message: 'OTP confirmation failed' 
+      message: getBilingualMessage('otp_confirmation_failed') 
     });
   }
 });
@@ -344,7 +345,7 @@ router.post('/login', validateLogin, async (req, res) => {
     if (identifierType === 'phone' && !isSaudiPhone(identifier)) {
       return res.status(400).json({
         status: 'error',
-        message: 'Phone login is only allowed for Saudi numbers'
+        message: getBilingualMessage('phone_login_saudi_only')
       });
     }
 
@@ -353,7 +354,7 @@ router.post('/login', validateLogin, async (req, res) => {
     if (!user) {
       return res.status(401).json({
         status: 'error',
-        message: 'Invalid credentials'
+        message: getBilingualMessage('invalid_credentials')
       });
     }
 
@@ -361,7 +362,7 @@ router.post('/login', validateLogin, async (req, res) => {
     if (!user.canLogin()) {
       return res.status(403).json({
         status: 'error',
-        message: 'Account is not active. Please contact support.'
+        message: getBilingualMessage('account_not_active')
       });
     }
 
@@ -370,7 +371,7 @@ router.post('/login', validateLogin, async (req, res) => {
     if (!isPasswordValid) {
       return res.status(401).json({
         status: 'error',
-        message: 'Invalid credentials'
+        message: getBilingualMessage('invalid_credentials')
       });
     }
 
@@ -379,7 +380,7 @@ router.post('/login', validateLogin, async (req, res) => {
 
     res.status(200).json({
       status: 'success',
-      message: 'Login successful',
+      message: getBilingualMessage('login_successful'),
       data: {
         user: {
           id: user._id,
@@ -401,7 +402,7 @@ router.post('/login', validateLogin, async (req, res) => {
     console.error('Login error:', err);
     res.status(500).json({ 
       status: 'error', 
-      message: 'Login failed' 
+      message: getBilingualMessage('login_failed') 
     });
   }
 });
@@ -418,7 +419,7 @@ router.post('/login-with-otp', validateLoginWithOTP, async (req, res) => {
     if (identifierType === 'phone' && !isSaudiPhone(identifier)) {
       return res.status(400).json({
         status: 'error',
-        message: 'Phone login is only allowed for Saudi numbers'
+        message: getBilingualMessage('phone_login_saudi_only')
       });
     }
 
@@ -427,7 +428,7 @@ router.post('/login-with-otp', validateLoginWithOTP, async (req, res) => {
     if (!user) {
       return res.status(404).json({
         status: 'error',
-        message: 'User not found'
+        message: getBilingualMessage('user_not_found')
       });
     }
 
@@ -435,7 +436,7 @@ router.post('/login-with-otp', validateLoginWithOTP, async (req, res) => {
     if (!user.canLogin()) {
       return res.status(403).json({
         status: 'error',
-        message: 'Account is not active. Please contact support.'
+        message: getBilingualMessage('account_not_active')
       });
     }
 
@@ -462,19 +463,19 @@ router.post('/login-with-otp', validateLoginWithOTP, async (req, res) => {
     if (!sendResult.success) {
       return res.status(500).json({
         status: 'error',
-        message: `Failed to send OTP to ${identifierType}`
+        message: getBilingualMessage('failed_send_otp_to')
       });
     }
 
     res.status(200).json({
       status: 'success',
-      message: `OTP sent to your ${identifierType} successfully`
+      message: getBilingualMessage('otp_sent_to_success')
     });
   } catch (err) {
     console.error('Login with OTP error:', err);
     res.status(500).json({ 
       status: 'error', 
-      message: 'Login with OTP failed' 
+      message: getBilingualMessage('login_with_otp_failed') 
     });
   }
 });
@@ -490,7 +491,7 @@ router.post('/forgot-password', validateForgotPassword, verifyToken, async (req,
     if (!user) {
       return res.status(404).json({
         status: 'error',
-        message: 'User not found'
+        message: getBilingualMessage('user_not_found')
       });
     }
 
@@ -505,13 +506,13 @@ router.post('/forgot-password', validateForgotPassword, verifyToken, async (req,
 
     res.status(200).json({
       status: 'success',
-      message: 'Password updated successfully'
+      message: getBilingualMessage('password_updated_success')
     });
   } catch (err) {
     console.error('Forgot password error:', err);
     res.status(500).json({ 
       status: 'error', 
-      message: 'Password update failed' 
+      message: getBilingualMessage('password_update_failed') 
     });
   }
 });
@@ -527,7 +528,7 @@ router.post('/confirm-login-otp', validateConfirmOTP, async (req, res) => {
     if (!user) {
       return res.status(404).json({
         status: 'error',
-        message: 'User not found'
+        message: getBilingualMessage('user_not_found')
       });
     }
     // Check OTP (from user model)
@@ -535,19 +536,19 @@ router.post('/confirm-login-otp', validateConfirmOTP, async (req, res) => {
     if (!user[otpField] || !user[otpField].code) {
       return res.status(400).json({
         status: 'error',
-        message: 'No OTP found for this user'
+        message: getBilingualMessage('no_otp_found_user')
       });
     }
     if (user[otpField].code !== otp) {
       return res.status(400).json({
         status: 'error',
-        message: 'Invalid OTP'
+        message: getBilingualMessage('invalid_otp')
       });
     }
     if (user[otpField].expiresAt < new Date()) {
       return res.status(400).json({
         status: 'error',
-        message: 'OTP has expired'
+        message: getBilingualMessage('otp_expired')
       });
     }
     // Mark as verified and clear OTP
@@ -559,7 +560,7 @@ router.post('/confirm-login-otp', validateConfirmOTP, async (req, res) => {
     const token = generateToken(user);
     res.status(200).json({
       status: 'success',
-      message: `${identifierType === 'email' ? 'Email' : 'Phone'} verified and login successful`,
+      message: getBilingualMessage('email_phone_verified_login'),
       data: {
         user: {
           id: user._id,
@@ -581,7 +582,7 @@ router.post('/confirm-login-otp', validateConfirmOTP, async (req, res) => {
     console.error('Confirm Login OTP error:', err);
     res.status(500).json({ 
       status: 'error', 
-      message: 'OTP confirmation failed' 
+      message: getBilingualMessage('otp_confirmation_failed') 
     });
   }
 });

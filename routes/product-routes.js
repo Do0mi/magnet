@@ -5,6 +5,7 @@ const User = require('../models/user-model');
 const { sendBusinessApprovalNotification } = require('../utils/email-utils');
 const verifyToken = require('../middleware/auth-middleware');
 const { requireAdminOrEmployee, requireAdminEmployeeOrBusiness } = require('../middleware/role-middleware');
+const { getBilingualMessage } = require('../utils/messages');
 
 // Get all products (public)
 router.get('/', async (req, res) => {
@@ -12,7 +13,7 @@ router.get('/', async (req, res) => {
     const products = await Product.find({ isApprove: true }).populate('business', 'email businessInfo.companyName');
     res.status(200).json({ status: 'success', data: { products } });
   } catch (err) {
-    res.status(500).json({ status: 'error', message: 'Failed to get products' });
+    res.status(500).json({ status: 'error', message: getBilingualMessage('failed_get_products') });
   }
 });
 
@@ -20,7 +21,7 @@ router.get('/', async (req, res) => {
 router.post('/', verifyToken, requireAdminEmployeeOrBusiness, async (req, res) => {
   try {
     if (req.user.role !== 'business') {
-      return res.status(403).json({ status: 'error', message: 'Only business users can add products' });
+      return res.status(403).json({ status: 'error', message: getBilingualMessage('only_business_add_products') });
     }
     const { title, description, image, price, rate, amount, inStock } = req.body;
     const product = new Product({
@@ -35,9 +36,9 @@ router.post('/', verifyToken, requireAdminEmployeeOrBusiness, async (req, res) =
       business: req.user.id
     });
     await product.save();
-    res.status(201).json({ status: 'success', message: 'Product added, pending approval', data: { product } });
+    res.status(201).json({ status: 'success', message: getBilingualMessage('product_added_pending_approval'), data: { product } });
   } catch (err) {
-    res.status(500).json({ status: 'error', message: 'Failed to add product' });
+    res.status(500).json({ status: 'error', message: getBilingualMessage('failed_add_product') });
   }
 });
 
@@ -45,9 +46,9 @@ router.post('/', verifyToken, requireAdminEmployeeOrBusiness, async (req, res) =
 router.put('/:productId', verifyToken, requireAdminEmployeeOrBusiness, async (req, res) => {
   try {
     const product = await Product.findById(req.params.productId);
-    if (!product) return res.status(404).json({ status: 'error', message: 'Product not found' });
+    if (!product) return res.status(404).json({ status: 'error', message: getBilingualMessage('product_not_found') });
     if (req.user.role !== 'business' || product.business.toString() !== req.user.id) {
-      return res.status(403).json({ status: 'error', message: 'Not authorized to update this product' });
+      return res.status(403).json({ status: 'error', message: getBilingualMessage('not_authorized_update_product') });
     }
     const { title, description, image, price, rate, amount, inStock } = req.body;
     product.title = title || product.title;
@@ -60,9 +61,9 @@ router.put('/:productId', verifyToken, requireAdminEmployeeOrBusiness, async (re
     product.isApprove = false;
     product.updatedAt = new Date();
     await product.save();
-    res.status(200).json({ status: 'success', message: 'Product updated, pending approval', data: { product } });
+    res.status(200).json({ status: 'success', message: getBilingualMessage('product_updated_pending_approval'), data: { product } });
   } catch (err) {
-    res.status(500).json({ status: 'error', message: 'Failed to update product' });
+    res.status(500).json({ status: 'error', message: getBilingualMessage('failed_update_product') });
   }
 });
 
@@ -71,7 +72,7 @@ router.post('/product-approval', verifyToken, requireAdminOrEmployee, async (req
   try {
     const { productId, status } = req.body; // status: 'approved' or 'rejected'
     const product = await Product.findById(productId).populate('business');
-    if (!product) return res.status(404).json({ status: 'error', message: 'Product not found' });
+    if (!product) return res.status(404).json({ status: 'error', message: getBilingualMessage('product_not_found') });
     product.isApprove = status === 'approved';
     product.updatedAt = new Date();
     await product.save();
@@ -82,9 +83,9 @@ router.post('/product-approval', verifyToken, requireAdminOrEmployee, async (req
       status,
       status === 'rejected' ? 'Your product was rejected.' : undefined
     );
-    res.status(200).json({ status: 'success', message: `Product ${status}` });
+    res.status(200).json({ status: 'success', message: getBilingualMessage('product_approved_rejected') });
   } catch (err) {
-    res.status(500).json({ status: 'error', message: 'Failed to process product approval' });
+    res.status(500).json({ status: 'error', message: getBilingualMessage('failed_process_product_approval') });
   }
 });
 
@@ -92,9 +93,9 @@ router.post('/product-approval', verifyToken, requireAdminOrEmployee, async (req
 router.delete('/:productId', verifyToken, requireAdminEmployeeOrBusiness, async (req, res) => {
   try {
     const product = await Product.findById(req.params.productId).populate('business');
-    if (!product) return res.status(404).json({ status: 'error', message: 'Product not found' });
+    if (!product) return res.status(404).json({ status: 'error', message: getBilingualMessage('product_not_found') });
     if (req.user.role === 'business' && product.business._id.toString() !== req.user.id) {
-      return res.status(403).json({ status: 'error', message: 'Not authorized to delete this product' });
+      return res.status(403).json({ status: 'error', message: getBilingualMessage('not_authorized_delete_product') });
     }
     const businessEmail = product.business.email;
     const businessName = product.business.businessInfo?.companyName || product.business.firstname;
@@ -108,9 +109,9 @@ router.delete('/:productId', verifyToken, requireAdminEmployeeOrBusiness, async 
         'Your product has been deleted by Magnet admin/employee.'
       );
     }
-    res.status(200).json({ status: 'success', message: 'Product deleted' });
+    res.status(200).json({ status: 'success', message: getBilingualMessage('product_deleted') });
   } catch (err) {
-    res.status(500).json({ status: 'error', message: 'Failed to delete product' });
+    res.status(500).json({ status: 'error', message: getBilingualMessage('failed_delete_product') });
   }
 });
 
