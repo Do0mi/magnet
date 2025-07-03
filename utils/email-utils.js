@@ -30,7 +30,7 @@ const sendOTPEmail = async (to, otp) => {
     const transporter = createTransporter();
     
     const mailOptions = {
-      from: process.env.EMAIL_USER || '"Magnet Project" <noreply@magnetproject.com>',
+      from: process.env.EMAIL_USER || '"Magnet" <noreply@magnetproject.com>',
       to: to,
       subject: 'Email Verification OTP',
       html: `
@@ -42,7 +42,7 @@ const sendOTPEmail = async (to, otp) => {
           </div>
           <p>This code will expire in 10 minutes.</p>
           <p>If you did not request this code, please ignore this email.</p>
-          <p>Thanks,<br>The Magnet Project Team</p>
+          <p>Thanks,<br>The Magnet Team</p>
         </div>
       `
     };
@@ -77,7 +77,7 @@ const sendBusinessApprovalNotification = async (to, companyName, status, reason 
     const statusColor = status === 'approved' ? '#28a745' : '#dc3545';
     
     const mailOptions = {
-      from: process.env.EMAIL_USER || '"Magnet Project" <noreply@magnetproject.com>',
+      from: process.env.EMAIL_USER || '"Magnet" <noreply@magnetproject.com>',
       to: to,
       subject: subject,
       html: `
@@ -87,7 +87,7 @@ const sendBusinessApprovalNotification = async (to, companyName, status, reason 
           <p>Your business registration for <strong>${companyName}</strong> has been <span style="color: ${statusColor}; font-weight: bold;">${statusText}</span>.</p>
           ${status === 'rejected' && reason ? `<p><strong>Reason:</strong> ${reason}</p>` : ''}
           ${status === 'approved' ? '<p>You can now log in to your account and start using our services.</p>' : '<p>Please review the feedback and resubmit your application if needed.</p>'}
-          <p>Thanks,<br>The Magnet Project Team</p>
+          <p>Thanks,<br>The Magnet Team</p>
         </div>
       `
     };
@@ -122,10 +122,10 @@ const sendBusinessUnderReviewNotification = async (to, companyName) => {
         <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
           <h2 style="color: #333;">Business Registration Under Review</h2>
           <p>Dear Business Owner,</p>
-          <p>Thank you for registering your business <strong>${companyName}</strong> with Magnet Project.</p>
+          <p>Thank you for registering your business <strong>${companyName}</strong> with Magnet.</p>
           <p>Your application is currently under review by our team. We will notify you once the review is complete.</p>
           <p>This process typically takes 1-3 business days.</p>
-          <p>Thanks,<br>The Magnet Project Team</p>
+          <p>Thanks,<br>The Magnet Team</p>
         </div>
       `
     };

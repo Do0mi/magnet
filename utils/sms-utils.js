@@ -13,7 +13,7 @@ const generateOTP = () => {
 // Send SMS OTP code
 const sendOTPSMS = async (phone, otp) => {
   try {
-    const from = process.env.VONAGE_BRAND_NAME || "Magnet Project";
+    const from = process.env.VONAGE_BRAND_NAME || "Magnet";
     const text = `Your verification code is: ${otp}. This code will expire in 10 minutes.`;
 
     const response = await vonage.sms.send({ to: phone, from, text });
