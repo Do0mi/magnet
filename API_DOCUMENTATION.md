@@ -154,11 +154,11 @@ This applies to both customer and business registration.
 
 ### 2. Update User Profile
 - **PUT** `/api/user/profile`
-- **Description:** Update the profile of the authenticated user (**customer only**).
+- **Description:** Update the profile of the authenticated user (**customer only**). Email and phone cannot be updated through this endpoint.
 - **Headers:** `Authorization: Bearer <token>`
 - **Role:** customer (requires 'customer' role)
 - **Body:**
-  - `firstname`, `lastname`, `email`, `phone`, `country`, `language` (all optional)
+  - `firstname`, `lastname`, `country`, `language`, `imageUrl` (all optional)
 - **Response:**
   - `200 OK`: Updated user info (bilingual message)
 
@@ -308,6 +308,7 @@ This applies to both customer and business registration.
       "lastname": "Doe",
       "email": "john@example.com",
       "phone": "+966501234567",
+      "imageUrl": "https://example.com/profile.jpg",
       "isEmailVerified": false,
       "isPhoneVerified": true
     },

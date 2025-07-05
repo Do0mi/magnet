@@ -39,7 +39,7 @@ router.get('/profile', verifyToken, requireCustomer, async (req, res) => {
 // Update user profile
 router.put('/profile', verifyToken, requireCustomer, validateUpdateProfile, async (req, res) => {
   try {
-    const { firstname, lastname, email, phone, country, language } = req.body;
+    const { firstname, lastname, country, language, imageUrl } = req.body;
 
     // Initialize update fields
     let updateFields = { 
@@ -51,32 +51,7 @@ router.put('/profile', verifyToken, requireCustomer, validateUpdateProfile, asyn
     if (lastname) updateFields.lastname = lastname;
     if (country) updateFields.country = country;
     if (language) updateFields.language = language;
-
-    // Handle email update with duplicate check
-    if (email) {
-      const existingEmail = await User.findOne({ email, _id: { $ne: req.user.id } });
-      if (existingEmail) {
-        return res.status(400).json({
-          status: 'error',
-          message: getBilingualMessage('email_already_exists')
-        });
-      }
-      updateFields.email = email;
-      updateFields.isEmailVerified = false; // Reset verification when email changes
-    }
-
-    // Handle phone update with duplicate check
-    if (phone) {
-      const existingPhone = await User.findOne({ phone, _id: { $ne: req.user.id } });
-      if (existingPhone) {
-        return res.status(400).json({
-          status: 'error',
-          message: getBilingualMessage('phone_already_registered')
-        });
-      }
-      updateFields.phone = phone;
-      updateFields.isPhoneVerified = false; // Reset verification when phone changes
-    }
+    if (imageUrl !== undefined) updateFields.imageUrl = imageUrl;
 
     // Find and update user
     const updatedUser = await User.findByIdAndUpdate(

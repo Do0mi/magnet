@@ -122,6 +122,7 @@ router.post('/register', validateRegister, async (req, res) => {
           role: newUser.role,
           country: newUser.country,
           language: newUser.language,
+          imageUrl: newUser.imageUrl,
           isEmailVerified: newUser.isEmailVerified,
           isPhoneVerified: newUser.isPhoneVerified
         },
@@ -419,6 +420,7 @@ router.post('/login', validateLogin, async (req, res) => {
           role: user.role,
           country: user.country,
           language: user.language,
+          imageUrl: user.imageUrl,
           isEmailVerified: user.isEmailVerified,
           isPhoneVerified: user.isPhoneVerified,
           businessInfo: user.businessInfo
@@ -599,6 +601,7 @@ router.post('/confirm-login-otp', validateConfirmOTP, async (req, res) => {
           role: user.role,
           country: user.country,
           language: user.language,
+          imageUrl: user.imageUrl,
           isEmailVerified: user.isEmailVerified,
           isPhoneVerified: user.isPhoneVerified,
           businessInfo: user.businessInfo

@@ -174,14 +174,6 @@ const validateUpdateProfile = [
     .trim()
     .isLength({ min: 2, max: 50 })
     .withMessage('Last name must be between 2 and 50 characters'),
-  body('email')
-    .optional()
-    .matches(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/)
-    .withMessage('Please provide a valid email address'),
-  body('phone')
-    .optional()
-    .matches(/^\+?[1-9]\d{1,14}$/)
-    .withMessage('Please provide a valid phone number'),
   body('country')
     .optional()
     .trim()
@@ -191,6 +183,10 @@ const validateUpdateProfile = [
     .optional()
     .isIn(['en', 'ar'])
     .withMessage('Language must be either "en" or "ar"'),
+  body('imageUrl')
+    .optional()
+    .isURL()
+    .withMessage('Please provide a valid image URL'),
   handleValidationErrors
 ];
 

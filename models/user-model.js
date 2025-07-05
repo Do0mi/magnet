@@ -46,6 +46,11 @@ const userSchema = new Schema({
     default: 'en',
     enum: ['en', 'ar']
   },
+  imageUrl: {
+    type: String,
+    trim: true,
+    default: null
+  },
   
   // Verification fields
   isEmailVerified: {
