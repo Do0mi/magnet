@@ -4,6 +4,7 @@ const dotenv = require('dotenv');
 const cookieSession = require('cookie-session');
 const passport = require('passport');
 const path = require('path');
+const cors = require('cors');
 
 // Routes
 const authRoutes = require('./routes/auth-routes');
@@ -27,10 +28,7 @@ app.use(express.urlencoded({ extended: true }));
 // Set up session
 app.use(cookieSession({
   maxAge: 24 * 60 * 60 * 1000, // 1 day in milliseconds
-  keys: [process.env.COOKIE_KEY || 'magnetdefaultsecretkey'],
-  secure: process.env.NODE_ENV === 'production', // Only use secure cookies in production
-  sameSite: 'lax', // Allow cross-site requests
-  httpOnly: true
+  keys: [process.env.COOKIE_KEY || 'magnetdefaultsecretkey']
 }));
 
 // Initialize passport
@@ -38,14 +36,7 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 // Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/magnet-project', {
-  // Modern MongoDB connection options (no deprecated options needed for Driver 4.0+)
-  maxPoolSize: 10, // Maximum number of connections in the pool
-  serverSelectionTimeoutMS: 5000, // Timeout for server selection
-  socketTimeoutMS: 45000, // Timeout for socket operations
-  bufferMaxEntries: 0, // Disable mongoose buffering
-  bufferCommands: false // Disable mongoose buffering
-})
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/magnet-project')
   .then(async () => {
     console.log('Connected to MongoDB');
     
@@ -68,74 +59,46 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/magnet-pr
       console.log('Index cleanup completed (or no problematic index found)');
     }
   })
-  .catch(err => {
-    console.error('Could not connect to MongoDB:', err.message);
-    console.error('Please check your MONGODB_URI environment variable and network connection');
-    process.exit(1); // Exit if we can't connect to database
-  });
+  .catch(err => console.error('Could not connect to MongoDB', err));
 
-// Request logging middleware
-app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.path} - Origin: ${req.headers.origin || 'No origin'}`);
-  next();
-});
-
-// CORS middleware
-app.use((req, res, next) => {
-  const allowedOrigins = [
-    'http://localhost:3000',
-    'http://localhost:5173', 
-    'http://127.0.0.1:5501',
-    'https://magnet-project.vercel.app'
-  ];
-  const origin = req.headers.origin;
-  
-  console.log('CORS check - Origin:', origin);
-  
-  // More flexible CORS handling for Vercel deployment
-  if (origin) {
-    // Allow if it's in our allowed list
+// CORS configuration
+const corsOptions = {
+  origin: function (origin, callback) {
+    const allowedOrigins = [
+      'http://localhost:3000',
+      'http://localhost:5173', 
+      'http://127.0.0.1:5501',
+      'https://magnet-project.vercel.app',
+      'https://magnet-project.vercel.app/'
+    ];
+    
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    // Check if origin is in allowed list
     if (allowedOrigins.includes(origin)) {
-      res.header('Access-Control-Allow-Origin', origin);
-      console.log('CORS allowed for origin (exact match):', origin);
+      return callback(null, true);
     }
-    // Allow if it's a Vercel subdomain
-    else if (origin.includes('vercel.app') || origin.includes('magnet-project')) {
-      res.header('Access-Control-Allow-Origin', origin);
-      console.log('CORS allowed for origin (Vercel subdomain):', origin);
+    
+    // Allow Vercel subdomains
+    if (origin.includes('vercel.app') || origin.includes('magnet-project')) {
+      return callback(null, true);
     }
-    // Allow if it's localhost (for development)
-    else if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
-      res.header('Access-Control-Allow-Origin', origin);
-      console.log('CORS allowed for origin (localhost):', origin);
+    
+    // Allow localhost for development
+    if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+      return callback(null, true);
     }
-    else {
-      console.log('CORS blocked for origin:', origin);
-    }
-  }
-  
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept');
-  res.header('Access-Control-Allow-Credentials', true);
-  res.header('Access-Control-Max-Age', '86400'); // 24 hours
-  
-  // Handle preflight requests
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-  
-  next();
-});
+    
+    callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  optionsSuccessStatus: 200 // Some legacy browsers (IE11, various SmartTVs) choke on 204
+};
 
-// Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.status(200).json({ 
-    status: 'success', 
-    message: 'Server is running',
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development'
-  });
-});
+app.use(cors(corsOptions));
 
 // Routes
 app.use('/api/auth', authRoutes);
