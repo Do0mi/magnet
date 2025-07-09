@@ -38,7 +38,14 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 // Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/magnet-project')
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/magnet-project', {
+  // Modern MongoDB connection options (no deprecated options needed for Driver 4.0+)
+  maxPoolSize: 10, // Maximum number of connections in the pool
+  serverSelectionTimeoutMS: 5000, // Timeout for server selection
+  socketTimeoutMS: 45000, // Timeout for socket operations
+  bufferMaxEntries: 0, // Disable mongoose buffering
+  bufferCommands: false // Disable mongoose buffering
+})
   .then(async () => {
     console.log('Connected to MongoDB');
     
@@ -61,7 +68,11 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/magnet-pr
       console.log('Index cleanup completed (or no problematic index found)');
     }
   })
-  .catch(err => console.error('Could not connect to MongoDB', err));
+  .catch(err => {
+    console.error('Could not connect to MongoDB:', err.message);
+    console.error('Please check your MONGODB_URI environment variable and network connection');
+    process.exit(1); // Exit if we can't connect to database
+  });
 
 // Request logging middleware
 app.use((req, res, next) => {
@@ -75,8 +86,7 @@ app.use((req, res, next) => {
     'http://localhost:3000',
     'http://localhost:5173', 
     'http://127.0.0.1:5501',
-    'https://magnet-project.vercel.app',
-    'https://magnet-project.vercel.app/'
+    'https://magnet-project.vercel.app'
   ];
   const origin = req.headers.origin;
   
