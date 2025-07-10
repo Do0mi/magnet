@@ -80,8 +80,7 @@ const corsOptions = {
       'http://localhost:3000',
       'http://localhost:5173', 
       'http://127.0.0.1:5501',
-      'https://magnet-project.vercel.app',
-      'https://magnet-project.vercel.app/'
+      'https://magnet-le5t.onrender.com'
     ];
     
     // Allow requests with no origin (like mobile apps or curl requests)
