@@ -1,17 +1,51 @@
 const mongoose = require('mongoose');
 
+// Custom validator to ensure 5–10 custom fields
+function arrayLimit(val) {
+  return val.length >= 5 && val.length <= 10;
+}
+
 const productSchema = new mongoose.Schema({
-  title: { type: String, required: true },
-  description: { type: String, required: true },
-  image: { type: String },
-  price: { type: Number, required: true },
-  rate: { type: Number, default: 0 },
-  amount: { type: Number, required: true },
-  inStock: { type: Boolean, default: true },
-  isApprove: { type: Boolean, default: false },
-  business: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date }
+  code: {
+    type: String,
+    unique: true
+  },
+  category: { type: String, required: true },
+  name: { type: String, required: true },
+  images: [{ type: String }],
+  description: { type: String },
+  color: { type: String },
+  features: { type: String },
+  unit: { type: String },
+  minOrder: { type: Number },
+  pricePerUnit: { type: String },
+  stock: { type: Number },
+  accessories: { type: String },
+  // Custom key/value sections (minimum 5, max 10)
+  customFields: {
+    type: [
+      {
+        key: { type: String, required: true },
+        value: { type: String, required: true }
+      }
+    ],
+    validate: [arrayLimit, 'Must provide 5-10 custom fields']
+  },
+  status: {
+    type: String,
+    enum: ['pending', 'approved', 'declined'],
+    default: 'pending'
+  },
+  owner: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  approvedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  createdAt: { type: Date, default: Date.now }
 });
 
 module.exports = mongoose.model('Product', productSchema); 

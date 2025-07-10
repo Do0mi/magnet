@@ -1,118 +1,22 @@
 const express = require('express');
 const router = express.Router();
-const Product = require('../models/product-model');
-const User = require('../models/user-model');
-const { sendBusinessApprovalNotification } = require('../utils/email-utils');
+const ProductController = require('../controllers/product-controller');
 const verifyToken = require('../middleware/auth-middleware');
-const { requireAdminOrEmployee, requireAdminEmployeeOrBusiness } = require('../middleware/role-middleware');
-const { getBilingualMessage } = require('../utils/messages');
+const { requireAdminOrEmployee, requireBusiness, requireAdminEmployeeOrBusiness } = require('../middleware/role-middleware');
 
-// Get all products (public)
-router.get('/', async (req, res) => {
-  try {
-    const products = await Product.find({ isApprove: true }).populate('business', 'email businessInfo.companyName');
-    res.status(200).json({ status: 'success', data: { products } });
-  } catch (err) {
-    res.status(500).json({ status: 'error', message: getBilingualMessage('failed_get_products') });
-  }
-});
-
-// Add product (business only, isApprove=false)
-router.post('/', verifyToken, requireAdminEmployeeOrBusiness, async (req, res) => {
-  try {
-    if (req.user.role !== 'business') {
-      return res.status(403).json({ status: 'error', message: getBilingualMessage('only_business_add_products') });
-    }
-    const { title, description, image, price, rate, amount, inStock } = req.body;
-    const product = new Product({
-      title,
-      description,
-      image,
-      price,
-      rate,
-      amount,
-      inStock,
-      isApprove: false,
-      business: req.user.id
-    });
-    await product.save();
-    res.status(201).json({ status: 'success', message: getBilingualMessage('product_added_pending_approval'), data: { product } });
-  } catch (err) {
-    res.status(500).json({ status: 'error', message: getBilingualMessage('failed_add_product') });
-  }
-});
-
-// Update product (business only, only own, isApprove=false)
-router.put('/:productId', verifyToken, requireAdminEmployeeOrBusiness, async (req, res) => {
-  try {
-    const product = await Product.findById(req.params.productId);
-    if (!product) return res.status(404).json({ status: 'error', message: getBilingualMessage('product_not_found') });
-    if (req.user.role !== 'business' || product.business.toString() !== req.user.id) {
-      return res.status(403).json({ status: 'error', message: getBilingualMessage('not_authorized_update_product') });
-    }
-    const { title, description, image, price, rate, amount, inStock } = req.body;
-    product.title = title || product.title;
-    product.description = description || product.description;
-    product.image = image || product.image;
-    product.price = price || product.price;
-    product.rate = rate || product.rate;
-    product.amount = amount || product.amount;
-    product.inStock = inStock !== undefined ? inStock : product.inStock;
-    product.isApprove = false;
-    product.updatedAt = new Date();
-    await product.save();
-    res.status(200).json({ status: 'success', message: getBilingualMessage('product_updated_pending_approval'), data: { product } });
-  } catch (err) {
-    res.status(500).json({ status: 'error', message: getBilingualMessage('failed_update_product') });
-  }
-});
-
-// Product approval (admin/employee only)
-router.post('/product-approval', verifyToken, requireAdminOrEmployee, async (req, res) => {
-  try {
-    const { productId, status } = req.body; // status: 'approved' or 'rejected'
-    const product = await Product.findById(productId).populate('business');
-    if (!product) return res.status(404).json({ status: 'error', message: getBilingualMessage('product_not_found') });
-    product.isApprove = status === 'approved';
-    product.updatedAt = new Date();
-    await product.save();
-    // Optionally, send email to business about approval/rejection
-    await sendBusinessApprovalNotification(
-      product.business.email,
-      product.title,
-      status,
-      status === 'rejected' ? 'Your product was rejected.' : undefined
-    );
-    res.status(200).json({ status: 'success', message: getBilingualMessage('product_approved_rejected') });
-  } catch (err) {
-    res.status(500).json({ status: 'error', message: getBilingualMessage('failed_process_product_approval') });
-  }
-});
-
-// Delete product (business: own, admin/employee: any, send email on delete)
-router.delete('/:productId', verifyToken, requireAdminEmployeeOrBusiness, async (req, res) => {
-  try {
-    const product = await Product.findById(req.params.productId).populate('business');
-    if (!product) return res.status(404).json({ status: 'error', message: getBilingualMessage('product_not_found') });
-    if (req.user.role === 'business' && product.business._id.toString() !== req.user.id) {
-      return res.status(403).json({ status: 'error', message: getBilingualMessage('not_authorized_delete_product') });
-    }
-    const businessEmail = product.business.email;
-    const businessName = product.business.businessInfo?.companyName || product.business.firstname;
-    await product.deleteOne();
-    // Send email to business user if deleted by admin/employee
-    if (req.user.role !== 'business') {
-      await sendBusinessApprovalNotification(
-        businessEmail,
-        businessName,
-        'deleted',
-        'Your product has been deleted by Magnet admin/employee.'
-      );
-    }
-    res.status(200).json({ status: 'success', message: getBilingualMessage('product_deleted') });
-  } catch (err) {
-    res.status(500).json({ status: 'error', message: getBilingualMessage('failed_delete_product') });
-  }
-});
+// GET /products (public)
+router.get('/', ProductController.getProducts);
+// POST /addProductsByBusiness (business only)
+router.post('/addProductsByBusiness', verifyToken, requireBusiness, ProductController.addProductsByBusiness);
+// POST /addProductsByMagnet_employee (magnet_employee only)
+router.post('/addProductsByMagnet_employee', verifyToken, requireAdminOrEmployee, ProductController.addProductsByMagnetEmployee);
+// PUT /products/:id (business: own, admin, or magnet_employee)
+router.put('/:id', verifyToken, requireAdminEmployeeOrBusiness, ProductController.updateProduct);
+// DELETE /products/:id (business: own, admin, or magnet_employee)
+router.delete('/:id', verifyToken, requireAdminEmployeeOrBusiness, ProductController.deleteProduct);
+// PUT /products/:id/approve (admin/magnet_employee only)
+router.put('/:id/approve', verifyToken, requireAdminOrEmployee, ProductController.approveProduct);
+// PUT /products/:id/decline (admin/magnet_employee only)
+router.put('/:id/decline', verifyToken, requireAdminOrEmployee, ProductController.declineProduct);
 
 module.exports = router; 

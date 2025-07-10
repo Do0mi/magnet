@@ -5,11 +5,21 @@ const cookieSession = require('cookie-session');
 const passport = require('passport');
 const path = require('path');
 const cors = require('cors');
+const http = require('http');
+const socketio = require('socket.io');
+const jwt = require('jsonwebtoken');
+const Order = require('./models/order-model');
+const Product = require('./models/product-model');
 
 // Routes
 const authRoutes = require('./routes/auth-routes');
 const userRoutes = require('./routes/user-routes');
 const productRoutes = require('./routes/product-routes');
+const categoryRoutes = require('./routes/category-routes');
+const orderRoutes = require('./routes/order-routes');
+const reviewRoutes = require('./routes/review-routes');
+const wishlistRoutes = require('./routes/wishlist-routes');
+const addressRoutes = require('./routes/address-routes');
 
 // Config
 require('./config/passport-setup');
@@ -19,6 +29,8 @@ dotenv.config();
 
 // Initialize app
 const app = express();
+const server = http.createServer(app);
+const io = socketio(server, { cors: { origin: '*' } });
 const PORT = process.env.PORT || 5000;
 
 // Middleware
@@ -100,10 +112,59 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
+// Socket.IO setup
+io.use((socket, next) => {
+  const token = socket.handshake.auth.token;
+  if (!token) return next(new Error('Authentication error'));
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'magnetprojecttokensecret');
+    socket.user = decoded;
+    next();
+  } catch (err) {
+    next(new Error('Authentication error'));
+  }
+});
+
+io.on('connection', (socket) => {
+  socket.on('joinOrderRoom', async (orderId) => {
+    const user = socket.user;
+    const order = await Order.findById(orderId).populate('items.product');
+    if (!order) return;
+    // Admin/Employee: always allowed
+    if (user.role === 'admin' || user.role === 'magnet_employee') {
+      socket.join(`order_${orderId}`);
+      return;
+    }
+    // Customer: only if they are the order's customer
+    if (user.role === 'customer' && order.customer.toString() === user.id) {
+      socket.join(`order_${orderId}`);
+      return;
+    }
+    // Business: only if any product in the order is owned by them
+    if (user.role === 'business') {
+      const ownsProduct = order.items.some(item =>
+        item.product && item.product.owner && item.product.owner.toString() === user.id
+      );
+      if (ownsProduct) {
+        socket.join(`order_${orderId}`);
+      }
+    }
+  });
+  socket.on('disconnect', () => {
+    console.log('Client disconnected:', socket.id);
+  });
+});
+app.set('io', io);
+
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/products', productRoutes);
+app.use('/api/categories', categoryRoutes);
+app.use('/api/orders', orderRoutes);
+app.use('/api/reviews', reviewRoutes);
+app.use('/api/wishlist', wishlistRoutes);
+app.use('/api/addresses', addressRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -114,7 +175,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Start server
-app.listen(PORT, '0.0.0.0', () => {
+// Start server with Socket.IO
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
 });
