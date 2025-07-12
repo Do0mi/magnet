@@ -186,6 +186,44 @@ This applies to both customer and business registration.
 
 ---
 
+### 10. Create Admin User
+- **POST** `/api/auth/create-admin`
+- **Description:** Create a new admin user. Only accessible by authenticated admin users.
+- **Headers:** `Authorization: Bearer <token>`
+- **Body:**
+  - `firstname` (string, required)
+  - `lastname` (string, required)
+  - `email` (string, required)
+  - `phone` (string, optional)
+  - `password` (string, required)
+  - `country` (string, required)
+  - `language` (string, optional, default: 'en')
+- **Response:**
+  - `201 Created`: Admin user info (bilingual message)
+  - `403 Forbidden`: Insufficient permissions (bilingual message)
+  - `400 Bad Request`: Email/phone already registered (bilingual message)
+
+---
+
+### 11. Create Magnet Employee User
+- **POST** `/api/auth/create-magnet-employee`
+- **Description:** Create a new magnet employee user. Only accessible by authenticated admin users.
+- **Headers:** `Authorization: Bearer <token>`
+- **Body:**
+  - `firstname` (string, required)
+  - `lastname` (string, required)
+  - `email` (string, required)
+  - `phone` (string, optional)
+  - `password` (string, required)
+  - `country` (string, required)
+  - `language` (string, optional, default: 'en')
+- **Response:**
+  - `201 Created`: Magnet employee user info (bilingual message)
+  - `403 Forbidden`: Insufficient permissions (bilingual message)
+  - `400 Bad Request`: Email/phone already registered (bilingual message)
+
+---
+
 ## Product Routes
 
 ### 1. Get Products

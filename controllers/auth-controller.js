@@ -366,4 +366,162 @@ exports.confirmLoginOTP = async (req, res) => {
     console.error('Confirm Login OTP error:', err);
     res.status(500).json({ status: 'error', message: getBilingualMessage('otp_confirmation_failed') });
   }
+};
+
+exports.createAdminUser = async (req, res) => {
+  try {
+    const { firstname, lastname, email, phone, password, country, language = 'en' } = req.body;
+    
+    // Check if user making the request has admin privileges
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ 
+        status: 'error', 
+        message: getBilingualMessage('insufficient_permissions') 
+      });
+    }
+
+    // Check if email already exists
+    const existingEmail = await User.findOne({ email });
+    if (existingEmail) {
+      return res.status(400).json({ 
+        status: 'error', 
+        message: getBilingualMessage('email_already_registered') 
+      });
+    }
+
+    // Check if phone already exists (if provided)
+    if (phone) {
+      const existingPhone = await User.findOne({ phone });
+      if (existingPhone) {
+        return res.status(400).json({ 
+          status: 'error', 
+          message: getBilingualMessage('phone_already_registered') 
+        });
+      }
+    }
+
+    // Hash password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    // Create admin user with verified status
+    const newAdmin = new User({
+      firstname,
+      lastname,
+      email,
+      phone,
+      password: hashedPassword,
+      role: 'admin',
+      country,
+      language,
+      isEmailVerified: true,
+      isPhoneVerified: phone ? true : false
+    });
+
+    await newAdmin.save();
+
+    res.status(201).json({
+      status: 'success',
+      message: getBilingualMessage('admin_user_created_successfully'),
+      data: {
+        admin: {
+          id: newAdmin._id,
+          firstname: newAdmin.firstname,
+          lastname: newAdmin.lastname,
+          email: newAdmin.email,
+          phone: newAdmin.phone,
+          role: newAdmin.role,
+          country: newAdmin.country,
+          language: newAdmin.language,
+          isEmailVerified: newAdmin.isEmailVerified,
+          isPhoneVerified: newAdmin.isPhoneVerified
+        }
+      }
+    });
+  } catch (err) {
+    console.error('Create admin user error:', err);
+    res.status(500).json({ 
+      status: 'error', 
+      message: getBilingualMessage('admin_creation_failed') 
+    });
+  }
+};
+
+exports.createMagnetEmployeeUser = async (req, res) => {
+  try {
+    const { firstname, lastname, email, phone, password, country, language = 'en' } = req.body;
+    
+    // Check if user making the request has admin privileges
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ 
+        status: 'error', 
+        message: getBilingualMessage('insufficient_permissions') 
+      });
+    }
+
+    // Check if email already exists
+    const existingEmail = await User.findOne({ email });
+    if (existingEmail) {
+      return res.status(400).json({ 
+        status: 'error', 
+        message: getBilingualMessage('email_already_registered') 
+      });
+    }
+
+    // Check if phone already exists (if provided)
+    if (phone) {
+      const existingPhone = await User.findOne({ phone });
+      if (existingPhone) {
+        return res.status(400).json({ 
+          status: 'error', 
+          message: getBilingualMessage('phone_already_registered') 
+        });
+      }
+    }
+
+    // Hash password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    // Create magnet employee user with verified status
+    const newEmployee = new User({
+      firstname,
+      lastname,
+      email,
+      phone,
+      password: hashedPassword,
+      role: 'magnet_employee',
+      country,
+      language,
+      isEmailVerified: true,
+      isPhoneVerified: phone ? true : false
+    });
+
+    await newEmployee.save();
+
+    res.status(201).json({
+      status: 'success',
+      message: getBilingualMessage('magnet_employee_created_successfully'),
+      data: {
+        employee: {
+          id: newEmployee._id,
+          firstname: newEmployee.firstname,
+          lastname: newEmployee.lastname,
+          email: newEmployee.email,
+          phone: newEmployee.phone,
+          role: newEmployee.role,
+          country: newEmployee.country,
+          language: newEmployee.language,
+          isEmailVerified: newEmployee.isEmailVerified,
+          isPhoneVerified: newEmployee.isPhoneVerified
+        }
+      }
+    });
+  } catch (err) {
+    console.error('Create magnet employee user error:', err);
+    res.status(500).json({ 
+      status: 'error', 
+      message: getBilingualMessage('magnet_employee_creation_failed') 
+    });
+  }
 }; 

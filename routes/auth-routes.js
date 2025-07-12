@@ -41,4 +41,10 @@ router.post('/forgot-password', validateForgotPassword, verifyToken, AuthControl
 // Confirm Login OTP API (for existing users, returns user data)
 router.post('/confirm-login-otp', validateConfirmOTP, AuthController.confirmLoginOTP);
 
+// Create Admin User (admin only)
+router.post('/create-admin', verifyToken, validateRegister, AuthController.createAdminUser);
+
+// Create Magnet Employee User (admin only)
+router.post('/create-magnet-employee', verifyToken, validateRegister, AuthController.createMagnetEmployeeUser);
+
 module.exports = router;
