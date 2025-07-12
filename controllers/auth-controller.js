@@ -2,7 +2,7 @@
 const User = require('../models/user-model');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const { generateVerificationCode, sendVerificationEmail, generateOTP, sendOTPEmail, generateBusinessUnderReviewNotification } = require('../utils/email-utils');
+const { generateVerificationCode, sendVerificationEmail, generateOTP, sendOTPEmail, sendBusinessUnderReviewNotification } = require('../utils/email-utils');
 const { generateSMSVerificationCode, sendSMSVerificationCode, generateOTP: generateSMSOTP, sendOTPSMS } = require('../utils/sms-utils');
 const { getBilingualMessage } = require('../utils/messages');
 const crypto = require('crypto');
