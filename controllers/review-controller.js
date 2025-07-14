@@ -2,6 +2,19 @@ const Review = require('../models/review-model');
 const Product = require('../models/product-model');
 const { getBilingualMessage } = require('../utils/messages');
 
+// Helper to update product average rating
+async function updateProductRating(productId) {
+  const Review = require('../models/review-model');
+  const Product = require('../models/product-model');
+  const reviews = await Review.find({ product: productId });
+  let avg = 0;
+  if (reviews.length > 0) {
+    avg = reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviews.length;
+    avg = Math.round(avg * 10) / 10; // round to 1 decimal
+  }
+  await Product.findByIdAndUpdate(productId, { rating: avg });
+}
+
 // POST /products/:id/reviews
 exports.addReview = async (req, res) => {
   try {
@@ -24,6 +37,7 @@ exports.addReview = async (req, res) => {
       comment
     });
     await review.save();
+    await updateProductRating(productId);
     res.status(201).json({ status: 'success', message: getBilingualMessage('review_added'), data: { review } });
   } catch (err) {
     res.status(500).json({ status: 'error', message: getBilingualMessage('failed_add_review') });
@@ -46,7 +60,9 @@ exports.deleteReview = async (req, res) => {
   try {
     const review = await Review.findById(req.params.id);
     if (!review) return res.status(404).json({ status: 'error', message: getBilingualMessage('review_not_found') });
+    const productId = review.product;
     await review.deleteOne();
+    await updateProductRating(productId);
     res.status(200).json({ status: 'success', message: getBilingualMessage('review_deleted') });
   } catch (err) {
     res.status(500).json({ status: 'error', message: getBilingualMessage('failed_delete_review') });

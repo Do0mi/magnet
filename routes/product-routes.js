@@ -5,7 +5,7 @@ const verifyToken = require('../middleware/auth-middleware');
 const { requireAdminOrEmployee, requireBusiness, requireAdminEmployeeOrBusiness } = require('../middleware/role-middleware');
 
 // GET /products (public)
-router.get('/', ProductController.getProducts);
+router.get('/', verifyToken, ProductController.getProducts);
 // POST /addProductsByBusiness (business only)
 router.post('/addProductsByBusiness', verifyToken, requireBusiness, ProductController.addProductsByBusiness);
 // POST /addProductsByMagnet_employee (magnet_employee only)

@@ -3,6 +3,14 @@ const User = require('../models/user-model');
 const generateProductCode = require('../utils/generateProductCode');
 const { getBilingualMessage } = require('../utils/messages');
 
+// Helper to format product with owner company name
+function formatProduct(product) {
+  const obj = product.toObject();
+  obj.ownerCompanyName = obj.owner && obj.owner.businessInfo ? obj.owner.businessInfo.companyName : null;
+  delete obj.owner;
+  return obj;
+}
+
 // GET /products
 exports.getProducts = async (req, res) => {
   try {
@@ -12,7 +20,8 @@ exports.getProducts = async (req, res) => {
     } else {
       products = await Product.find({ status: 'approved' }).populate('owner', 'email businessInfo.companyName');
     }
-    res.status(200).json({ status: 'success', data: { products } });
+    const formattedProducts = products.map(formatProduct);
+    res.status(200).json({ status: 'success', data: { products: formattedProducts } });
   } catch (err) {
     res.status(500).json({ status: 'error', message: getBilingualMessage('failed_get_products') });
   }
@@ -49,7 +58,7 @@ exports.addProductsByBusiness = async (req, res) => {
       owner: req.user.id
     });
     await product.save();
-    res.status(201).json({ status: 'success', message: getBilingualMessage('product_added_pending_approval'), data: { product } });
+    res.status(201).json({ status: 'success', message: getBilingualMessage('product_added_pending_approval'), data: { product: formatProduct(product) } });
   } catch (err) {
     res.status(500).json({ status: 'error', message: getBilingualMessage('failed_add_product') });
   }
@@ -87,7 +96,7 @@ exports.addProductsByMagnetEmployee = async (req, res) => {
       approvedBy: req.user.id
     });
     await product.save();
-    res.status(201).json({ status: 'success', message: getBilingualMessage('product_added_and_approved'), data: { product } });
+    res.status(201).json({ status: 'success', message: getBilingualMessage('product_added_and_approved'), data: { product: formatProduct(product) } });
   } catch (err) {
     res.status(500).json({ status: 'error', message: getBilingualMessage('failed_add_product') });
   }
@@ -134,7 +143,7 @@ exports.updateProduct = async (req, res) => {
     if (customFields && Array.isArray(customFields) && customFields.length >= 3 && customFields.length <= 10) product.customFields = customFields;
     product.updatedAt = new Date();
     await product.save();
-    res.status(200).json({ status: 'success', message: getBilingualMessage('product_updated'), data: { product } });
+    res.status(200).json({ status: 'success', message: getBilingualMessage('product_updated'), data: { product: formatProduct(product) } });
   } catch (err) {
     res.status(500).json({ status: 'error', message: getBilingualMessage('failed_update_product') });
   }
@@ -171,7 +180,7 @@ exports.approveProduct = async (req, res) => {
     product.approvedBy = req.user.id;
     product.updatedAt = new Date();
     await product.save();
-    res.status(200).json({ status: 'success', message: getBilingualMessage('product_approved'), data: { product } });
+    res.status(200).json({ status: 'success', message: getBilingualMessage('product_approved'), data: { product: formatProduct(product) } });
   } catch (err) {
     res.status(500).json({ status: 'error', message: getBilingualMessage('failed_approve_product') });
   }
@@ -189,7 +198,7 @@ exports.declineProduct = async (req, res) => {
     product.approvedBy = req.user.id;
     product.updatedAt = new Date();
     await product.save();
-    res.status(200).json({ status: 'success', message: getBilingualMessage('product_declined'), data: { product } });
+    res.status(200).json({ status: 'success', message: getBilingualMessage('product_declined'), data: { product: formatProduct(product) } });
   } catch (err) {
     res.status(500).json({ status: 'error', message: getBilingualMessage('failed_decline_product') });
   }
