@@ -15,7 +15,7 @@ function formatProduct(product) {
 exports.getProducts = async (req, res) => {
   try {
     let products;
-    if (req.user && (req.user.role === 'admin' || req.user.role === 'magnet_employee')) {
+    if (req.user && (req.user.role === 'admin' ||req.user.role === 'business' || req.user.role === 'magnet_employee')) {
       products = await Product.find().populate('owner', 'email businessInfo.companyName');
     } else {
       products = await Product.find({ status: 'approved' }).populate('owner', 'email businessInfo.companyName');
