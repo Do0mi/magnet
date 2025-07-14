@@ -316,6 +316,242 @@ const messages = {
   'product_approved_rejected': {
     en: 'Product',
     ar: 'المنتج'
+  },
+  'insufficient_permissions': {
+    en: 'Insufficient permissions',
+    ar: 'ليست لديك الصلاحيات الكافية'
+  },
+  'admin_user_created_successfully': {
+    en: 'Admin user created successfully',
+    ar: 'تم إنشاء مستخدم مسؤول بنجاح'
+  },
+  'admin_creation_failed': {
+    en: 'Failed to create admin user',
+    ar: 'فشل في إنشاء مستخدم مسؤول'
+  },
+  'magnet_employee_created_successfully': {
+    en: 'Magnet employee user created successfully',
+    ar: 'تم إنشاء موظف مغناطيس بنجاح'
+  },
+  'magnet_employee_creation_failed': {
+    en: 'Failed to create magnet employee user',
+    ar: 'فشل في إنشاء موظف مغناطيس'
+  },
+  'business_approval_success': {
+    en: 'Business approval processed successfully',
+    ar: 'تمت معالجة موافقة الأعمال بنجاح'
+  },
+
+  // Address messages
+  'failed_get_addresses': {
+    en: 'Failed to get addresses',
+    ar: 'فشل في الحصول على العناوين'
+  },
+  'address_added': {
+    en: 'Address added successfully',
+    ar: 'تمت إضافة العنوان بنجاح'
+  },
+  'failed_add_address': {
+    en: 'Failed to add address',
+    ar: 'فشل في إضافة العنوان'
+  },
+  'address_not_found': {
+    en: 'Address not found',
+    ar: 'العنوان غير موجود'
+  },
+  'address_updated': {
+    en: 'Address updated successfully',
+    ar: 'تم تحديث العنوان بنجاح'
+  },
+  'failed_update_address': {
+    en: 'Failed to update address',
+    ar: 'فشل في تحديث العنوان'
+  },
+  'address_deleted': {
+    en: 'Address deleted successfully',
+    ar: 'تم حذف العنوان بنجاح'
+  },
+  'failed_delete_address': {
+    en: 'Failed to delete address',
+    ar: 'فشل في حذف العنوان'
+  },
+
+  // Category messages
+  'failed_get_categories': {
+    en: 'Failed to get categories',
+    ar: 'فشل في الحصول على التصنيفات'
+  },
+  'category_created': {
+    en: 'Category created successfully',
+    ar: 'تم إنشاء التصنيف بنجاح'
+  },
+  'failed_create_category': {
+    en: 'Failed to create category',
+    ar: 'فشل في إنشاء التصنيف'
+  },
+  'category_not_found': {
+    en: 'Category not found',
+    ar: 'التصنيف غير موجود'
+  },
+  'not_authorized_update_category': {
+    en: 'Not authorized to update this category',
+    ar: 'غير مصرح بتحديث هذا التصنيف'
+  },
+  'category_updated': {
+    en: 'Category updated successfully',
+    ar: 'تم تحديث التصنيف بنجاح'
+  },
+  'failed_update_category': {
+    en: 'Failed to update category',
+    ar: 'فشل في تحديث التصنيف'
+  },
+  'not_authorized_delete_category': {
+    en: 'Not authorized to delete this category',
+    ar: 'غير مصرح بحذف هذا التصنيف'
+  },
+  'category_deleted': {
+    en: 'Category deleted successfully',
+    ar: 'تم حذف التصنيف بنجاح'
+  },
+  'failed_delete_category': {
+    en: 'Failed to delete category',
+    ar: 'فشل في حذف التصنيف'
+  },
+
+  // Order messages
+  'order_must_have_items': {
+    en: 'Order must have at least one item',
+    ar: 'يجب أن يحتوي الطلب على عنصر واحد على الأقل'
+  },
+  'order_created': {
+    en: 'Order created successfully',
+    ar: 'تم إنشاء الطلب بنجاح'
+  },
+  'failed_create_order': {
+    en: 'Failed to create order',
+    ar: 'فشل في إنشاء الطلب'
+  },
+  'failed_get_orders': {
+    en: 'Failed to get orders',
+    ar: 'فشل في الحصول على الطلبات'
+  },
+  'order_not_found': {
+    en: 'Order not found',
+    ar: 'الطلب غير موجود'
+  },
+  'not_authorized_view_order': {
+    en: 'Not authorized to view this order',
+    ar: 'غير مصرح بعرض هذا الطلب'
+  },
+  'failed_get_order': {
+    en: 'Failed to get order',
+    ar: 'فشل في الحصول على الطلب'
+  },
+  'invalid_order_status': {
+    en: 'Invalid order status',
+    ar: 'حالة الطلب غير صالحة'
+  },
+  'order_status_updated': {
+    en: 'Order status updated successfully',
+    ar: 'تم تحديث حالة الطلب بنجاح'
+  },
+  'failed_update_order_status': {
+    en: 'Failed to update order status',
+    ar: 'فشل في تحديث حالة الطلب'
+  },
+
+  // Product messages (additional)
+  'only_business_can_add_products': {
+    en: 'Only business users can add products',
+    ar: 'فقط مستخدمي الأعمال يمكنهم إضافة المنتجات'
+  },
+  'invalid_custom_fields_count': {
+    en: 'Must provide 3–10 custom fields',
+    ar: 'يجب توفير من 3 إلى 10 حقول مخصصة'
+  },
+  'only_magnet_employee_can_add_products': {
+    en: 'Only magnet employees can add products',
+    ar: 'فقط موظفي مغناطيس يمكنهم إضافة المنتجات'
+  },
+  'product_added_and_approved': {
+    en: 'Product added and approved',
+    ar: 'تمت إضافة المنتج والموافقة عليه'
+  },
+  'product_updated': {
+    en: 'Product updated successfully',
+    ar: 'تم تحديث المنتج بنجاح'
+  },
+  'not_authorized_approve_product': {
+    en: 'Not authorized to approve this product',
+    ar: 'غير مصرح بالموافقة على هذا المنتج'
+  },
+  'product_approved': {
+    en: 'Product approved successfully',
+    ar: 'تمت الموافقة على المنتج بنجاح'
+  },
+  'failed_approve_product': {
+    en: 'Failed to approve product',
+    ar: 'فشل في الموافقة على المنتج'
+  },
+  'not_authorized_decline_product': {
+    en: 'Not authorized to decline this product',
+    ar: 'غير مصرح برفض هذا المنتج'
+  },
+  'product_declined': {
+    en: 'Product declined successfully',
+    ar: 'تم رفض المنتج بنجاح'
+  },
+  'failed_decline_product': {
+    en: 'Failed to decline product',
+    ar: 'فشل في رفض المنتج'
+  },
+
+  // Review messages
+  'product_not_found_or_not_approved': {
+    en: 'Product not found or not approved',
+    ar: 'المنتج غير موجود أو غير معتمد'
+  },
+  'already_reviewed_product': {
+    en: 'You have already reviewed this product',
+    ar: 'لقد قمت بتقييم هذا المنتج من قبل'
+  },
+  'review_added': {
+    en: 'Review added successfully',
+    ar: 'تمت إضافة التقييم بنجاح'
+  },
+  'failed_add_review': {
+    en: 'Failed to add review',
+    ar: 'فشل في إضافة التقييم'
+  },
+  'failed_get_reviews': {
+    en: 'Failed to get reviews',
+    ar: 'فشل في الحصول على التقييمات'
+  },
+  'review_not_found': {
+    en: 'Review not found',
+    ar: 'التقييم غير موجود'
+  },
+  'review_deleted': {
+    en: 'Review deleted successfully',
+    ar: 'تم حذف التقييم بنجاح'
+  },
+  'failed_delete_review': {
+    en: 'Failed to delete review',
+    ar: 'فشل في حذف التقييم'
+  },
+
+  // Wishlist messages
+  'product_not_found_or_not_approved': {
+    en: 'Product not found or not approved',
+    ar: 'المنتج غير موجود أو غير معتمد'
+  },
+  'product_already_in_wishlist': {
+    en: 'Product already in wishlist',
+    ar: 'المنتج موجود بالفعل في قائمة الرغبات'
+  },
+  'wishlist_not_found': {
+    en: 'Wishlist not found',
+    ar: 'قائمة الرغبات غير موجودة'
   }
 };
 

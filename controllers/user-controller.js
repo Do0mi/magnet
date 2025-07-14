@@ -98,7 +98,7 @@ exports.businessApproval = async (req, res) => {
     );
     res.status(200).json({
       status: 'success',
-      message: `${getBilingualMessage('business_approved_rejected').en} ${status} ${getBilingualMessage('successfully').en}`,
+      message: getBilingualMessage('business_approval_success'),
       data: {
         business: {
           id: business._id,

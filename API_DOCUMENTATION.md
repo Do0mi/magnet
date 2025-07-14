@@ -12,22 +12,26 @@
 |             | PUT /products/:id/approve   | No     | Yes           | admin, magnet_employee         |
 |             | PUT /products/:id/decline   | No     | Yes           | admin, magnet_employee         |
 | Categories  | GET /api/categories         | Yes    | No            | None                          |
-|             | POST/PUT/DELETE /categories | No     | Yes           | business (own), admin, magnet_employee |
+|             | POST /api/categories        | No     | Yes           | business, admin, magnet_employee |
+|             | PUT /api/categories/:id     | No     | Yes           | business, admin, magnet_employee |
+|             | DELETE /api/categories/:id  | No     | Yes           | business, admin, magnet_employee |
 | Orders      | POST /api/orders            | No     | Yes           | customer                      |
 |             | GET /api/orders/my          | No     | Yes           | customer                      |
-|             | GET /api/orders/:id         | No     | Yes           | admin, magnet_employee, customer (own), business (if owns product in order) |
+|             | GET /api/orders/:id         | No     | Yes           | admin, magnet_employee, customer (own) |
 |             | GET /api/orders             | No     | Yes           | admin, magnet_employee         |
 |             | PUT /api/orders/:id/status  | No     | Yes           | admin, magnet_employee         |
 | Reviews     | POST /products/:id/reviews  | No     | Yes           | customer                      |
 |             | GET /products/:id/reviews   | Yes    | No            | None                          |
 |             | DELETE /reviews/:id         | No     | Yes           | admin, magnet_employee         |
-| Wishlist    | All /api/wishlist           | No     | Yes           | customer                      |
-| Addresses   | All /api/addresses          | No     | Yes           | customer                      |
-| User        | /api/user/profile           | No     | Yes           | customer                      |
-|             | /api/user/business-requests | No     | Yes           | admin, magnet_employee         |
-|             | /api/user/business-approval | No     | Yes           | admin, magnet_employee         |
-|             | /api/user/business/:id      | No     | Yes           | admin, magnet_employee         |
-|             | /api/user/business-profile  | No     | Yes           | business, admin, magnet_employee |
+| Wishlist    | GET /api/wishlist           | No     | Yes           | customer                      |
+|             | POST /api/wishlist          | No     | Yes           | customer                      |
+|             | DELETE /api/wishlist/:productId | No  | Yes           | customer                      |
+| User        | GET /api/user/profile       | No     | Yes           | customer                      |
+|             | PUT /api/user/profile       | No     | Yes           | customer                      |
+|             | GET /api/user/business-requests | No | Yes           | admin, magnet_employee         |
+|             | POST /api/user/business-approval | No | Yes           | admin, magnet_employee         |
+|             | GET /api/user/business/:businessId | No | Yes         | admin, magnet_employee         |
+|             | GET /api/user/business-profile | No | Yes           | business, admin, magnet_employee |
 | Auth        | Registration/Login/OTP      | Yes    | No            | None                          |
 |             | Forgot Password             | No     | Yes           | Any authenticated user         |
 
@@ -52,7 +56,7 @@
 
 ## Message Format
 
-All API responses now return bilingual messages in both English and Arabic:
+All API responses now return bilingual messages in both English and Arabic for every endpoint, including all errors and successes. The system uses a centralized messages.js file to ensure consistency across all modules (auth, user, product, order, address, category, review, wishlist, etc.).
 
 ```json
 {
@@ -64,6 +68,9 @@ All API responses now return bilingual messages in both English and Arabic:
   "data": { ... }
 }
 ```
+
+- All error and success messages are bilingual.
+- If you add new features, add their message keys to messages.js for full support.
 
 ---
 
@@ -387,7 +394,220 @@ socket.on('orderStatusUpdate', (data) => {
 
 ---
 
-## (Other modules remain as previously documented, unless you want to update them as well)
+## Category Routes
+
+### 1. Get Categories
+- **GET** `/api/categories`
+- **Description:** Get all categories (public).
+- **Response:**
+  - `200 OK`: List of categories
+
+### 2. Create Category
+- **POST** `/api/categories`
+- **Description:** Create a new category (business, admin, or magnet_employee only).
+- **Headers:** `Authorization: Bearer <token>`
+- **Body:**
+  - `name` (string, required)
+- **Response:**
+  - `201 Created`: Category info (bilingual message)
+
+### 3. Update Category
+- **PUT** `/api/categories/:id`
+- **Description:** Update a category (business, admin, or magnet_employee only).
+- **Headers:** `Authorization: Bearer <token>`
+- **Body:**
+  - `name` (string, required)
+- **Response:**
+  - `200 OK`: Updated category info (bilingual message)
+
+### 4. Delete Category
+- **DELETE** `/api/categories/:id`
+- **Description:** Delete a category (business, admin, or magnet_employee only).
+- **Headers:** `Authorization: Bearer <token>`
+- **Response:**
+  - `200 OK`: Category deleted (bilingual message)
+
+---
+
+## Order Routes
+
+### 1. Create Order
+- **POST** `/api/orders`
+- **Description:** Create a new order (customer only).
+- **Headers:** `Authorization: Bearer <token>`
+- **Body:**
+  - Order details (see order model)
+- **Response:**
+  - `201 Created`: Order info (bilingual message)
+
+### 2. Get My Orders
+- **GET** `/api/orders/my`
+- **Description:** Get all orders for the authenticated customer.
+- **Headers:** `Authorization: Bearer <token>`
+- **Response:**
+  - `200 OK`: List of orders (bilingual message)
+
+### 3. Get Order by ID
+- **GET** `/api/orders/:id`
+- **Description:** Get order by ID (admin, magnet_employee, or owner).
+- **Headers:** `Authorization: Bearer <token>`
+- **Response:**
+  - `200 OK`: Order info (bilingual message)
+
+### 4. Get All Orders
+- **GET** `/api/orders`
+- **Description:** Get all orders (admin, magnet_employee only).
+- **Headers:** `Authorization: Bearer <token>`
+- **Response:**
+  - `200 OK`: List of orders (bilingual message)
+
+### 5. Update Order Status
+- **PUT** `/api/orders/:id/status`
+- **Description:** Update order status (admin, magnet_employee only).
+- **Headers:** `Authorization: Bearer <token>`
+- **Body:**
+  - `status` (string, required)
+- **Response:**
+  - `200 OK`: Updated order info (bilingual message)
+
+---
+
+## Address Routes
+
+### 1. Get Addresses
+- **GET** `/api/addresses`
+- **Description:** Get all addresses for the authenticated customer.
+- **Headers:** `Authorization: Bearer <token>`
+- **Response:**
+  - `200 OK`: List of addresses (bilingual message)
+
+### 2. Add Address
+- **POST** `/api/addresses`
+- **Description:** Add a new address (customer only).
+- **Headers:** `Authorization: Bearer <token>`
+- **Body:**
+  - Address details (see address model)
+- **Response:**
+  - `201 Created`: Address info (bilingual message)
+
+### 3. Update Address
+- **PUT** `/api/addresses/:id`
+- **Description:** Update an address (customer only).
+- **Headers:** `Authorization: Bearer <token>`
+- **Body:**
+  - Address details (see address model)
+- **Response:**
+  - `200 OK`: Updated address info (bilingual message)
+
+### 4. Delete Address
+- **DELETE** `/api/addresses/:id`
+- **Description:** Delete an address (customer only).
+- **Headers:** `Authorization: Bearer <token>`
+- **Response:**
+  - `200 OK`: Address deleted (bilingual message)
+
+---
+
+## Wishlist Routes
+
+### 1. Get Wishlist
+- **GET** `/api/wishlist`
+- **Description:** Get the authenticated customer's wishlist.
+- **Headers:** `Authorization: Bearer <token>`
+- **Response:**
+  - `200 OK`: List of wishlist items (bilingual message)
+
+### 2. Add to Wishlist
+- **POST** `/api/wishlist`
+- **Description:** Add a product to the authenticated customer's wishlist.
+- **Headers:** `Authorization: Bearer <token>`
+- **Body:**
+  - `productId` (string, required)
+- **Response:**
+  - `201 Created`: Wishlist item info (bilingual message)
+
+### 3. Remove from Wishlist
+- **DELETE** `/api/wishlist/:productId`
+- **Description:** Remove a product from the authenticated customer's wishlist.
+- **Headers:** `Authorization: Bearer <token>`
+- **Response:**
+  - `200 OK`: Wishlist item removed (bilingual message)
+
+---
+
+## Review Routes
+
+### 1. Add Review
+- **POST** `/api/products/:id/reviews`
+- **Description:** Add a review to a product (customer only).
+- **Headers:** `Authorization: Bearer <token>`
+- **Body:**
+  - Review details (see review model)
+- **Response:**
+  - `201 Created`: Review info (bilingual message)
+
+### 2. Get Product Reviews
+- **GET** `/api/products/:id/reviews`
+- **Description:** Get all reviews for a product (public).
+- **Response:**
+  - `200 OK`: List of reviews (bilingual message)
+
+### 3. Delete Review
+- **DELETE** `/api/reviews/:id`
+- **Description:** Delete a review (admin or magnet_employee only).
+- **Headers:** `Authorization: Bearer <token>`
+- **Response:**
+  - `200 OK`: Review deleted (bilingual message)
+
+---
+
+## User Routes
+
+### 1. Get User Profile
+- **GET** `/api/user/profile`
+- **Description:** Get the authenticated customer's profile.
+- **Headers:** `Authorization: Bearer <token>`
+- **Response:**
+  - `200 OK`: User profile info (bilingual message)
+
+### 2. Update User Profile
+- **PUT** `/api/user/profile`
+- **Description:** Update the authenticated customer's profile.
+- **Headers:** `Authorization: Bearer <token>`
+- **Body:**
+  - Profile details (see user model)
+- **Response:**
+  - `200 OK`: Updated profile info (bilingual message)
+
+### 3. Get Business Registration Requests
+- **GET** `/api/user/business-requests`
+- **Description:** Get all business registration requests (admin, magnet_employee only).
+- **Headers:** `Authorization: Bearer <token>`
+- **Response:**
+  - `200 OK`: List of business requests (bilingual message)
+
+### 4. Approve/Reject Business Registration
+- **POST** `/api/user/business-approval`
+- **Description:** Approve or reject a business registration (admin, magnet_employee only).
+- **Headers:** `Authorization: Bearer <token>`
+- **Body:**
+  - Approval details (see business approval model)
+- **Response:**
+  - `200 OK`: Approval/rejection result (bilingual message)
+
+### 5. Get Business Details by ID
+- **GET** `/api/user/business/:businessId`
+- **Description:** Get business details by ID (admin, magnet_employee only).
+- **Headers:** `Authorization: Bearer <token>`
+- **Response:**
+  - `200 OK`: Business details (bilingual message)
+
+### 6. Get Business Profile
+- **GET** `/api/user/business-profile`
+- **Description:** Get the business profile (business, admin, or magnet_employee only).
+- **Headers:** `Authorization: Bearer <token>`
+- **Response:**
+  - `200 OK`: Business profile info (bilingual message)
 
 ---
 

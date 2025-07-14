@@ -1,6 +1,7 @@
 const Product = require('../models/product-model');
 const User = require('../models/user-model');
 const generateProductCode = require('../utils/generateProductCode');
+const { getBilingualMessage } = require('../utils/messages');
 
 // GET /products
 exports.getProducts = async (req, res) => {
@@ -13,7 +14,7 @@ exports.getProducts = async (req, res) => {
     }
     res.status(200).json({ status: 'success', data: { products } });
   } catch (err) {
-    res.status(500).json({ status: 'error', message: 'Failed to get products' });
+    res.status(500).json({ status: 'error', message: getBilingualMessage('failed_get_products') });
   }
 };
 
@@ -21,11 +22,11 @@ exports.getProducts = async (req, res) => {
 exports.addProductsByBusiness = async (req, res) => {
   try {
     if (!req.user || req.user.role !== 'business') {
-      return res.status(403).json({ status: 'error', message: 'Only business users can add products' });
+      return res.status(403).json({ status: 'error', message: getBilingualMessage('only_business_can_add_products') });
     }
     let { code, category, name, images, description, color, features, unit, minOrder, pricePerUnit, stock, accessories, customFields } = req.body;
-    if (!customFields || !Array.isArray(customFields) || customFields.length < 5 || customFields.length > 10) {
-      return res.status(400).json({ status: 'error', message: 'Must provide 5–10 custom fields' });
+    if (!customFields || !Array.isArray(customFields) || customFields.length < 3 || customFields.length > 10) {
+      return res.status(400).json({ status: 'error', message: getBilingualMessage('invalid_custom_fields_count') });
     }
     if (!code) {
       code = await generateProductCode();
@@ -48,9 +49,9 @@ exports.addProductsByBusiness = async (req, res) => {
       owner: req.user.id
     });
     await product.save();
-    res.status(201).json({ status: 'success', message: 'Product added and pending approval', data: { product } });
+    res.status(201).json({ status: 'success', message: getBilingualMessage('product_added_pending_approval'), data: { product } });
   } catch (err) {
-    res.status(500).json({ status: 'error', message: 'Failed to add product' });
+    res.status(500).json({ status: 'error', message: getBilingualMessage('failed_add_product') });
   }
 };
 
@@ -58,11 +59,11 @@ exports.addProductsByBusiness = async (req, res) => {
 exports.addProductsByMagnetEmployee = async (req, res) => {
   try {
     if (!req.user || req.user.role !== 'magnet_employee') {
-      return res.status(403).json({ status: 'error', message: 'Only magnet_employee can add products' });
+      return res.status(403).json({ status: 'error', message: getBilingualMessage('only_magnet_employee_can_add_products') });
     }
     let { code, category, name, images, description, color, features, unit, minOrder, pricePerUnit, stock, accessories, customFields, owner } = req.body;
-    if (!customFields || !Array.isArray(customFields) || customFields.length < 5 || customFields.length > 10) {
-      return res.status(400).json({ status: 'error', message: 'Must provide 5–10 custom fields' });
+    if (!customFields || !Array.isArray(customFields) || customFields.length < 3 || customFields.length > 10) {
+      return res.status(400).json({ status: 'error', message: getBilingualMessage('invalid_custom_fields_count') });
     }
     if (!code) {
       code = await generateProductCode();
@@ -86,9 +87,9 @@ exports.addProductsByMagnetEmployee = async (req, res) => {
       approvedBy: req.user.id
     });
     await product.save();
-    res.status(201).json({ status: 'success', message: 'Product added and approved', data: { product } });
+    res.status(201).json({ status: 'success', message: getBilingualMessage('product_added_and_approved'), data: { product } });
   } catch (err) {
-    res.status(500).json({ status: 'error', message: 'Failed to add product' });
+    res.status(500).json({ status: 'error', message: getBilingualMessage('failed_add_product') });
   }
 };
 
@@ -96,10 +97,10 @@ exports.addProductsByMagnetEmployee = async (req, res) => {
 exports.updateProduct = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
-    if (!product) return res.status(404).json({ status: 'error', message: 'Product not found' });
+    if (!product) return res.status(404).json({ status: 'error', message: getBilingualMessage('product_not_found') });
     if (req.user.role === 'business') {
       if (product.owner.toString() !== req.user.id) {
-        return res.status(403).json({ status: 'error', message: 'Not authorized to update this product' });
+        return res.status(403).json({ status: 'error', message: getBilingualMessage('not_authorized_update_product') });
       }
       // Business update: set status to pending
       product.status = 'pending';
@@ -115,7 +116,7 @@ exports.updateProduct = async (req, res) => {
         product.approvedBy = req.user.id;
       }
     } else {
-      return res.status(403).json({ status: 'error', message: 'Not authorized to update product' });
+      return res.status(403).json({ status: 'error', message: getBilingualMessage('not_authorized_update_product') });
     }
     const { code, category, name, images, description, color, features, unit, minOrder, pricePerUnit, stock, accessories, customFields } = req.body;
     if (code) product.code = code;
@@ -130,12 +131,12 @@ exports.updateProduct = async (req, res) => {
     if (pricePerUnit) product.pricePerUnit = pricePerUnit;
     if (stock !== undefined) product.stock = stock;
     if (accessories) product.accessories = accessories;
-    if (customFields && Array.isArray(customFields) && customFields.length >= 5 && customFields.length <= 10) product.customFields = customFields;
+    if (customFields && Array.isArray(customFields) && customFields.length >= 3 && customFields.length <= 10) product.customFields = customFields;
     product.updatedAt = new Date();
     await product.save();
-    res.status(200).json({ status: 'success', message: 'Product updated', data: { product } });
+    res.status(200).json({ status: 'success', message: getBilingualMessage('product_updated'), data: { product } });
   } catch (err) {
-    res.status(500).json({ status: 'error', message: 'Failed to update product' });
+    res.status(500).json({ status: 'error', message: getBilingualMessage('failed_update_product') });
   }
 };
 
@@ -143,18 +144,18 @@ exports.updateProduct = async (req, res) => {
 exports.deleteProduct = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
-    if (!product) return res.status(404).json({ status: 'error', message: 'Product not found' });
+    if (!product) return res.status(404).json({ status: 'error', message: getBilingualMessage('product_not_found') });
     if (req.user.role === 'business') {
       if (product.owner.toString() !== req.user.id) {
-        return res.status(403).json({ status: 'error', message: 'Not authorized to delete this product' });
+        return res.status(403).json({ status: 'error', message: getBilingualMessage('not_authorized_delete_product') });
       }
     } else if (req.user.role !== 'admin' && req.user.role !== 'magnet_employee') {
-      return res.status(403).json({ status: 'error', message: 'Not authorized to delete product' });
+      return res.status(403).json({ status: 'error', message: getBilingualMessage('not_authorized_delete_product') });
     }
     await product.deleteOne();
-    res.status(200).json({ status: 'success', message: 'Product deleted' });
+    res.status(200).json({ status: 'success', message: getBilingualMessage('product_deleted') });
   } catch (err) {
-    res.status(500).json({ status: 'error', message: 'Failed to delete product' });
+    res.status(500).json({ status: 'error', message: getBilingualMessage('failed_delete_product') });
   }
 };
 
@@ -162,17 +163,17 @@ exports.deleteProduct = async (req, res) => {
 exports.approveProduct = async (req, res) => {
   try {
     if (req.user.role !== 'admin' && req.user.role !== 'magnet_employee') {
-      return res.status(403).json({ status: 'error', message: 'Not authorized to approve product' });
+      return res.status(403).json({ status: 'error', message: getBilingualMessage('not_authorized_approve_product') });
     }
     const product = await Product.findById(req.params.id);
-    if (!product) return res.status(404).json({ status: 'error', message: 'Product not found' });
+    if (!product) return res.status(404).json({ status: 'error', message: getBilingualMessage('product_not_found') });
     product.status = 'approved';
     product.approvedBy = req.user.id;
     product.updatedAt = new Date();
     await product.save();
-    res.status(200).json({ status: 'success', message: 'Product approved', data: { product } });
+    res.status(200).json({ status: 'success', message: getBilingualMessage('product_approved'), data: { product } });
   } catch (err) {
-    res.status(500).json({ status: 'error', message: 'Failed to approve product' });
+    res.status(500).json({ status: 'error', message: getBilingualMessage('failed_approve_product') });
   }
 };
 
@@ -180,16 +181,16 @@ exports.approveProduct = async (req, res) => {
 exports.declineProduct = async (req, res) => {
   try {
     if (req.user.role !== 'admin' && req.user.role !== 'magnet_employee') {
-      return res.status(403).json({ status: 'error', message: 'Not authorized to decline product' });
+      return res.status(403).json({ status: 'error', message: getBilingualMessage('not_authorized_decline_product') });
     }
     const product = await Product.findById(req.params.id);
-    if (!product) return res.status(404).json({ status: 'error', message: 'Product not found' });
+    if (!product) return res.status(404).json({ status: 'error', message: getBilingualMessage('product_not_found') });
     product.status = 'declined';
     product.approvedBy = req.user.id;
     product.updatedAt = new Date();
     await product.save();
-    res.status(200).json({ status: 'success', message: 'Product declined', data: { product } });
+    res.status(200).json({ status: 'success', message: getBilingualMessage('product_declined'), data: { product } });
   } catch (err) {
-    res.status(500).json({ status: 'error', message: 'Failed to decline product' });
+    res.status(500).json({ status: 'error', message: getBilingualMessage('failed_decline_product') });
   }
 }; 

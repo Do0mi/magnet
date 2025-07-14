@@ -1,4 +1,5 @@
 const Address = require('../models/address-model');
+const { getBilingualMessage } = require('../utils/messages');
 
 // GET /addresses
 exports.getAddresses = async (req, res) => {
@@ -6,7 +7,7 @@ exports.getAddresses = async (req, res) => {
     const addresses = await Address.find({ user: req.user.id });
     res.status(200).json({ status: 'success', data: { addresses } });
   } catch (err) {
-    res.status(500).json({ status: 'error', message: 'Failed to get addresses' });
+    res.status(500).json({ status: 'error', message: getBilingualMessage('failed_get_addresses') });
   }
 };
 
@@ -24,9 +25,9 @@ exports.addAddress = async (req, res) => {
       country
     });
     await address.save();
-    res.status(201).json({ status: 'success', message: 'Address added', data: { address } });
+    res.status(201).json({ status: 'success', message: getBilingualMessage('address_added'), data: { address } });
   } catch (err) {
-    res.status(500).json({ status: 'error', message: 'Failed to add address' });
+    res.status(500).json({ status: 'error', message: getBilingualMessage('failed_add_address') });
   }
 };
 
@@ -35,7 +36,7 @@ exports.updateAddress = async (req, res) => {
   try {
     const address = await Address.findById(req.params.id);
     if (!address || address.user.toString() !== req.user.id) {
-      return res.status(404).json({ status: 'error', message: 'Address not found' });
+      return res.status(404).json({ status: 'error', message: getBilingualMessage('address_not_found') });
     }
     const { addressLine1, addressLine2, city, state, postalCode, country } = req.body;
     if (addressLine1) address.addressLine1 = addressLine1;
@@ -46,9 +47,9 @@ exports.updateAddress = async (req, res) => {
     if (country) address.country = country;
     address.updatedAt = new Date();
     await address.save();
-    res.status(200).json({ status: 'success', message: 'Address updated', data: { address } });
+    res.status(200).json({ status: 'success', message: getBilingualMessage('address_updated'), data: { address } });
   } catch (err) {
-    res.status(500).json({ status: 'error', message: 'Failed to update address' });
+    res.status(500).json({ status: 'error', message: getBilingualMessage('failed_update_address') });
   }
 };
 
@@ -57,11 +58,11 @@ exports.deleteAddress = async (req, res) => {
   try {
     const address = await Address.findById(req.params.id);
     if (!address || address.user.toString() !== req.user.id) {
-      return res.status(404).json({ status: 'error', message: 'Address not found' });
+      return res.status(404).json({ status: 'error', message: getBilingualMessage('address_not_found') });
     }
     await address.deleteOne();
-    res.status(200).json({ status: 'success', message: 'Address deleted' });
+    res.status(200).json({ status: 'success', message: getBilingualMessage('address_deleted') });
   } catch (err) {
-    res.status(500).json({ status: 'error', message: 'Failed to delete address' });
+    res.status(500).json({ status: 'error', message: getBilingualMessage('failed_delete_address') });
   }
 }; 
