@@ -55,7 +55,8 @@ exports.addProductsByBusiness = async (req, res) => {
       accessories,
       customFields,
       status: 'pending',
-      owner: req.user.id
+      owner: req.user.id,
+      rating: req.body.rating !== undefined ? req.body.rating : 0
     });
     await product.save();
     res.status(201).json({ status: 'success', message: getBilingualMessage('product_added_pending_approval'), data: { product: formatProduct(product) } });
