@@ -60,6 +60,7 @@ exports.addProductsByBusiness = async (req, res) => {
     await product.save();
     res.status(201).json({ status: 'success', message: getBilingualMessage('product_added_pending_approval'), data: { product: formatProduct(product) } });
   } catch (err) {
+    console.error('Add Product Error:', err); // أضف هذا السطر
     res.status(500).json({ status: 'error', message: getBilingualMessage('failed_add_product') });
   }
 };
