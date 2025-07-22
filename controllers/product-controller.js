@@ -26,7 +26,7 @@ exports.getProducts = async (req, res) => {
     res.status(500).json({ status: 'error', message: getBilingualMessage('failed_get_products') });
   }
 };
-
+//
 // POST /addProductsByBusiness
 exports.addProductsByBusiness = async (req, res) => {
   try {
