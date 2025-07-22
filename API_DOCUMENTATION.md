@@ -58,6 +58,9 @@
 
 All API responses now return bilingual messages in both English and Arabic for every endpoint, including all errors and successes. The system uses a centralized messages.js file to ensure consistency across all modules (auth, user, product, order, address, category, review, wishlist, etc.).
 
+### Product Attachments
+- The `attachments` field in the product object is an array of product IDs, referencing other products as attachments or related items.
+
 ```json
 {
   "status": "success",
@@ -245,12 +248,10 @@ This applies to both customer and business registration.
   - `images` (array of strings)
   - `description` (string)
   - `color` (string)
-  - `features` (string)
-  - `unit` (string)
+  - `attachments` (array of product IDs, references to other products)
   - `minOrder` (number)
   - `pricePerUnit` (string)
   - `stock` (number)
-  - `accessories` (string)
   - `customFields` (array of objects, min 5, max 10, each: `{ key, value }`)
   - `status` (string: 'pending', 'approved', 'declined')
   - `owner` (user id, required)
@@ -267,7 +268,7 @@ This applies to both customer and business registration.
   - `category` (string, required)
   - `name` (string, required)
   - `images` (array of strings, optional)
-  - `description`, `color`, `features`, `unit`, `minOrder`, `pricePerUnit`, `stock`, `accessories` (all optional)
+  - `description`, `color`, `unit`, `minOrder`, `pricePerUnit`, `stock`, `customFields` (all optional)
   - `customFields` (array of objects, min 5, max 10, each: `{ key, value }`, required)
 - **Response:**
   - `201 Created`: Product info (pending approval) with bilingual message
@@ -282,7 +283,7 @@ This applies to both customer and business registration.
   - `category` (string, required)
   - `name` (string, required)
   - `images` (array of strings, optional)
-  - `description`, `color`, `features`, `unit`, `minOrder`, `pricePerUnit`, `stock`, `accessories` (all optional)
+  - `description`, `color`, `unit`, `minOrder`, `pricePerUnit`, `stock`, `customFields` (all optional)
   - `customFields` (array of objects, min 5, max 10, each: `{ key, value }`, required)
   - `owner` (user id, required)
 - **Response:**
@@ -629,12 +630,11 @@ socket.on('orderStatusUpdate', (data) => {
       "images": ["https://example.com/image1.jpg"],
       "description": "A great phone",
       "color": "Black",
-      "features": "Waterproof, Dual SIM",
       "unit": "piece",
       "minOrder": 1,
       "pricePerUnit": "1000",
       "stock": 50,
-      "accessories": "Charger, Earphones",
+      "attachments": ["60f7b3b3b3b3b3b3b3b3b3b3", "60f7b3b3b3b3b3b3b3b3b3b4"],
       "customFields": [
         { "key": "Warranty", "value": "2 years" },
         { "key": "Origin", "value": "Japan" },

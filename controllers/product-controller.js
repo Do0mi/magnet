@@ -33,7 +33,7 @@ exports.addProductsByBusiness = async (req, res) => {
     if (!req.user || req.user.role !== 'business') {
       return res.status(403).json({ status: 'error', message: getBilingualMessage('only_business_can_add_products') });
     }
-    let { code, category, name, images, description, color, features, unit, minOrder, pricePerUnit, stock, accessories, customFields } = req.body;
+    let { code, category, name, images, description, color, unit, minOrder, pricePerUnit, stock, customFields, attachments } = req.body;
     if (!customFields || !Array.isArray(customFields) || customFields.length < 3 || customFields.length > 10) {
       return res.status(400).json({ status: 'error', message: getBilingualMessage('invalid_custom_fields_count') });
     }
@@ -47,13 +47,12 @@ exports.addProductsByBusiness = async (req, res) => {
       images,
       description,
       color,
-      features,
       unit,
       minOrder,
       pricePerUnit,
       stock,
-      accessories,
       customFields,
+      attachments,
       status: 'pending',
       owner: req.user.id,
       rating: req.body.rating !== undefined ? req.body.rating : 0
@@ -72,7 +71,7 @@ exports.addProductsByMagnetEmployee = async (req, res) => {
     if (!req.user || req.user.role !== 'magnet_employee') {
       return res.status(403).json({ status: 'error', message: getBilingualMessage('only_magnet_employee_can_add_products') });
     }
-    let { code, category, name, images, description, color, features, unit, minOrder, pricePerUnit, stock, accessories, customFields, owner } = req.body;
+    let { code, category, name, images, description, color, unit, minOrder, pricePerUnit, stock, customFields, attachments, owner } = req.body;
     if (!customFields || !Array.isArray(customFields) || customFields.length < 3 || customFields.length > 10) {
       return res.status(400).json({ status: 'error', message: getBilingualMessage('invalid_custom_fields_count') });
     }
@@ -86,13 +85,12 @@ exports.addProductsByMagnetEmployee = async (req, res) => {
       images,
       description,
       color,
-      features,
       unit,
       minOrder,
       pricePerUnit,
       stock,
-      accessories,
       customFields,
+      attachments,
       status: 'approved',
       owner,
       approvedBy: req.user.id
@@ -129,20 +127,19 @@ exports.updateProduct = async (req, res) => {
     } else {
       return res.status(403).json({ status: 'error', message: getBilingualMessage('not_authorized_update_product') });
     }
-    const { code, category, name, images, description, color, features, unit, minOrder, pricePerUnit, stock, accessories, customFields } = req.body;
+    const { code, category, name, images, description, color, unit, minOrder, pricePerUnit, stock, customFields, attachments } = req.body;
     if (code) product.code = code;
     if (category) product.category = category;
     if (name) product.name = name;
     if (images) product.images = images;
     if (description) product.description = description;
     if (color) product.color = color;
-    if (features) product.features = features;
     if (unit) product.unit = unit;
     if (minOrder !== undefined) product.minOrder = minOrder;
     if (pricePerUnit) product.pricePerUnit = pricePerUnit;
     if (stock !== undefined) product.stock = stock;
-    if (accessories) product.accessories = accessories;
     if (customFields && Array.isArray(customFields) && customFields.length >= 3 && customFields.length <= 10) product.customFields = customFields;
+    if (attachments) product.attachments = attachments;
     product.updatedAt = new Date();
     await product.save();
     res.status(200).json({ status: 'success', message: getBilingualMessage('product_updated'), data: { product: formatProduct(product) } });

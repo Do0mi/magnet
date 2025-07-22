@@ -140,8 +140,13 @@ app.use('/api/wishlist', wishlistRoutes);
 app.use('/api/addresses', addressRoutes);
 
 // Health check route
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ status: 'ok', message: 'Health check passed' });
+});
+
+// Root route
 app.get('/', (req, res) => {
-  res.send('Server is up and running!');
+  res.send('Server is up and running! (API root)');
 });
 
 // Error handling middleware

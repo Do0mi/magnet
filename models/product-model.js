@@ -15,12 +15,13 @@ const productSchema = new mongoose.Schema({
   images: [{ type: String }],
   description: { type: String },
   color: { type: String },
-  features: { type: String },
   unit: { type: String },
   minOrder: { type: Number },
   pricePerUnit: { type: String },
   stock: { type: Number },
-  accessories: { type: String },
+  // Remove features and accessories
+  // Add attachments: array of product references
+  attachments: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
   // Custom key/value sections (minimum 5, max 10)
   customFields: {
     type: [
