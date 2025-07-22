@@ -6,6 +6,8 @@ const { requireAdminOrEmployee, requireBusiness, requireAdminEmployeeOrBusiness 
 
 // GET /products (public)
 router.get('/', verifyToken, ProductController.getProducts);
+// GET /products/:id (public)
+router.get('/:id', ProductController.getProductById);
 // POST /addProductsByBusiness (business only)
 router.post('/addProductsByBusiness', verifyToken, requireBusiness, ProductController.addProductsByBusiness);
 // POST /addProductsByMagnet_employee (magnet_employee only)

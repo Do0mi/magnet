@@ -5,27 +5,31 @@
 | Module      | Route/Action                | Public | Auth Required | Role(s) Required                |
 |-------------|-----------------------------|--------|---------------|-------------------------------|
 | Products    | GET /api/products           | Yes    | No            | None                          |
-|             | POST /addProductsByBusiness | No     | Yes           | business                      |
-|             | POST /addProductsByMagnet_employee | No | Yes         | magnet_employee, admin        |
-|             | PUT /products/:id           | No     | Yes           | business (own), admin, magnet_employee |
-|             | DELETE /products/:id        | No     | Yes           | business (own), admin, magnet_employee |
-|             | PUT /products/:id/approve   | No     | Yes           | admin, magnet_employee         |
-|             | PUT /products/:id/decline   | No     | Yes           | admin, magnet_employee         |
+|             | GET /api/products/:id       | Yes    | No            | None (see below)              |
+|             | POST /api/products/addProductsByBusiness | No     | Yes           | business                      |
+|             | POST /api/products/addProductsByMagnet_employee | No | Yes         | magnet_employee, admin        |
+|             | PUT /api/products/:id           | No     | Yes           | business (own), admin, magnet_employee |
+|             | DELETE /api/products/:id        | No     | Yes           | business (own), admin, magnet_employee |
+|             | PUT /api/products/:id/approve   | No     | Yes           | admin, magnet_employee         |
+|             | PUT /api/products/:id/decline   | No     | Yes           | admin, magnet_employee         |
 | Categories  | GET /api/categories         | Yes    | No            | None                          |
 |             | POST /api/categories        | No     | Yes           | business, admin, magnet_employee |
-|             | PUT /api/categories/:id     | No     | Yes           | business, admin, magnet_employee |
-|             | DELETE /api/categories/:id  | No     | Yes           | business, admin, magnet_employee |
+|             | PUT /api/categories/:id     | No     | Yes           | business (own), admin, magnet_employee |
+|             | DELETE /api/categories/:id  | No     | Yes           | business (own), admin, magnet_employee |
 | Orders      | POST /api/orders            | No     | Yes           | customer                      |
 |             | GET /api/orders/my          | No     | Yes           | customer                      |
 |             | GET /api/orders/:id         | No     | Yes           | admin, magnet_employee, customer (own) |
 |             | GET /api/orders             | No     | Yes           | admin, magnet_employee         |
-|             | PUT /api/orders/:id/status  | No     | Yes           | admin, magnet_employee         |
-| Reviews     | POST /products/:id/reviews  | No     | Yes           | customer                      |
-|             | GET /products/:id/reviews   | Yes    | No            | None                          |
-|             | DELETE /reviews/:id         | No     | Yes           | admin, magnet_employee         |
+| Reviews     | POST /api/products/:id/reviews  | No     | Yes           | customer                      |
+|             | GET /api/products/:id/reviews   | Yes    | No            | None                          |
+|             | DELETE /api/reviews/:id         | No     | Yes           | admin, magnet_employee         |
 | Wishlist    | GET /api/wishlist           | No     | Yes           | customer                      |
 |             | POST /api/wishlist          | No     | Yes           | customer                      |
 |             | DELETE /api/wishlist/:productId | No  | Yes           | customer                      |
+| Address     | GET /api/addresses          | No     | Yes           | customer                      |
+|             | POST /api/addresses         | No     | Yes           | customer                      |
+|             | PUT /api/addresses/:id      | No     | Yes           | customer                      |
+|             | DELETE /api/addresses/:id   | No     | Yes           | customer                      |
 | User        | GET /api/user/profile       | No     | Yes           | customer                      |
 |             | PUT /api/user/profile       | No     | Yes           | customer                      |
 |             | GET /api/user/business-requests | No | Yes           | admin, magnet_employee         |
@@ -46,21 +50,11 @@
 
 ---
 
-## Each module's section below should reference this table for route protection. For details on request/response, see the rest of the documentation.
-
----
-
-## Authentication & User Management APIs
-
----
-
 ## Message Format
 
-All API responses now return bilingual messages in both English and Arabic for every endpoint, including all errors and successes. The system uses a centralized messages.js file to ensure consistency across all modules (auth, user, product, order, address, category, review, wishlist, etc.).
+All API responses return bilingual messages in both English and Arabic for every endpoint, including all errors and successes. The system uses a centralized messages.js file to ensure consistency across all modules (auth, user, product, order, address, category, review, wishlist, etc.).
 
-### Product Attachments
-- The `attachments` field in the product object is an array of product IDs, referencing other products as attachments or related items.
-
+Example:
 ```json
 {
   "status": "success",
@@ -71,9 +65,6 @@ All API responses now return bilingual messages in both English and Arabic for e
   "data": { ... }
 }
 ```
-
-- All error and success messages are bilingual.
-- If you add new features, add their message keys to messages.js for full support.
 
 ---
 
@@ -247,8 +238,8 @@ This applies to both customer and business registration.
   - `name` (string, required)
   - `images` (array of strings)
   - `description` (string)
-  - `color` (string)
   - `attachments` (array of product IDs, references to other products)
+  - `unit` (string)
   - `minOrder` (number)
   - `pricePerUnit` (string)
   - `stock` (number)
@@ -260,6 +251,16 @@ This applies to both customer and business registration.
 
 ---
 
+### 1a. Get Product by ID
+- **GET** `/api/products/:id`
+- **Description:** Get a single product by its ID. Publicly accessible for approved products. Admin, business, and magnet_employee can access any product (including pending/declined).
+- **Response:**
+  - `200 OK`: Product object (see above)
+  - `404 Not Found`: If product does not exist
+  - `403 Forbidden`: If trying to access a non-approved product without proper role
+
+---
+
 ### 2. Add Product (Business)
 - **POST** `/api/products/addProductsByBusiness`
 - **Description:** Business user adds a new product (pending approval). Product code is auto-generated if not provided.
@@ -268,7 +269,8 @@ This applies to both customer and business registration.
   - `category` (string, required)
   - `name` (string, required)
   - `images` (array of strings, optional)
-  - `description`, `color`, `unit`, `minOrder`, `pricePerUnit`, `stock`, `customFields` (all optional)
+  - `attachments` (array of product IDs, references to other products, optional)
+  - `description`, `unit`, `minOrder`, `pricePerUnit`, `stock`, `customFields` (all optional)
   - `customFields` (array of objects, min 5, max 10, each: `{ key, value }`, required)
 - **Response:**
   - `201 Created`: Product info (pending approval) with bilingual message
@@ -283,7 +285,8 @@ This applies to both customer and business registration.
   - `category` (string, required)
   - `name` (string, required)
   - `images` (array of strings, optional)
-  - `description`, `color`, `unit`, `minOrder`, `pricePerUnit`, `stock`, `customFields` (all optional)
+  - `attachments` (array of product IDs, references to other products, optional)
+  - `description`, `unit`, `minOrder`, `pricePerUnit`, `stock`, `customFields` (all optional)
   - `customFields` (array of objects, min 5, max 10, each: `{ key, value }`, required)
   - `owner` (user id, required)
 - **Response:**
@@ -409,6 +412,7 @@ socket.on('orderStatusUpdate', (data) => {
 - **Headers:** `Authorization: Bearer <token>`
 - **Body:**
   - `name` (string, required)
+  - `description` (string, optional)
 - **Response:**
   - `201 Created`: Category info (bilingual message)
 
@@ -417,7 +421,8 @@ socket.on('orderStatusUpdate', (data) => {
 - **Description:** Update a category (business, admin, or magnet_employee only).
 - **Headers:** `Authorization: Bearer <token>`
 - **Body:**
-  - `name` (string, required)
+  - `name` (string, optional)
+  - `description` (string, optional)
 - **Response:**
   - `200 OK`: Updated category info (bilingual message)
 
@@ -487,7 +492,12 @@ socket.on('orderStatusUpdate', (data) => {
 - **Description:** Add a new address (customer only).
 - **Headers:** `Authorization: Bearer <token>`
 - **Body:**
-  - Address details (see address model)
+  - `addressLine1` (string, required)
+  - `addressLine2` (string, optional)
+  - `city` (string, required)
+  - `state` (string, required)
+  - `postalCode` (string, required)
+  - `country` (string, required)
 - **Response:**
   - `201 Created`: Address info (bilingual message)
 
@@ -496,7 +506,7 @@ socket.on('orderStatusUpdate', (data) => {
 - **Description:** Update an address (customer only).
 - **Headers:** `Authorization: Bearer <token>`
 - **Body:**
-  - Address details (see address model)
+  - Any address field (see above)
 - **Response:**
   - `200 OK`: Updated address info (bilingual message)
 
@@ -525,7 +535,7 @@ socket.on('orderStatusUpdate', (data) => {
 - **Body:**
   - `productId` (string, required)
 - **Response:**
-  - `201 Created`: Wishlist item info (bilingual message)
+  - `200 OK`: Wishlist item info (bilingual message)
 
 ### 3. Remove from Wishlist
 - **DELETE** `/api/wishlist/:productId`
@@ -543,7 +553,8 @@ socket.on('orderStatusUpdate', (data) => {
 - **Description:** Add a review to a product (customer only).
 - **Headers:** `Authorization: Bearer <token>`
 - **Body:**
-  - Review details (see review model)
+  - `rating` (number, required)
+  - `comment` (string, optional)
 - **Response:**
   - `201 Created`: Review info (bilingual message)
 
@@ -566,114 +577,3 @@ socket.on('orderStatusUpdate', (data) => {
 
 ### 1. Get User Profile
 - **GET** `/api/user/profile`
-- **Description:** Get the authenticated customer's profile.
-- **Headers:** `Authorization: Bearer <token>`
-- **Response:**
-  - `200 OK`: User profile info (bilingual message)
-
-### 2. Update User Profile
-- **PUT** `/api/user/profile`
-- **Description:** Update the authenticated customer's profile.
-- **Headers:** `Authorization: Bearer <token>`
-- **Body:**
-  - Profile details (see user model)
-- **Response:**
-  - `200 OK`: Updated profile info (bilingual message)
-
-### 3. Get Business Registration Requests
-- **GET** `/api/user/business-requests`
-- **Description:** Get all business registration requests (admin, magnet_employee only).
-- **Headers:** `Authorization: Bearer <token>`
-- **Response:**
-  - `200 OK`: List of business requests (bilingual message)
-
-### 4. Approve/Reject Business Registration
-- **POST** `/api/user/business-approval`
-- **Description:** Approve or reject a business registration (admin, magnet_employee only).
-- **Headers:** `Authorization: Bearer <token>`
-- **Body:**
-  - Approval details (see business approval model)
-- **Response:**
-  - `200 OK`: Approval/rejection result (bilingual message)
-
-### 5. Get Business Details by ID
-- **GET** `/api/user/business/:businessId`
-- **Description:** Get business details by ID (admin, magnet_employee only).
-- **Headers:** `Authorization: Bearer <token>`
-- **Response:**
-  - `200 OK`: Business details (bilingual message)
-
-### 6. Get Business Profile
-- **GET** `/api/user/business-profile`
-- **Description:** Get the business profile (business, admin, or magnet_employee only).
-- **Headers:** `Authorization: Bearer <token>`
-- **Response:**
-  - `200 OK`: Business profile info (bilingual message)
-
----
-
-## Response Examples
-
-### Success Response
-```json
-{
-  "status": "success",
-  "message": {
-    "en": "Product added successfully",
-    "ar": "تمت إضافة المنتج بنجاح"
-  },
-  "data": {
-    "product": {
-      "code": "A001",
-      "category": "Electronics",
-      "name": "Smartphone",
-      "images": ["https://example.com/image1.jpg"],
-      "description": "A great phone",
-      "color": "Black",
-      "unit": "piece",
-      "minOrder": 1,
-      "pricePerUnit": "1000",
-      "stock": 50,
-      "attachments": ["60f7b3b3b3b3b3b3b3b3b3b3", "60f7b3b3b3b3b3b3b3b3b3b4"],
-      "customFields": [
-        { "key": "Warranty", "value": "2 years" },
-        { "key": "Origin", "value": "Japan" },
-        { "key": "Battery", "value": "4000mAh" },
-        { "key": "Screen", "value": "6.5 inch" },
-        { "key": "Weight", "value": "180g" }
-      ],
-      "status": "pending",
-      "owner": "60f7b3b3b3b3b3b3b3b3b3b3",
-      "approvedBy": null,
-      "createdAt": "2024-07-10T12:00:00.000Z"
-    }
-  }
-}
-```
-
-### Error Response
-```json
-{
-  "status": "error",
-  "message": {
-    "en": "Must provide 5–10 custom fields",
-    "ar": "يجب توفير 5 إلى 10 حقول مخصصة"
-  }
-}
-```
-
----
-
-## Notes
-- All endpoints require authentication unless stated otherwise.
-- Role-based access is enforced for some endpoints (Admin, Employee, Business, Customer).
-- For endpoints that update or approve/decline, validation middleware is used.
-- **All API responses now include bilingual messages in English and Arabic.**
-- **Verification status is automatically set during registration based on phone number presence.**
-- **Product codes are auto-generated in the format A001, A002, ... if not provided.**
-- **Products require 5–10 custom fields (key/value pairs).**
-- **The GET and PUT `/api/user/profile` endpoints are protected by the `requireCustomer` middleware, allowing only users with the 'customer' role to access them.**
-
----
-
-For more details or example requests, refer to the code or request further examples. 

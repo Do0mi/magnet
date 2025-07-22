@@ -33,7 +33,7 @@ exports.addProductsByBusiness = async (req, res) => {
     if (!req.user || req.user.role !== 'business') {
       return res.status(403).json({ status: 'error', message: getBilingualMessage('only_business_can_add_products') });
     }
-    let { code, category, name, images, description, color, unit, minOrder, pricePerUnit, stock, customFields, attachments } = req.body;
+    let { code, category, name, images, description, unit, minOrder, pricePerUnit, stock, customFields, attachments } = req.body;
     if (!customFields || !Array.isArray(customFields) || customFields.length < 3 || customFields.length > 10) {
       return res.status(400).json({ status: 'error', message: getBilingualMessage('invalid_custom_fields_count') });
     }
@@ -46,7 +46,6 @@ exports.addProductsByBusiness = async (req, res) => {
       name,
       images,
       description,
-      color,
       unit,
       minOrder,
       pricePerUnit,
@@ -71,7 +70,7 @@ exports.addProductsByMagnetEmployee = async (req, res) => {
     if (!req.user || req.user.role !== 'magnet_employee') {
       return res.status(403).json({ status: 'error', message: getBilingualMessage('only_magnet_employee_can_add_products') });
     }
-    let { code, category, name, images, description, color, unit, minOrder, pricePerUnit, stock, customFields, attachments, owner } = req.body;
+    let { code, category, name, images, description, unit, minOrder, pricePerUnit, stock, customFields, attachments, owner } = req.body;
     if (!customFields || !Array.isArray(customFields) || customFields.length < 3 || customFields.length > 10) {
       return res.status(400).json({ status: 'error', message: getBilingualMessage('invalid_custom_fields_count') });
     }
@@ -84,7 +83,6 @@ exports.addProductsByMagnetEmployee = async (req, res) => {
       name,
       images,
       description,
-      color,
       unit,
       minOrder,
       pricePerUnit,
@@ -127,13 +125,12 @@ exports.updateProduct = async (req, res) => {
     } else {
       return res.status(403).json({ status: 'error', message: getBilingualMessage('not_authorized_update_product') });
     }
-    const { code, category, name, images, description, color, unit, minOrder, pricePerUnit, stock, customFields, attachments } = req.body;
+    const { code, category, name, images, description, unit, minOrder, pricePerUnit, stock, customFields, attachments } = req.body;
     if (code) product.code = code;
     if (category) product.category = category;
     if (name) product.name = name;
     if (images) product.images = images;
     if (description) product.description = description;
-    if (color) product.color = color;
     if (unit) product.unit = unit;
     if (minOrder !== undefined) product.minOrder = minOrder;
     if (pricePerUnit) product.pricePerUnit = pricePerUnit;
@@ -200,5 +197,24 @@ exports.declineProduct = async (req, res) => {
     res.status(200).json({ status: 'success', message: getBilingualMessage('product_declined'), data: { product: formatProduct(product) } });
   } catch (err) {
     res.status(500).json({ status: 'error', message: getBilingualMessage('failed_decline_product') });
+  }
+};
+
+// GET /products/:id
+exports.getProductById = async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id).populate('owner', 'email businessInfo.companyName');
+    if (!product) {
+      return res.status(404).json({ status: 'error', message: getBilingualMessage('product_not_found') });
+    }
+    // Only show non-approved products to admin/business/employee
+    if (product.status !== 'approved') {
+      if (!req.user || !['admin', 'business', 'magnet_employee'].includes(req.user.role)) {
+        return res.status(403).json({ status: 'error', message: getBilingualMessage('not_authorized_view_product') });
+      }
+    }
+    res.status(200).json({ status: 'success', data: { product: formatProduct(product) } });
+  } catch (err) {
+    res.status(500).json({ status: 'error', message: getBilingualMessage('failed_get_product') });
   }
 }; 
