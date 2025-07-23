@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 // Custom validator to ensure 5–10 custom fields
 function arrayLimit(val) {
-  return val.length >= 5 && val.length <= 10;
+  return val.length >= 3 && val.length <= 10;
 }
 
 const productSchema = new mongoose.Schema({
@@ -29,7 +29,7 @@ const productSchema = new mongoose.Schema({
         value: { type: String, required: true }
       }
     ],
-    validate: [arrayLimit, 'Must provide 5-10 custom fields']
+    validate: [arrayLimit, 'Must provide 3-10 custom fields']
   },
   status: {
     type: String,
