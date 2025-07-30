@@ -3,11 +3,34 @@ const User = require('../models/user-model');
 const generateProductCode = require('../utils/generateProductCode');
 const { getBilingualMessage } = require('../utils/messages');
 
-// Helper to format product with owner company name
-function formatProduct(product) {
+// Helper to format product with owner company name and language support
+function formatProduct(product, language = 'en') {
   const obj = product.toObject();
   obj.ownerCompanyName = obj.owner && obj.owner.businessInfo ? obj.owner.businessInfo.companyName : null;
   delete obj.owner;
+  
+  // Convert bilingual fields to single language if language is specified
+  if (language && language !== 'both') {
+    if (obj.name) {
+      obj.name = obj.name[language] || obj.name.en;
+    }
+    if (obj.description) {
+      obj.description = obj.description[language] || obj.description.en;
+    }
+    if (obj.category) {
+      obj.category = obj.category[language] || obj.category.en;
+    }
+    if (obj.unit) {
+      obj.unit = obj.unit[language] || obj.unit.en;
+    }
+    if (obj.customFields) {
+      obj.customFields = obj.customFields.map(field => ({
+        key: field.key[language] || field.key.en,
+        value: field.value[language] || field.value.en
+      }));
+    }
+  }
+  
   return obj;
 }
 
@@ -15,31 +38,91 @@ function formatProduct(product) {
 exports.getProducts = async (req, res) => {
   try {
     let products;
-    if (req.user && (req.user.role === 'admin' ||req.user.role === 'business' || req.user.role === 'magnet_employee')) {
+    const language = req.query.lang || req.user?.language || 'en';
+    
+    if (req.user && (req.user.role === 'admin' || req.user.role === 'business' || req.user.role === 'magnet_employee')) {
       products = await Product.find().populate('owner', 'email businessInfo.companyName');
     } else {
       products = await Product.find({ status: 'approved' }).populate('owner', 'email businessInfo.companyName');
     }
-    const formattedProducts = products.map(formatProduct);
+    
+    const formattedProducts = products.map(product => formatProduct(product, language));
     res.status(200).json({ status: 'success', data: { products: formattedProducts } });
   } catch (err) {
     res.status(500).json({ status: 'error', message: getBilingualMessage('failed_get_products') });
   }
 };
-//
+
+// GET /products/:id
+exports.getProductById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const language = req.query.lang || req.user?.language || 'en';
+    
+    const product = await Product.findById(id).populate('owner', 'email businessInfo.companyName');
+    
+    if (!product) {
+      return res.status(404).json({ status: 'error', message: getBilingualMessage('product_not_found') });
+    }
+    
+    // Check if user can access this product
+    if (product.status !== 'approved' && 
+        req.user && 
+        req.user.role !== 'admin' && 
+        req.user.role !== 'magnet_employee' && 
+        req.user.role !== 'business') {
+      return res.status(403).json({ status: 'error', message: getBilingualMessage('product_access_denied') });
+    }
+    
+    const formattedProduct = formatProduct(product, language);
+    res.status(200).json({ status: 'success', data: { product: formattedProduct } });
+  } catch (err) {
+    res.status(500).json({ status: 'error', message: getBilingualMessage('failed_get_product') });
+  }
+};
+
 // POST /addProductsByBusiness
 exports.addProductsByBusiness = async (req, res) => {
   try {
     if (!req.user || req.user.role !== 'business') {
       return res.status(403).json({ status: 'error', message: getBilingualMessage('only_business_can_add_products') });
     }
+    
     let { code, category, name, images, description, unit, minOrder, pricePerUnit, stock, customFields, attachments } = req.body;
+    
+    // Validate custom fields
     if (!customFields || !Array.isArray(customFields) || customFields.length < 3 || customFields.length > 10) {
       return res.status(400).json({ status: 'error', message: getBilingualMessage('invalid_custom_fields_count') });
     }
+    
+    // Validate bilingual fields
+    if (!name || !name.en || !name.ar) {
+      return res.status(400).json({ status: 'error', message: getBilingualMessage('product_name_required_both_languages') });
+    }
+    
+    if (description && (!description.en || !description.ar)) {
+      return res.status(400).json({ status: 'error', message: getBilingualMessage('product_description_required_both_languages') });
+    }
+    
+    if (!category || !category.en || !category.ar) {
+      return res.status(400).json({ status: 'error', message: getBilingualMessage('product_category_required_both_languages') });
+    }
+    
+    if (unit && (!unit.en || !unit.ar)) {
+      return res.status(400).json({ status: 'error', message: getBilingualMessage('product_unit_required_both_languages') });
+    }
+    
+    // Validate custom fields have bilingual content
+    for (let field of customFields) {
+      if (!field.key || !field.key.en || !field.key.ar || !field.value || !field.value.en || !field.value.ar) {
+        return res.status(400).json({ status: 'error', message: getBilingualMessage('custom_fields_required_both_languages') });
+      }
+    }
+    
     if (!code) {
       code = await generateProductCode();
     }
+    
     const product = new Product({
       code,
       category,
@@ -56,10 +139,15 @@ exports.addProductsByBusiness = async (req, res) => {
       owner: req.user.id,
       rating: req.body.rating !== undefined ? req.body.rating : 0
     });
+    
     await product.save();
-    res.status(201).json({ status: 'success', message: getBilingualMessage('product_added_pending_approval'), data: { product: formatProduct(product) } });
+    res.status(201).json({ 
+      status: 'success', 
+      message: getBilingualMessage('product_added_pending_approval'), 
+      data: { product: formatProduct(product, req.user.language || 'en') } 
+    });
   } catch (err) {
-    console.error('Add Product Error:', err); // أضف هذا السطر
+    console.error('Add Product Error:', err);
     res.status(500).json({ status: 'error', message: getBilingualMessage('failed_add_product') });
   }
 };
@@ -70,13 +158,42 @@ exports.addProductsByMagnetEmployee = async (req, res) => {
     if (!req.user || req.user.role !== 'magnet_employee') {
       return res.status(403).json({ status: 'error', message: getBilingualMessage('only_magnet_employee_can_add_products') });
     }
+    
     let { code, category, name, images, description, unit, minOrder, pricePerUnit, stock, customFields, attachments, owner } = req.body;
+    
+    // Validate custom fields
     if (!customFields || !Array.isArray(customFields) || customFields.length < 3 || customFields.length > 10) {
       return res.status(400).json({ status: 'error', message: getBilingualMessage('invalid_custom_fields_count') });
     }
+    
+    // Validate bilingual fields
+    if (!name || !name.en || !name.ar) {
+      return res.status(400).json({ status: 'error', message: getBilingualMessage('product_name_required_both_languages') });
+    }
+    
+    if (description && (!description.en || !description.ar)) {
+      return res.status(400).json({ status: 'error', message: getBilingualMessage('product_description_required_both_languages') });
+    }
+    
+    if (!category || !category.en || !category.ar) {
+      return res.status(400).json({ status: 'error', message: getBilingualMessage('product_category_required_both_languages') });
+    }
+    
+    if (unit && (!unit.en || !unit.ar)) {
+      return res.status(400).json({ status: 'error', message: getBilingualMessage('product_unit_required_both_languages') });
+    }
+    
+    // Validate custom fields have bilingual content
+    for (let field of customFields) {
+      if (!field.key || !field.key.en || !field.key.ar || !field.value || !field.value.en || !field.value.ar) {
+        return res.status(400).json({ status: 'error', message: getBilingualMessage('custom_fields_required_both_languages') });
+      }
+    }
+    
     if (!code) {
       code = await generateProductCode();
     }
+    
     const product = new Product({
       code,
       category,
@@ -93,8 +210,13 @@ exports.addProductsByMagnetEmployee = async (req, res) => {
       owner,
       approvedBy: req.user.id
     });
+    
     await product.save();
-    res.status(201).json({ status: 'success', message: getBilingualMessage('product_added_and_approved'), data: { product: formatProduct(product) } });
+    res.status(201).json({ 
+      status: 'success', 
+      message: getBilingualMessage('product_added_and_approved'), 
+      data: { product: formatProduct(product, req.user.language || 'en') } 
+    });
   } catch (err) {
     res.status(500).json({ status: 'error', message: getBilingualMessage('failed_add_product') });
   }
@@ -197,24 +319,5 @@ exports.declineProduct = async (req, res) => {
     res.status(200).json({ status: 'success', message: getBilingualMessage('product_declined'), data: { product: formatProduct(product) } });
   } catch (err) {
     res.status(500).json({ status: 'error', message: getBilingualMessage('failed_decline_product') });
-  }
-};
-
-// GET /products/:id
-exports.getProductById = async (req, res) => {
-  try {
-    const product = await Product.findById(req.params.id).populate('owner', 'email businessInfo.companyName');
-    if (!product) {
-      return res.status(404).json({ status: 'error', message: getBilingualMessage('product_not_found') });
-    }
-    // Only show non-approved products to admin/business/employee
-    if (product.status !== 'approved') {
-      if (!req.user || !['admin', 'business', 'magnet_employee'].includes(req.user.role)) {
-        return res.status(403).json({ status: 'error', message: getBilingualMessage('not_authorized_view_product') });
-      }
-    }
-    res.status(200).json({ status: 'success', data: { product: formatProduct(product) } });
-  } catch (err) {
-    res.status(500).json({ status: 'error', message: getBilingualMessage('failed_get_product') });
   }
 }; 

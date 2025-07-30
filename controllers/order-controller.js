@@ -2,6 +2,14 @@ const Order = require('../models/order-model');
 const Product = require('../models/product-model');
 const { getBilingualMessage } = require('../utils/messages');
 
+// Helper function to format order data with localization
+const formatOrder = (order, language = 'en') => {
+  if (!order) return order;
+  
+  // Use the model's built-in localization method
+  return order.getLocalizedData(language);
+};
+
 // POST /orders
 exports.createOrder = async (req, res) => {
   try {
@@ -9,16 +17,24 @@ exports.createOrder = async (req, res) => {
     if (!items || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ status: 'error', message: getBilingualMessage('order_must_have_items') });
     }
+    
+    // Convert English status to bilingual format using model's static method
+    const bilingualStatus = Order.convertStatusToBilingual('pending');
+    
     // Optionally: check product availability, etc.
     const order = new Order({
       customer: req.user.id,
       items,
       shippingAddress,
-      status: 'pending',
-      statusLog: [{ status: 'pending', timestamp: new Date() }]
+      status: bilingualStatus,
+      statusLog: [{ status: bilingualStatus, timestamp: new Date() }]
     });
     await order.save();
-    res.status(201).json({ status: 'success', message: getBilingualMessage('order_created'), data: { order } });
+    
+    const language = req.query.lang || 'en';
+    const formattedOrder = formatOrder(order, language);
+    
+    res.status(201).json({ status: 'success', message: getBilingualMessage('order_created'), data: { order: formattedOrder } });
   } catch (err) {
     res.status(500).json({ status: 'error', message: getBilingualMessage('failed_create_order') });
   }
@@ -27,8 +43,12 @@ exports.createOrder = async (req, res) => {
 // GET /orders/my
 exports.getMyOrders = async (req, res) => {
   try {
+    const language = req.query.lang || 'en';
     const orders = await Order.find({ customer: req.user.id }).populate('items.product').populate('shippingAddress');
-    res.status(200).json({ status: 'success', data: { orders } });
+    
+    const formattedOrders = orders.map(order => formatOrder(order, language));
+    
+    res.status(200).json({ status: 'success', data: { orders: formattedOrders } });
   } catch (err) {
     res.status(500).json({ status: 'error', message: getBilingualMessage('failed_get_orders') });
   }
@@ -37,13 +57,17 @@ exports.getMyOrders = async (req, res) => {
 // GET /orders/:id
 exports.getOrderById = async (req, res) => {
   try {
+    const language = req.query.lang || 'en';
     const order = await Order.findById(req.params.id).populate('items.product').populate('shippingAddress');
     if (!order) return res.status(404).json({ status: 'error', message: getBilingualMessage('order_not_found') });
     // Only admin, magnet_employee, or owner (customer) can view
     if (req.user.role !== 'admin' && req.user.role !== 'magnet_employee' && order.customer.toString() !== req.user.id) {
       return res.status(403).json({ status: 'error', message: getBilingualMessage('not_authorized_view_order') });
     }
-    res.status(200).json({ status: 'success', data: { order } });
+    
+    const formattedOrder = formatOrder(order, language);
+    
+    res.status(200).json({ status: 'success', data: { order: formattedOrder } });
   } catch (err) {
     res.status(500).json({ status: 'error', message: getBilingualMessage('failed_get_order') });
   }
@@ -52,8 +76,12 @@ exports.getOrderById = async (req, res) => {
 // GET /orders
 exports.getAllOrders = async (req, res) => {
   try {
+    const language = req.query.lang || 'en';
     const orders = await Order.find().populate('items.product').populate('shippingAddress');
-    res.status(200).json({ status: 'success', data: { orders } });
+    
+    const formattedOrders = orders.map(order => formatOrder(order, language));
+    
+    res.status(200).json({ status: 'success', data: { orders: formattedOrders } });
   } catch (err) {
     res.status(500).json({ status: 'error', message: getBilingualMessage('failed_get_orders') });
   }
@@ -63,26 +91,73 @@ exports.getAllOrders = async (req, res) => {
 exports.updateOrderStatus = async (req, res) => {
   try {
     const { status } = req.body;
-    const allowedStatuses = ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'];
-    if (!allowedStatuses.includes(status)) {
-      return res.status(400).json({ status: 'error', message: getBilingualMessage('invalid_order_status') });
+    
+    // Use model's validation method instead of hardcoded array
+    if (!Order.isValidStatus(status)) {
+      const validStatuses = Order.getValidEnglishStatuses().join(', ');
+      return res.status(400).json({ 
+        status: 'error', 
+        message: getBilingualMessage('invalid_order_status'),
+        data: { validStatuses }
+      });
     }
+    
     const order = await Order.findById(req.params.id);
     if (!order) return res.status(404).json({ status: 'error', message: getBilingualMessage('order_not_found') });
-    order.status = status;
-    order.statusLog.push({ status, timestamp: new Date() });
+    
+    // Convert English status to bilingual format using model's static method
+    const bilingualStatus = Order.convertStatusToBilingual(status);
+    
+    order.status = bilingualStatus;
+    order.statusLog.push({ status: bilingualStatus, timestamp: new Date() });
     order.updatedAt = new Date();
     await order.save();
+    
     // Emit real-time update via Socket.IO
     const io = req.app.get('io');
     io.to(`order_${order._id}`).emit('orderStatusUpdate', {
       orderId: order._id,
-      status: order.status,
-      statusLog: order.statusLog,
+      status: order.status, // This will be the bilingual object
+      statusLog: order.statusLog, // This will contain bilingual objects
       updatedAt: order.updatedAt
     });
-    res.status(200).json({ status: 'success', message: getBilingualMessage('order_status_updated'), data: { order } });
+    
+    const language = req.query.lang || 'en';
+    const formattedOrder = formatOrder(order, language); // This will localize the status for the response
+    
+    res.status(200).json({ status: 'success', message: getBilingualMessage('order_status_updated'), data: { order: formattedOrder } });
   } catch (err) {
     res.status(500).json({ status: 'error', message: getBilingualMessage('failed_update_order_status') });
+  }
+}; 
+
+// GET /orders/status-options
+exports.getStatusOptions = async (req, res) => {
+  try {
+    const language = req.query.lang || 'en';
+    const statusMapping = Order.getStatusMapping();
+    const statusEnums = Order.getStatusEnums();
+    
+    let statusOptions;
+    if (language === 'both') {
+      statusOptions = statusMapping;
+    } else {
+      statusOptions = Object.keys(statusMapping).reduce((acc, key) => {
+        acc[key] = statusMapping[key][language] || statusMapping[key].en;
+        return acc;
+      }, {});
+    }
+    
+    res.status(200).json({ 
+      status: 'success', 
+      data: { 
+        statusOptions,
+        statusEnums, // Include the enums for reference
+        validEnglishStatuses: Order.getValidEnglishStatuses()
+      },
+      message: getBilingualMessage('status_options_retrieved')
+    });
+  } catch (err) {
+    res.status(500).json({ status: 'error', message: getBilingualMessage('failed_get_status_options') });
   }
 }; 

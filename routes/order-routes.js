@@ -4,6 +4,9 @@ const OrderController = require('../controllers/order-controller');
 const verifyToken = require('../middleware/auth-middleware');
 const { requireAdminOrEmployee, requireCustomer } = require('../middleware/role-middleware');
 
+// GET /orders/status-options (Public - anyone can get status options)
+router.get('/status-options', OrderController.getStatusOptions);
+
 // POST /orders (Customer)
 router.post('/', verifyToken, requireCustomer, OrderController.createOrder);
 // GET /orders/my (Customer views own orders)

@@ -552,6 +552,89 @@ const messages = {
   'wishlist_not_found': {
     en: 'Wishlist not found',
     ar: 'قائمة الرغبات غير موجودة'
+  },
+
+  // Bilingual product validation messages
+  'product_name_required_both_languages': {
+    en: 'Product name is required in both English and Arabic',
+    ar: 'اسم المنتج مطلوب باللغتين الإنجليزية والعربية'
+  },
+  'product_description_required_both_languages': {
+    en: 'Product description is required in both English and Arabic',
+    ar: 'وصف المنتج مطلوب باللغتين الإنجليزية والعربية'
+  },
+  'custom_fields_required_both_languages': {
+    en: 'Custom fields are required in both English and Arabic',
+    ar: 'الحقول المخصصة مطلوبة باللغتين الإنجليزية والعربية'
+  },
+  'product_category_required_both_languages': {
+    en: 'Product category is required in both English and Arabic',
+    ar: 'فئة المنتج مطلوبة باللغتين الإنجليزية والعربية'
+  },
+  'product_unit_required_both_languages': {
+    en: 'Product unit is required in both English and Arabic',
+    ar: 'وحدة المنتج مطلوبة باللغتين الإنجليزية والعربية'
+  },
+  
+  // Address validation messages
+  'address_line1_required_both_languages': {
+    en: 'Address line 1 is required in both English and Arabic',
+    ar: 'عنوان السطر الأول مطلوب باللغتين الإنجليزية والعربية'
+  },
+  'address_line2_required_both_languages': {
+    en: 'Address line 2 is required in both English and Arabic',
+    ar: 'عنوان السطر الثاني مطلوب باللغتين الإنجليزية والعربية'
+  },
+  'city_required_both_languages': {
+    en: 'City is required in both English and Arabic',
+    ar: 'المدينة مطلوبة باللغتين الإنجليزية والعربية'
+  },
+  'state_required_both_languages': {
+    en: 'State is required in both English and Arabic',
+    ar: 'الولاية مطلوبة باللغتين الإنجليزية والعربية'
+  },
+  'country_required_both_languages': {
+    en: 'Country is required in both English and Arabic',
+    ar: 'البلد مطلوب باللغتين الإنجليزية والعربية'
+  },
+  
+  // Category validation messages
+  'category_name_required_both_languages': {
+    en: 'Category name is required in both English and Arabic',
+    ar: 'اسم الفئة مطلوب باللغتين الإنجليزية والعربية'
+  },
+  'category_description_required_both_languages': {
+    en: 'Category description is required in both English and Arabic',
+    ar: 'وصف الفئة مطلوب باللغتين الإنجليزية والعربية'
+  },
+  
+  // Review validation messages
+  'review_comment_required_both_languages': {
+    en: 'Review comment is required in both English and Arabic',
+    ar: 'تعليق التقييم مطلوب باللغتين الإنجليزية والعربية'
+  },
+  
+  // Order status options messages
+  'status_options_retrieved': {
+    en: 'Status options retrieved successfully',
+    ar: 'تم استرجاع خيارات الحالة بنجاح'
+  },
+  'failed_get_status_options': {
+    en: 'Failed to get status options',
+    ar: 'فشل في الحصول على خيارات الحالة'
+  },
+  
+  'product_not_found': {
+    en: 'Product not found',
+    ar: 'المنتج غير موجود'
+  },
+  'product_access_denied': {
+    en: 'Access denied to this product',
+    ar: 'تم رفض الوصول لهذا المنتج'
+  },
+  'failed_get_product': {
+    en: 'Failed to get product',
+    ar: 'فشل في الحصول على المنتج'
   }
 };
 
