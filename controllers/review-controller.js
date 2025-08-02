@@ -2,18 +2,10 @@ const Review = require('../models/review-model');
 const Product = require('../models/product-model');
 const { getBilingualMessage } = require('../utils/messages');
 
-// Helper function to format review data with localization
-const formatReview = (review, language = 'en') => {
+// Helper function to format review data
+const formatReview = (review) => {
   if (!review) return review;
-  
-  const obj = review.toObject ? review.toObject() : review;
-  
-  // Convert bilingual fields to single language
-  if (obj.comment) {
-    obj.comment = obj.comment[language] || obj.comment.en;
-  }
-  
-  return obj;
+  return review.toObject ? review.toObject() : review;
 };
 
 // Helper to update product average rating
@@ -45,9 +37,9 @@ exports.addReview = async (req, res) => {
       return res.status(400).json({ status: 'error', message: getBilingualMessage('already_reviewed_product') });
     }
     
-    // Validate bilingual comment if provided
-    if (comment && (!comment.en || !comment.ar)) {
-      return res.status(400).json({ status: 'error', message: getBilingualMessage('review_comment_required_both_languages') });
+    // Validate comment if provided
+    if (!comment) {
+      return res.status(400).json({ status: 'error', message: getBilingualMessage('review_comment_required') });
     }
     
     const review = new Review({
@@ -59,8 +51,7 @@ exports.addReview = async (req, res) => {
     await review.save();
     await updateProductRating(productId);
     
-    const language = req.query.lang || 'en';
-    const formattedReview = formatReview(review, language);
+    const formattedReview = formatReview(review);
     
     res.status(201).json({ status: 'success', message: getBilingualMessage('review_added'), data: { review: formattedReview } });
   } catch (err) {
@@ -71,11 +62,10 @@ exports.addReview = async (req, res) => {
 // GET /products/:id/reviews
 exports.getProductReviews = async (req, res) => {
   try {
-    const language = req.query.lang || 'en';
     const productId = req.params.id;
     const reviews = await Review.find({ product: productId }).populate('user', 'firstname lastname');
     
-    const formattedReviews = reviews.map(review => formatReview(review, language));
+    const formattedReviews = reviews.map(review => formatReview(review));
     
     res.status(200).json({ status: 'success', data: { reviews: formattedReviews } });
   } catch (err) {

@@ -130,12 +130,12 @@ This applies to both customer and business registration.
 - **Stock**: Optional number
 
 ### Address Validation
-- **Address Line 1**: Required bilingual object `{ en: "English", ar: "Arabic" }`
-- **Address Line 2**: Optional bilingual object `{ en: "English", ar: "Arabic" }`
-- **City**: Required bilingual object `{ en: "English", ar: "Arabic" }`
-- **State**: Required bilingual object `{ en: "English", ar: "Arabic" }`
+- **Address Line 1**: Required string
+- **Address Line 2**: Optional string
+- **City**: Required string
+- **State**: Required string
 - **Postal Code**: Required string
-- **Country**: Required bilingual object `{ en: "English", ar: "Arabic" }`
+- **Country**: Required string
 
 ### Category Validation
 - **Name**: Required bilingual object `{ en: "English", ar: "Arabic" }`
@@ -143,7 +143,7 @@ This applies to both customer and business registration.
 
 ### Review Validation
 - **Rating**: Required number, min: 1, max: 5
-- **Comment**: Optional bilingual object `{ en: "English", ar: "Arabic" }`
+- **Comment**: Required string
 
 ### Order Validation
 - **Customer**: Required user ID
@@ -753,27 +753,22 @@ Orders support bilingual content (Arabic and English). You can:
 ## Address Routes
 
 ### Language Support
-Addresses support bilingual content (Arabic and English). You can:
-- **Get addresses in specific language**: Add `?lang=en` or `?lang=ar` to the URL
-- **Get addresses in user's preferred language**: The system uses the user's language preference
-- **Get full bilingual data**: Use `?lang=both` to get both languages
+Addresses no longer support bilingual content. All address fields are stored as simple strings.
 
 ### Address Object
 - `user` (ObjectId, required, reference to User)
-- `addressLine1` (object, required, bilingual: `{ en: "English Address Line 1", ar: "Arabic Address Line 1" }`)
-- `addressLine2` (object, optional, bilingual: `{ en: "English Address Line 2", ar: "Arabic Address Line 2" }`)
-- `city` (object, required, bilingual: `{ en: "English City", ar: "Arabic City" }`)
-- `state` (object, required, bilingual: `{ en: "English State", ar: "Arabic State" }`)
+- `addressLine1` (string, required)
+- `addressLine2` (string, optional)
+- `city` (string, required)
+- `state` (string, required)
 - `postalCode` (string, required)
-- `country` (object, required, bilingual: `{ en: "English Country", ar: "Arabic Country" }`)
+- `country` (string, required)
 - `createdAt` (date)
 - `updatedAt` (date)
 
 ### 1. Get Addresses
 - **GET** `/api/addresses`
-- **GET** `/api/addresses?lang=en` (English only)
-- **GET** `/api/addresses?lang=ar` (Arabic only)
-- **GET** `/api/addresses?lang=both` (Both languages)
+
 - **Description:** Get all addresses for the authenticated customer.
 - **Headers:** `Authorization: Bearer <token>`
 - **Response:**
@@ -784,12 +779,12 @@ Addresses support bilingual content (Arabic and English). You can:
 - **Description:** Add a new address (customer only).
 - **Headers:** `Authorization: Bearer <token>`
 - **Body:**
-  - `addressLine1` (object, required, bilingual: `{ en: "English Address Line 1", ar: "Arabic Address Line 1" }`)
-  - `addressLine2` (object, optional, bilingual: `{ en: "English Address Line 2", ar: "Arabic Address Line 2" }`)
-  - `city` (object, required, bilingual: `{ en: "English City", ar: "Arabic City" }`)
-  - `state` (object, required, bilingual: `{ en: "English State", ar: "Arabic State" }`)
+  - `addressLine1` (string, required)
+  - `addressLine2` (string, optional)
+  - `city` (string, required)
+  - `state` (string, required)
   - `postalCode` (string, required)
-  - `country` (object, required, bilingual: `{ en: "English Country", ar: "Arabic Country" }`)
+  - `country` (string, required)
 - **Response:**
   - `201 Created`: Address info (bilingual message)
 
@@ -841,16 +836,13 @@ Addresses support bilingual content (Arabic and English). You can:
 ## Review Routes
 
 ### Language Support
-Reviews support bilingual content (Arabic and English). You can:
-- **Get reviews in specific language**: Add `?lang=en` or `?lang=ar` to the URL
-- **Get reviews in user's preferred language**: The system uses the user's language preference
-- **Get full bilingual data**: Use `?lang=both` to get both languages
+Reviews no longer support bilingual content. All review comments are stored as simple strings.
 
 ### Review Object
 - `product` (ObjectId, required, reference to Product)
 - `user` (ObjectId, required, reference to User)
 - `rating` (number, required, min: 1, max: 5)
-- `comment` (object, optional, bilingual: `{ en: "English Comment", ar: "Arabic Comment" }`)
+- `comment` (string, required)
 - `createdAt` (date)
 
 ### 1. Add Review
@@ -859,15 +851,13 @@ Reviews support bilingual content (Arabic and English). You can:
 - **Headers:** `Authorization: Bearer <token>`
 - **Body:**
   - `rating` (number, required, min: 1, max: 5)
-  - `comment` (object, optional, bilingual: `{ en: "English Comment", ar: "Arabic Comment" }`)
+  - `comment` (string, required)
 - **Response:**
   - `201 Created`: Review info (bilingual message)
 
 ### 2. Get Product Reviews
 - **GET** `/api/reviews/products/:id/reviews`
-- **GET** `/api/reviews/products/:id/reviews?lang=en` (English only)
-- **GET** `/api/reviews/products/:id/reviews?lang=ar` (Arabic only)
-- **GET** `/api/reviews/products/:id/reviews?lang=both` (Both languages)
+
 - **Description:** Get all reviews for a product (public).
 - **Response:**
   - `200 OK`: List of reviews (bilingual message)
