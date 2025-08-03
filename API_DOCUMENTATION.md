@@ -23,6 +23,7 @@
 |             | GET /api/orders             | No     | Yes           | admin, magnet_employee         |
 | Reviews     | POST /api/reviews/products/:id/reviews  | No     | Yes           | customer                      |
 |             | GET /api/reviews/products/:id/reviews   | Yes    | No            | None                          |
+|             | GET /api/reviews/business-products-reviews | No  | Yes           | business                      |
 |             | DELETE /api/reviews/:id         | No     | Yes           | admin, magnet_employee         |
 | Wishlist    | GET /api/wishlist           | No     | Yes           | customer                      |
 |             | POST /api/wishlist          | No     | Yes           | customer                      |
@@ -871,7 +872,15 @@ Reviews no longer support bilingual content. All review comments are stored as s
 - **Response:**
   - `200 OK`: List of reviews (bilingual message)
 
-### 3. Delete Review
+### 3. Get Business Products Reviews
+- **GET** `/api/reviews/business-products-reviews`
+- **Description:** Get all reviews for products owned by the authenticated business user.
+- **Headers:** `Authorization: Bearer <token>`
+- **Response:**
+  - `200 OK`: List of reviews for the business user's products
+  - **Note:** This endpoint returns reviews for all products owned by the business user, with user and product details.
+
+### 4. Delete Review
 - **DELETE** `/api/reviews/:id`
 - **Description:** Delete a review (admin or magnet_employee only).
 - **Headers:** `Authorization: Bearer <token>`

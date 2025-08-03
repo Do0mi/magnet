@@ -85,4 +85,43 @@ exports.deleteReview = async (req, res) => {
   } catch (err) {
     res.status(500).json({ status: 'error', message: getBilingualMessage('failed_delete_review') });
   }
-}; 
+};
+
+// GET /business-products-reviews
+exports.getBusinessProductsReviews = async (req, res) => {
+  try {
+    // First get all products owned by this business user
+    const Product = require('../models/product-model');
+    const businessProducts = await Product.find({ owner: req.user.id }).select('_id name');
+    
+    if (!businessProducts || businessProducts.length === 0) {
+      return res.status(200).json({ 
+        status: 'success', 
+        data: { reviews: [] },
+        message: getBilingualMessage('no_products_found')
+      });
+    }
+    
+    // Get product IDs
+    const productIds = businessProducts.map(product => product._id);
+    
+    // Find reviews for these products
+    const reviews = await Review.find({
+      product: { $in: productIds }
+    }).populate('user', 'firstname lastname email')
+      .populate('product', 'name');
+    
+    const formattedReviews = reviews.map(review => formatReview(review));
+    
+    res.status(200).json({ 
+      status: 'success', 
+      data: { reviews: formattedReviews },
+      message: getBilingualMessage('business_product_reviews_retrieved')
+    });
+  } catch (err) {
+    res.status(500).json({ 
+      status: 'error', 
+      message: getBilingualMessage('failed_get_business_product_reviews')
+    });
+  }
+};

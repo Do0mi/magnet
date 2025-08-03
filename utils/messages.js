@@ -539,6 +539,16 @@ const messages = {
     en: 'Failed to delete review',
     ar: 'فشل في حذف التقييم'
   },
+  
+  'business_product_reviews_retrieved': {
+    en: 'Business product reviews retrieved successfully',
+    ar: 'تم استرجاع تقييمات منتجات الأعمال بنجاح'
+  },
+  
+  'failed_get_business_product_reviews': {
+    en: 'Failed to get business product reviews',
+    ar: 'فشل في الحصول على تقييمات منتجات الأعمال'
+  },
 
   // Wishlist messages
   'product_not_found_or_not_approved': {
