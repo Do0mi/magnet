@@ -18,6 +18,11 @@ const categorySchema = new mongoose.Schema({
 categorySchema.methods.getLocalizedData = function(language = 'en') {
   const category = this.toObject();
   
+  // If language is 'both', return the bilingual objects as they are
+  if (language === 'both') {
+    return category;
+  }
+  
   // Convert bilingual fields to single language
   if (category.name) {
     category.name = category.name[language] || category.name.en;

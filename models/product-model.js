@@ -77,6 +77,11 @@ productSchema.virtual('descriptionByLang').get(function() {
 productSchema.methods.getLocalizedData = function(language = 'en') {
   const product = this.toObject();
   
+  // If language is 'both', return the bilingual objects as they are
+  if (language === 'both') {
+    return product;
+  }
+  
   // Convert bilingual fields to single language
   if (product.name) {
     product.name = product.name[language] || product.name.en;

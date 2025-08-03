@@ -7,6 +7,11 @@ const formatCategory = (category, language = 'en') => {
   
   const obj = category.toObject ? category.toObject() : category;
   
+  // If language is 'both', return the bilingual objects as they are
+  if (language === 'both') {
+    return obj;
+  }
+  
   // Convert bilingual fields to single language
   if (obj.name) {
     obj.name = obj.name[language] || obj.name.en;

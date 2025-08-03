@@ -48,6 +48,11 @@ const orderSchema = new mongoose.Schema({
 orderSchema.methods.getLocalizedData = function(language = 'en') {
   const order = this.toObject();
   
+  // If language is 'both', return the bilingual objects as they are
+  if (language === 'both') {
+    return order;
+  }
+  
   // Convert bilingual status to single language
   if (order.status) {
     order.status = order.status[language] || order.status.en;
