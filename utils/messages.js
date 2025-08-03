@@ -624,6 +624,21 @@ const messages = {
     ar: 'فشل في الحصول على خيارات الحالة'
   },
   
+  'business_product_orders_retrieved': {
+    en: 'Business product orders retrieved successfully',
+    ar: 'تم استرجاع طلبات منتجات الأعمال بنجاح'
+  },
+  
+  'failed_get_business_product_orders': {
+    en: 'Failed to get business product orders',
+    ar: 'فشل في الحصول على طلبات منتجات الأعمال'
+  },
+  
+  'no_products_found': {
+    en: 'No products found for this business',
+    ar: 'لم يتم العثور على منتجات لهذا العمل'
+  },
+  
   'product_not_found': {
     en: 'Product not found',
     ar: 'المنتج غير موجود'

@@ -2,10 +2,13 @@ const express = require('express');
 const router = express.Router();
 const OrderController = require('../controllers/order-controller');
 const verifyToken = require('../middleware/auth-middleware');
-const { requireAdminOrEmployee, requireCustomer } = require('../middleware/role-middleware');
+const { requireAdminOrEmployee, requireCustomer, requireBusiness } = require('../middleware/role-middleware');
 
 // GET /orders/status-options (Public - anyone can get status options)
 router.get('/status-options', OrderController.getStatusOptions);
+
+// GET /orders/business-products (Business - view orders containing their products)
+router.get('/business-products', verifyToken, requireBusiness, OrderController.getBusinessProductOrders);
 
 // POST /orders (Customer)
 router.post('/', verifyToken, requireCustomer, OrderController.createOrder);

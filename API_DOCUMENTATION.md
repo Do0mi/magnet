@@ -18,6 +18,7 @@
 |             | DELETE /api/categories/:id  | No     | Yes           | business (own), admin, magnet_employee |
 | Orders      | POST /api/orders            | No     | Yes           | customer                      |
 |             | GET /api/orders/my          | No     | Yes           | customer                      |
+|             | GET /api/orders/business-products | No     | Yes           | business                      |
 |             | GET /api/orders/:id         | No     | Yes           | admin, magnet_employee, customer (own) |
 |             | GET /api/orders             | No     | Yes           | admin, magnet_employee         |
 | Reviews     | POST /api/reviews/products/:id/reviews  | No     | Yes           | customer                      |
@@ -747,6 +748,14 @@ Orders support bilingual content (Arabic and English). You can:
       }
     }
     ```
+
+### 7. Get Business Product Orders
+- **GET** `/api/orders/business-products`
+- **Description:** Get all orders containing products owned by the authenticated business user.
+- **Headers:** `Authorization: Bearer <token>`
+- **Response:**
+  - `200 OK`: List of orders containing the business user's products
+  - **Note:** This endpoint returns orders that contain any product owned by the business user, with customer details for order fulfillment.
 
 ---
 

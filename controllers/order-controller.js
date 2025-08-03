@@ -160,4 +160,44 @@ exports.getStatusOptions = async (req, res) => {
   } catch (err) {
     res.status(500).json({ status: 'error', message: getBilingualMessage('failed_get_status_options') });
   }
-}; 
+};
+
+// GET /orders/business-products
+exports.getBusinessProductOrders = async (req, res) => {
+  try {
+    const language = req.query.lang || 'en';
+    
+    // First get all products owned by this business user
+    const Product = require('../models/product-model');
+    const businessProducts = await Product.find({ owner: req.user.id }).select('_id');
+    
+    if (!businessProducts || businessProducts.length === 0) {
+      return res.status(200).json({ 
+        status: 'success', 
+        data: { orders: [] },
+        message: getBilingualMessage('no_products_found')
+      });
+    }
+    
+    // Get product IDs
+    const productIds = businessProducts.map(product => product._id);
+    
+    // Find orders containing any of these products
+    const orders = await Order.find({
+      'items.product': { $in: productIds }
+    }).populate('items.product').populate('customer', 'firstname lastname email phone').populate('shippingAddress');
+    
+    const formattedOrders = orders.map(order => formatOrder(order, language));
+    
+    res.status(200).json({ 
+      status: 'success', 
+      data: { orders: formattedOrders },
+      message: getBilingualMessage('business_product_orders_retrieved')
+    });
+  } catch (err) {
+    res.status(500).json({ 
+      status: 'error', 
+      message: getBilingualMessage('failed_get_business_product_orders')
+    });
+  }
+};
