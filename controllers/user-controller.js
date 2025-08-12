@@ -2,6 +2,7 @@
 const User = require('../models/user-model');
 const { sendBusinessApprovalNotification } = require('../utils/email-utils');
 const { getBilingualMessage } = require('../utils/messages');
+const { formatUser, createResponse } = require('../utils/response-formatters');
 
 // Middleware dependencies (for validation, role checks, etc.) should remain in the route file
 
@@ -11,7 +12,9 @@ exports.getProfile = async (req, res) => {
     if (!user) {
       return res.status(404).json({ status: 'error', message: getBilingualMessage('user_not_found') });
     }
-    res.status(200).json({ status: 'success', data: { user } });
+    res.status(200).json(createResponse('success', { 
+      user: formatUser(user, { includeBusinessInfo: true }) 
+    }));
   } catch (err) {
     console.error('Get profile error:', err);
     res.status(500).json({ status: 'error', message: getBilingualMessage('failed_get_profile') });
@@ -35,7 +38,10 @@ exports.updateProfile = async (req, res) => {
     if (!updatedUser) {
       return res.status(404).json({ status: 'error', message: getBilingualMessage('user_not_found') });
     }
-    res.status(200).json({ status: 'success', message: getBilingualMessage('profile_updated_success'), data: { user: updatedUser } });
+    res.status(200).json(createResponse('success', 
+      { user: formatUser(updatedUser, { includeBusinessInfo: true }) },
+      getBilingualMessage('profile_updated_success')
+    ));
   } catch (err) {
     console.error('Update profile error:', err);
     res.status(500).json({ status: 'error', message: getBilingualMessage('failed_update_profile') });
@@ -53,18 +59,17 @@ exports.getBusinessRequests = async (req, res) => {
       .skip(skip)
       .limit(parseInt(limit));
     const total = await User.countDocuments(query);
-    res.status(200).json({
-      status: 'success',
-      data: {
-        businesses,
-        pagination: {
-          currentPage: parseInt(page),
-          totalPages: Math.ceil(total / limit),
-          totalItems: total,
-          itemsPerPage: parseInt(limit)
-        }
+    const formattedBusinesses = businesses.map(business => formatUser(business, { includeBusinessInfo: true }));
+    res.status(200).json(createResponse('success', {
+      businesses: formattedBusinesses
+    }, null, {
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages: Math.ceil(total / limit),
+        totalItems: total,
+        itemsPerPage: parseInt(limit)
       }
-    });
+    }));
   } catch (err) {
     console.error('Get business requests error:', err);
     res.status(500).json({ status: 'error', message: getBilingualMessage('failed_get_business_requests') });
@@ -96,18 +101,12 @@ exports.businessApproval = async (req, res) => {
       status,
       reason
     );
-    res.status(200).json({
-      status: 'success',
-      message: getBilingualMessage('business_approval_success'),
-      data: {
-        business: {
-          id: business._id,
-          companyName: business.businessInfo.companyName,
-          approvalStatus: business.businessInfo.approvalStatus,
-          isApproved: business.businessInfo.isApproved
-        }
-      }
-    });
+    res.status(200).json(createResponse('success', {
+      business: formatUser(business, { 
+        includeBusinessInfo: true,
+        includeVerification: false 
+      })
+    }, getBilingualMessage('business_approval_success')));
   } catch (err) {
     console.error('Business approval error:', err);
     res.status(500).json({ status: 'error', message: getBilingualMessage('failed_process_business_approval') });
@@ -124,7 +123,9 @@ exports.getBusinessDetails = async (req, res) => {
     if (business.role !== 'business') {
       return res.status(400).json({ status: 'error', message: getBilingualMessage('user_not_business') });
     }
-    res.status(200).json({ status: 'success', data: { business } });
+    res.status(200).json(createResponse('success', { 
+      business: formatUser(business, { includeBusinessInfo: true }) 
+    }));
   } catch (err) {
     console.error('Get business details error:', err);
     res.status(500).json({ status: 'error', message: getBilingualMessage('failed_get_business_details') });
@@ -140,7 +141,9 @@ exports.getBusinessProfile = async (req, res) => {
     if (user.role !== 'business') {
       return res.status(403).json({ status: 'error', message: getBilingualMessage('access_denied_business_profile') });
     }
-    res.status(200).json({ status: 'success', data: { business: user } });
+    res.status(200).json(createResponse('success', { 
+      business: formatUser(user, { includeBusinessInfo: true }) 
+    }));
   } catch (err) {
     console.error('Get business profile error:', err);
     res.status(500).json({ status: 'error', message: getBilingualMessage('failed_get_business_profile') });

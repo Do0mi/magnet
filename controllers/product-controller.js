@@ -2,36 +2,11 @@ const Product = require('../models/product-model');
 const User = require('../models/user-model');
 const generateProductCode = require('../utils/generateProductCode');
 const { getBilingualMessage } = require('../utils/messages');
+const { formatProduct, createResponse } = require('../utils/response-formatters');
 
-// Helper to format product with owner company name and language support
-function formatProduct(product, language = 'en') {
-  const obj = product.toObject();
-  obj.ownerCompanyName = obj.owner && obj.owner.businessInfo ? obj.owner.businessInfo.companyName : null;
-  delete obj.owner;
-  
-  // Convert bilingual fields to single language if language is specified
-  if (language && language !== 'both') {
-    if (obj.name) {
-      obj.name = obj.name[language] || obj.name.en;
-    }
-    if (obj.description) {
-      obj.description = obj.description[language] || obj.description.en;
-    }
-    if (obj.category) {
-      obj.category = obj.category[language] || obj.category.en;
-    }
-    if (obj.unit) {
-      obj.unit = obj.unit[language] || obj.unit.en;
-    }
-    if (obj.customFields) {
-      obj.customFields = obj.customFields.map(field => ({
-        key: field.key[language] || field.key.en,
-        value: field.value[language] || field.value.en
-      }));
-    }
-  }
-  
-  return obj;
+// Legacy formatProduct function - now using the one from response-formatters
+function legacyFormatProduct(product, language = 'en') {
+  return formatProduct(product, { language });
 }
 
 // GET /products
@@ -46,8 +21,8 @@ exports.getProducts = async (req, res) => {
       products = await Product.find({ status: 'approved' }).populate('owner', 'email businessInfo.companyName');
     }
     
-    const formattedProducts = products.map(product => formatProduct(product, language));
-    res.status(200).json({ status: 'success', data: { products: formattedProducts } });
+    const formattedProducts = products.map(product => formatProduct(product, { language }));
+    res.status(200).json(createResponse('success', { products: formattedProducts }));
   } catch (err) {
     res.status(500).json({ status: 'error', message: getBilingualMessage('failed_get_products') });
   }
@@ -74,8 +49,8 @@ exports.getProductById = async (req, res) => {
       return res.status(403).json({ status: 'error', message: getBilingualMessage('product_access_denied') });
     }
     
-    const formattedProduct = formatProduct(product, language);
-    res.status(200).json({ status: 'success', data: { product: formattedProduct } });
+    const formattedProduct = formatProduct(product, { language });
+    res.status(200).json(createResponse('success', { product: formattedProduct }));
   } catch (err) {
     res.status(500).json({ status: 'error', message: getBilingualMessage('failed_get_product') });
   }
@@ -141,11 +116,10 @@ exports.addProductsByBusiness = async (req, res) => {
     });
     
     await product.save();
-    res.status(201).json({ 
-      status: 'success', 
-      message: getBilingualMessage('product_added_pending_approval'), 
-      data: { product: formatProduct(product, req.user.language || 'en') } 
-    });
+    res.status(201).json(createResponse('success', 
+      { product: formatProduct(product, { language: req.user.language || 'en' }) },
+      getBilingualMessage('product_added_pending_approval')
+    ));
   } catch (err) {
     console.error('Add Product Error:', err);
     res.status(500).json({ status: 'error', message: getBilingualMessage('failed_add_product') });
@@ -212,11 +186,10 @@ exports.addProductsByMagnetEmployee = async (req, res) => {
     });
     
     await product.save();
-    res.status(201).json({ 
-      status: 'success', 
-      message: getBilingualMessage('product_added_and_approved'), 
-      data: { product: formatProduct(product, req.user.language || 'en') } 
-    });
+    res.status(201).json(createResponse('success', 
+      { product: formatProduct(product, { language: req.user.language || 'en' }) },
+      getBilingualMessage('product_added_and_approved')
+    ));
   } catch (err) {
     res.status(500).json({ status: 'error', message: getBilingualMessage('failed_add_product') });
   }
@@ -261,7 +234,10 @@ exports.updateProduct = async (req, res) => {
     if (attachments) product.attachments = attachments;
     product.updatedAt = new Date();
     await product.save();
-    res.status(200).json({ status: 'success', message: getBilingualMessage('product_updated'), data: { product: formatProduct(product) } });
+    res.status(200).json(createResponse('success', 
+      { product: formatProduct(product) },
+      getBilingualMessage('product_updated')
+    ));
   } catch (err) {
     res.status(500).json({ status: 'error', message: getBilingualMessage('failed_update_product') });
   }
@@ -280,7 +256,7 @@ exports.deleteProduct = async (req, res) => {
       return res.status(403).json({ status: 'error', message: getBilingualMessage('not_authorized_delete_product') });
     }
     await product.deleteOne();
-    res.status(200).json({ status: 'success', message: getBilingualMessage('product_deleted') });
+    res.status(200).json(createResponse('success', null, getBilingualMessage('product_deleted')));
   } catch (err) {
     res.status(500).json({ status: 'error', message: getBilingualMessage('failed_delete_product') });
   }
@@ -298,7 +274,10 @@ exports.approveProduct = async (req, res) => {
     product.approvedBy = req.user.id;
     product.updatedAt = new Date();
     await product.save();
-    res.status(200).json({ status: 'success', message: getBilingualMessage('product_approved'), data: { product: formatProduct(product) } });
+    res.status(200).json(createResponse('success', 
+      { product: formatProduct(product) },
+      getBilingualMessage('product_approved')
+    ));
   } catch (err) {
     res.status(500).json({ status: 'error', message: getBilingualMessage('failed_approve_product') });
   }
@@ -316,7 +295,10 @@ exports.declineProduct = async (req, res) => {
     product.approvedBy = req.user.id;
     product.updatedAt = new Date();
     await product.save();
-    res.status(200).json({ status: 'success', message: getBilingualMessage('product_declined'), data: { product: formatProduct(product) } });
+    res.status(200).json(createResponse('success', 
+      { product: formatProduct(product) },
+      getBilingualMessage('product_declined')
+    ));
   } catch (err) {
     res.status(500).json({ status: 'error', message: getBilingualMessage('failed_decline_product') });
   }

@@ -1,26 +1,10 @@
 const Category = require('../models/category-model');
 const { getBilingualMessage } = require('../utils/messages');
+const { formatCategory, createResponse } = require('../utils/response-formatters');
 
-// Helper function to format category data with localization
-const formatCategory = (category, language = 'en') => {
-  if (!category) return category;
-  
-  const obj = category.toObject ? category.toObject() : category;
-  
-  // If language is 'both', return the bilingual objects as they are
-  if (language === 'both') {
-    return obj;
-  }
-  
-  // Convert bilingual fields to single language
-  if (obj.name) {
-    obj.name = obj.name[language] || obj.name.en;
-  }
-  if (obj.description) {
-    obj.description = obj.description[language] || obj.description.en;
-  }
-  
-  return obj;
+// Legacy formatCategory function - now using the one from response-formatters
+const legacyFormatCategory = (category, language = 'en') => {
+  return formatCategory(category, { language });
 };
 
 // GET /categories
@@ -29,9 +13,9 @@ exports.getCategories = async (req, res) => {
     const language = req.query.lang || 'en';
     const categories = await Category.find();
     
-    const formattedCategories = categories.map(category => formatCategory(category, language));
+    const formattedCategories = categories.map(category => formatCategory(category, { language }));
     
-    res.status(200).json({ status: 'success', data: { categories: formattedCategories } });
+    res.status(200).json(createResponse('success', { categories: formattedCategories }));
   } catch (err) {
     res.status(500).json({ status: 'error', message: getBilingualMessage('failed_get_categories') });
   }
@@ -59,9 +43,12 @@ exports.createCategory = async (req, res) => {
     await category.save();
     
     const language = req.query.lang || 'en';
-    const formattedCategory = formatCategory(category, language);
+    const formattedCategory = formatCategory(category, { language });
     
-    res.status(201).json({ status: 'success', message: getBilingualMessage('category_created'), data: { category: formattedCategory } });
+    res.status(201).json(createResponse('success', 
+      { category: formattedCategory },
+      getBilingualMessage('category_created')
+    ));
   } catch (err) {
     res.status(500).json({ status: 'error', message: getBilingualMessage('failed_create_category') });
   }
@@ -94,9 +81,12 @@ exports.updateCategory = async (req, res) => {
     await category.save();
     
     const language = req.query.lang || 'en';
-    const formattedCategory = formatCategory(category, language);
+    const formattedCategory = formatCategory(category, { language });
     
-    res.status(200).json({ status: 'success', message: getBilingualMessage('category_updated'), data: { category: formattedCategory } });
+    res.status(200).json(createResponse('success', 
+      { category: formattedCategory },
+      getBilingualMessage('category_updated')
+    ));
   } catch (err) {
     res.status(500).json({ status: 'error', message: getBilingualMessage('failed_update_category') });
   }
@@ -112,7 +102,7 @@ exports.deleteCategory = async (req, res) => {
       return res.status(403).json({ status: 'error', message: getBilingualMessage('not_authorized_delete_category') });
     }
     await category.deleteOne();
-    res.status(200).json({ status: 'success', message: getBilingualMessage('category_deleted') });
+    res.status(200).json(createResponse('success', null, getBilingualMessage('category_deleted')));
   } catch (err) {
     res.status(500).json({ status: 'error', message: getBilingualMessage('failed_delete_category') });
   }

@@ -5,6 +5,7 @@ const bcrypt = require('bcryptjs');
 const { generateVerificationCode, sendVerificationEmail, generateOTP, sendOTPEmail, sendBusinessUnderReviewNotification } = require('../utils/email-utils');
 const { generateSMSVerificationCode, sendSMSVerificationCode, generateOTP: generateSMSOTP, sendOTPSMS } = require('../utils/sms-utils');
 const { getBilingualMessage } = require('../utils/messages');
+const { formatUser, createResponse } = require('../utils/response-formatters');
 const crypto = require('crypto');
 
 // In-memory OTP store (for demo; use Redis or similar in production)
@@ -65,26 +66,10 @@ exports.register = async (req, res) => {
     });
     await newUser.save();
     const token = generateToken(newUser);
-    res.status(201).json({
-      status: 'success',
-      message: getBilingualMessage('user_registered_successfully'),
-      data: {
-        user: {
-          id: newUser._id,
-          firstname: newUser.firstname,
-          lastname: newUser.lastname,
-          email: newUser.email,
-          phone: newUser.phone,
-          role: newUser.role,
-          country: newUser.country,
-          language: newUser.language,
-          imageUrl: newUser.imageUrl,
-          isEmailVerified: newUser.isEmailVerified,
-          isPhoneVerified: newUser.isPhoneVerified
-        },
-        token
-      }
-    });
+    res.status(201).json(createResponse('success', {
+      user: formatUser(newUser, { includeBusinessInfo: false }),
+      token
+    }, getBilingualMessage('user_registered_successfully')));
   } catch (err) {
     console.error('Register error:', err);
     res.status(500).json({ status: 'error', message: getBilingualMessage('registration_failed') });
@@ -134,17 +119,12 @@ exports.businessRegister = async (req, res) => {
     });
     await newBusiness.save();
     await sendBusinessUnderReviewNotification(email, companyName);
-    res.status(201).json({
-      status: 'success',
-      message: getBilingualMessage('business_registration_submitted'),
-      data: {
-        business: {
-          id: newBusiness._id,
-          companyName: newBusiness.businessInfo.companyName,
-          approvalStatus: newBusiness.businessInfo.approvalStatus
-        }
-      }
-    });
+    res.status(201).json(createResponse('success', {
+      business: formatUser(newBusiness, { 
+        includeVerification: false,
+        includeBusinessInfo: true 
+      })
+    }, getBilingualMessage('business_registration_submitted')));
   } catch (err) {
     console.error('Business register error:', err);
     res.status(500).json({ status: 'error', message: getBilingualMessage('business_registration_failed') });
@@ -234,27 +214,10 @@ exports.login = async (req, res) => {
       return res.status(401).json({ status: 'error', message: getBilingualMessage('invalid_credentials') });
     }
     const token = generateToken(user);
-    res.status(200).json({
-      status: 'success',
-      message: getBilingualMessage('login_successful'),
-      data: {
-        user: {
-          id: user._id,
-          firstname: user.firstname,
-          lastname: user.lastname,
-          email: user.email,
-          phone: user.phone,
-          role: user.role,
-          country: user.country,
-          language: user.language,
-          imageUrl: user.imageUrl,
-          isEmailVerified: user.isEmailVerified,
-          isPhoneVerified: user.isPhoneVerified,
-          businessInfo: user.businessInfo
-        },
-        token
-      }
-    });
+    res.status(200).json(createResponse('success', {
+      user: formatUser(user, { includeBusinessInfo: true }),
+      token
+    }, getBilingualMessage('login_successful')));
   } catch (err) {
     console.error('Login error:', err);
     res.status(500).json({ status: 'error', message: getBilingualMessage('login_failed') });
@@ -341,27 +304,10 @@ exports.confirmLoginOTP = async (req, res) => {
     user[otpField] = null;
     await user.save();
     const token = generateToken(user);
-    res.status(200).json({
-      status: 'success',
-      message: getBilingualMessage('email_phone_verified_login'),
-      data: {
-        user: {
-          id: user._id,
-          firstname: user.firstname,
-          lastname: user.lastname,
-          email: user.email,
-          phone: user.phone,
-          role: user.role,
-          country: user.country,
-          language: user.language,
-          imageUrl: user.imageUrl,
-          isEmailVerified: user.isEmailVerified,
-          isPhoneVerified: user.isPhoneVerified,
-          businessInfo: user.businessInfo
-        },
-        token
-      }
-    });
+    res.status(200).json(createResponse('success', {
+      user: formatUser(user, { includeBusinessInfo: true }),
+      token
+    }, getBilingualMessage('email_phone_verified_login')));
   } catch (err) {
     console.error('Confirm Login OTP error:', err);
     res.status(500).json({ status: 'error', message: getBilingualMessage('otp_confirmation_failed') });
@@ -420,24 +366,9 @@ exports.createAdminUser = async (req, res) => {
 
     await newAdmin.save();
 
-    res.status(201).json({
-      status: 'success',
-      message: getBilingualMessage('admin_user_created_successfully'),
-      data: {
-        admin: {
-          id: newAdmin._id,
-          firstname: newAdmin.firstname,
-          lastname: newAdmin.lastname,
-          email: newAdmin.email,
-          phone: newAdmin.phone,
-          role: newAdmin.role,
-          country: newAdmin.country,
-          language: newAdmin.language,
-          isEmailVerified: newAdmin.isEmailVerified,
-          isPhoneVerified: newAdmin.isPhoneVerified
-        }
-      }
-    });
+    res.status(201).json(createResponse('success', {
+      admin: formatUser(newAdmin, { includeBusinessInfo: false })
+    }, getBilingualMessage('admin_user_created_successfully')));
   } catch (err) {
     console.error('Create admin user error:', err);
     res.status(500).json({ 
@@ -499,24 +430,9 @@ exports.createMagnetEmployeeUser = async (req, res) => {
 
     await newEmployee.save();
 
-    res.status(201).json({
-      status: 'success',
-      message: getBilingualMessage('magnet_employee_created_successfully'),
-      data: {
-        employee: {
-          id: newEmployee._id,
-          firstname: newEmployee.firstname,
-          lastname: newEmployee.lastname,
-          email: newEmployee.email,
-          phone: newEmployee.phone,
-          role: newEmployee.role,
-          country: newEmployee.country,
-          language: newEmployee.language,
-          isEmailVerified: newEmployee.isEmailVerified,
-          isPhoneVerified: newEmployee.isPhoneVerified
-        }
-      }
-    });
+    res.status(201).json(createResponse('success', {
+      employee: formatUser(newEmployee, { includeBusinessInfo: false })
+    }, getBilingualMessage('magnet_employee_created_successfully')));
   } catch (err) {
     console.error('Create magnet employee user error:', err);
     res.status(500).json({ 

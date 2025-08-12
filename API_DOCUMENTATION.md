@@ -925,8 +925,8 @@ Reviews no longer support bilingual content. All review comments are stored as s
 - **Headers:** `Authorization: Bearer <token>`
 - **Body:**
   - `businessId` (string, required)
-  - `action` (string, required, enum: 'approve', 'reject')
-  - `reason` (string, optional, required if action is 'reject')
+  - `status` (string, required, enum: 'approved', 'rejected')
+  - `reason` (string, optional, required if status is 'rejected')
 - **Response:**
   - `200 OK`: Business approval status updated (bilingual message)
 

@@ -1,10 +1,10 @@
 const Address = require('../models/address-model');
 const { getBilingualMessage } = require('../utils/messages');
+const { formatAddress, createResponse } = require('../utils/response-formatters');
 
-// Helper function to format address data
-const formatAddress = (address) => {
-  if (!address) return address;
-  return address.toObject ? address.toObject() : address;
+// Legacy formatAddress function - now using the one from response-formatters
+const legacyFormatAddress = (address) => {
+  return formatAddress(address);
 };
 
 // GET /addresses
@@ -14,7 +14,7 @@ exports.getAddresses = async (req, res) => {
     
     const formattedAddresses = addresses.map(address => formatAddress(address));
     
-    res.status(200).json({ status: 'success', data: { addresses: formattedAddresses } });
+    res.status(200).json(createResponse('success', { addresses: formattedAddresses }));
   } catch (err) {
     res.status(500).json({ status: 'error', message: getBilingualMessage('failed_get_addresses') });
   }
@@ -55,7 +55,10 @@ exports.addAddress = async (req, res) => {
     
     const formattedAddress = formatAddress(address);
     
-    res.status(201).json({ status: 'success', message: getBilingualMessage('address_added'), data: { address: formattedAddress } });
+    res.status(201).json(createResponse('success', 
+      { address: formattedAddress },
+      getBilingualMessage('address_added')
+    ));
   } catch (err) {
     res.status(500).json({ status: 'error', message: getBilingualMessage('failed_add_address') });
   }
@@ -83,7 +86,10 @@ exports.updateAddress = async (req, res) => {
     
     const formattedAddress = formatAddress(address);
     
-    res.status(200).json({ status: 'success', message: getBilingualMessage('address_updated'), data: { address: formattedAddress } });
+    res.status(200).json(createResponse('success', 
+      { address: formattedAddress },
+      getBilingualMessage('address_updated')
+    ));
   } catch (err) {
     res.status(500).json({ status: 'error', message: getBilingualMessage('failed_update_address') });
   }
@@ -97,7 +103,7 @@ exports.deleteAddress = async (req, res) => {
       return res.status(404).json({ status: 'error', message: getBilingualMessage('address_not_found') });
     }
     await address.deleteOne();
-    res.status(200).json({ status: 'success', message: getBilingualMessage('address_deleted') });
+    res.status(200).json(createResponse('success', null, getBilingualMessage('address_deleted')));
   } catch (err) {
     res.status(500).json({ status: 'error', message: getBilingualMessage('failed_delete_address') });
   }

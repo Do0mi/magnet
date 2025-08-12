@@ -1,9 +1,10 @@
 const Order = require('../models/order-model');
 const Product = require('../models/product-model');
 const { getBilingualMessage } = require('../utils/messages');
+const { formatOrder, createResponse } = require('../utils/response-formatters');
 
-// Helper function to format order data with localization
-const formatOrder = (order, language = 'en') => {
+// Legacy formatOrder function - now using the one from response-formatters
+const legacyFormatOrder = (order, language = 'en') => {
   if (!order) return order;
   
   // Use the model's built-in localization method
@@ -32,9 +33,12 @@ exports.createOrder = async (req, res) => {
     await order.save();
     
     const language = req.query.lang || 'en';
-    const formattedOrder = formatOrder(order, language);
+    const formattedOrder = formatOrder(order, { language });
     
-    res.status(201).json({ status: 'success', message: getBilingualMessage('order_created'), data: { order: formattedOrder } });
+    res.status(201).json(createResponse('success', 
+      { order: formattedOrder },
+      getBilingualMessage('order_created')
+    ));
   } catch (err) {
     res.status(500).json({ status: 'error', message: getBilingualMessage('failed_create_order') });
   }
@@ -46,9 +50,9 @@ exports.getMyOrders = async (req, res) => {
     const language = req.query.lang || 'en';
     const orders = await Order.find({ customer: req.user.id }).populate('items.product').populate('shippingAddress');
     
-    const formattedOrders = orders.map(order => formatOrder(order, language));
+    const formattedOrders = orders.map(order => formatOrder(order, { language }));
     
-    res.status(200).json({ status: 'success', data: { orders: formattedOrders } });
+    res.status(200).json(createResponse('success', { orders: formattedOrders }));
   } catch (err) {
     res.status(500).json({ status: 'error', message: getBilingualMessage('failed_get_orders') });
   }
@@ -65,9 +69,9 @@ exports.getOrderById = async (req, res) => {
       return res.status(403).json({ status: 'error', message: getBilingualMessage('not_authorized_view_order') });
     }
     
-    const formattedOrder = formatOrder(order, language);
+    const formattedOrder = formatOrder(order, { language });
     
-    res.status(200).json({ status: 'success', data: { order: formattedOrder } });
+    res.status(200).json(createResponse('success', { order: formattedOrder }));
   } catch (err) {
     res.status(500).json({ status: 'error', message: getBilingualMessage('failed_get_order') });
   }
@@ -79,9 +83,9 @@ exports.getAllOrders = async (req, res) => {
     const language = req.query.lang || 'en';
     const orders = await Order.find().populate('items.product').populate('shippingAddress');
     
-    const formattedOrders = orders.map(order => formatOrder(order, language));
+    const formattedOrders = orders.map(order => formatOrder(order, { language }));
     
-    res.status(200).json({ status: 'success', data: { orders: formattedOrders } });
+    res.status(200).json(createResponse('success', { orders: formattedOrders }));
   } catch (err) {
     res.status(500).json({ status: 'error', message: getBilingualMessage('failed_get_orders') });
   }
@@ -123,9 +127,12 @@ exports.updateOrderStatus = async (req, res) => {
     });
     
     const language = req.query.lang || 'en';
-    const formattedOrder = formatOrder(order, language); // This will localize the status for the response
+    const formattedOrder = formatOrder(order, { language }); // This will localize the status for the response
     
-    res.status(200).json({ status: 'success', message: getBilingualMessage('order_status_updated'), data: { order: formattedOrder } });
+    res.status(200).json(createResponse('success', 
+      { order: formattedOrder },
+      getBilingualMessage('order_status_updated')
+    ));
   } catch (err) {
     res.status(500).json({ status: 'error', message: getBilingualMessage('failed_update_order_status') });
   }
@@ -148,15 +155,11 @@ exports.getStatusOptions = async (req, res) => {
       }, {});
     }
     
-    res.status(200).json({ 
-      status: 'success', 
-      data: { 
-        statusOptions,
-        statusEnums, // Include the enums for reference
-        validEnglishStatuses: Order.getValidEnglishStatuses()
-      },
-      message: getBilingualMessage('status_options_retrieved')
-    });
+    res.status(200).json(createResponse('success', { 
+      statusOptions,
+      statusEnums, // Include the enums for reference
+      validEnglishStatuses: Order.getValidEnglishStatuses()
+    }, getBilingualMessage('status_options_retrieved')));
   } catch (err) {
     res.status(500).json({ status: 'error', message: getBilingualMessage('failed_get_status_options') });
   }
@@ -172,11 +175,10 @@ exports.getBusinessProductOrders = async (req, res) => {
     const businessProducts = await Product.find({ owner: req.user.id }).select('_id');
     
     if (!businessProducts || businessProducts.length === 0) {
-      return res.status(200).json({ 
-        status: 'success', 
-        data: { orders: [] },
-        message: getBilingualMessage('no_products_found')
-      });
+      return res.status(200).json(createResponse('success', 
+        { orders: [] },
+        getBilingualMessage('no_products_found')
+      ));
     }
     
     // Get product IDs
@@ -187,13 +189,12 @@ exports.getBusinessProductOrders = async (req, res) => {
       'items.product': { $in: productIds }
     }).populate('items.product').populate('customer', 'firstname lastname email phone').populate('shippingAddress');
     
-    const formattedOrders = orders.map(order => formatOrder(order, language));
+    const formattedOrders = orders.map(order => formatOrder(order, { language }));
     
-    res.status(200).json({ 
-      status: 'success', 
-      data: { orders: formattedOrders },
-      message: getBilingualMessage('business_product_orders_retrieved')
-    });
+    res.status(200).json(createResponse('success', 
+      { orders: formattedOrders },
+      getBilingualMessage('business_product_orders_retrieved')
+    ));
   } catch (err) {
     res.status(500).json({ 
       status: 'error', 

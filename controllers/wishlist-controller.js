@@ -1,12 +1,13 @@
 const Wishlist = require('../models/wishlist-model');
 const Product = require('../models/product-model');
 const { getBilingualMessage } = require('../utils/messages');
+const { createResponse } = require('../utils/response-formatters');
 
 // GET /wishlist
 exports.getWishlist = async (req, res) => {
   try {
     const wishlist = await Wishlist.findOne({ user: req.user.id }).populate('products');
-    res.status(200).json({ status: 'success', data: { wishlist: wishlist ? wishlist.products : [] } });
+    res.status(200).json(createResponse('success', { wishlist: wishlist ? wishlist.products : [] }));
   } catch (err) {
     res.status(500).json({ status: 'error', message: getBilingualMessage('failed_get_favourites') });
   }
@@ -30,7 +31,10 @@ exports.addToWishlist = async (req, res) => {
       wishlist.products.push(productId);
     }
     await wishlist.save();
-    res.status(200).json({ status: 'success', message: getBilingualMessage('product_added_favourites'), data: { wishlist: wishlist.products } });
+    res.status(200).json(createResponse('success', 
+      { wishlist: wishlist.products },
+      getBilingualMessage('product_added_favourites')
+    ));
   } catch (err) {
     res.status(500).json({ status: 'error', message: getBilingualMessage('failed_add_favourites') });
   }
@@ -46,7 +50,10 @@ exports.removeFromWishlist = async (req, res) => {
     }
     wishlist.products = wishlist.products.filter(pid => pid.toString() !== productId);
     await wishlist.save();
-    res.status(200).json({ status: 'success', message: getBilingualMessage('product_removed_favourites'), data: { wishlist: wishlist.products } });
+    res.status(200).json(createResponse('success', 
+      { wishlist: wishlist.products },
+      getBilingualMessage('product_removed_favourites')
+    ));
   } catch (err) {
     res.status(500).json({ status: 'error', message: getBilingualMessage('failed_remove_favourites') });
   }
