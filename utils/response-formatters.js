@@ -38,6 +38,16 @@ const formatUser = (user, options = {}) => {
   if (includeVerification) {
     formatted.isEmailVerified = user.isEmailVerified;
     formatted.isPhoneVerified = user.isPhoneVerified;
+    formatted.isDisallowed = user.isDisallowed;
+    if (user.isDisallowed) {
+      formatted.disallowReason = user.disallowReason;
+      formatted.disallowedBy = user.disallowedBy;
+      formatted.disallowedAt = user.disallowedAt;
+    }
+    if (user.allowedBy) {
+      formatted.allowedBy = user.allowedBy;
+      formatted.allowedAt = user.allowedAt;
+    }
   }
 
   if (includeBusinessInfo && user.businessInfo) {

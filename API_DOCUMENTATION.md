@@ -38,6 +38,14 @@
 |             | POST /api/user/business-approval | No | Yes           | admin, magnet_employee         |
 |             | GET /api/user/business/:businessId | No | Yes         | admin, magnet_employee         |
 |             | GET /api/user/business-profile | No | Yes           | business, admin, magnet_employee |
+| Admin       | POST /api/admin/users       | No     | Yes           | admin                         |
+|             | GET /api/admin/users        | No     | Yes           | admin                         |
+|             | GET /api/admin/users/stats  | No     | Yes           | admin                         |
+|             | GET /api/admin/users/:id    | No     | Yes           | admin                         |
+|             | PUT /api/admin/users/:id    | No     | Yes           | admin                         |
+|             | DELETE /api/admin/users/:id | No     | Yes           | admin                         |
+|             | PUT /api/admin/users/:id/disallow | No | Yes       | admin                         |
+|             | PUT /api/admin/users/:id/allow | No | Yes         | admin                         |
 | Auth        | Registration/Login/OTP      | Yes    | No            | None                          |
 |             | Forgot Password             | No     | Yes           | Any authenticated user         |
 
@@ -146,6 +154,20 @@ This applies to both customer and business registration.
 ### Review Validation
 - **Rating**: Required number, min: 1, max: 5
 - **Comment**: Required string
+
+### Admin User Management Validation
+- **Role**: Must be one of: 'admin', 'magnet_employee', 'business', 'customer'
+- **Business Info**: Required for business users
+  - **CR Number**: 1-50 characters, required for business users
+  - **VAT Number**: 1-50 characters, required for business users
+  - **Company Name**: 2-100 characters, required for business users
+  - **Company Type**: 2-100 characters, required for business users
+  - **City**: 2-50 characters, required for business users
+  - **District**: 2-50 characters, required for business users
+  - **Street Name**: 2-100 characters, required for business users
+- **Disallow Reason**: Required when disallowing a user
+- **Self-Protection**: Admins cannot disallow or delete their own accounts
+- **Admin Protection**: Admin users cannot be disallowed by other admins
 
 ### Order Validation
 - **Customer**: Required user ID
@@ -549,6 +571,15 @@ The user model includes several advanced features:
 - **Automatic Verification**: Saudi phone numbers are automatically verified
 - **Manual Verification**: Other verification methods available
 
+#### User Disallowance System
+- **Account Disallowance**: Admins can disallow users from logging in and performing actions
+- **Disallowance Tracking**: Track who disallowed a user, when, and the reason
+- **Allowance Tracking**: Track who allowed a user and when
+- **Login Prevention**: Disallowed users cannot login or perform any actions
+- **Business Action Prevention**: Disallowed business users cannot add products
+- **Self-Protection**: Admins cannot disallow their own accounts
+- **Admin Protection**: Admin users cannot be disallowed by other admins
+
 ### Bilingual Message System
 The API includes a comprehensive bilingual message system:
 
@@ -581,10 +612,19 @@ The API includes a robust authentication and authorization system:
 - **Secure**: Uses environment variables for secret keys
 
 #### Role-Based Access Control
-- **Admin**: Full system access
+- **Admin**: Full system access including user management
 - **Magnet Employee**: Limited admin access
 - **Business**: Business-specific features
 - **Customer**: Customer-specific features
+
+#### Admin User Management
+- **User Creation**: Admins can create any type of user (customer, business, magnet_employee, admin)
+- **User Management**: Complete CRUD operations on all users
+- **User Statistics**: Comprehensive user statistics and analytics
+- **User Disallowance**: Ability to disallow users from accessing the system
+- **User Allowance**: Ability to re-allow previously disallowed users
+- **Audit Trail**: Complete tracking of disallowance/allowance actions
+- **Security Protections**: Self-protection and admin protection mechanisms
 
 #### Middleware System
 - **Auth Middleware**: Verifies JWT tokens
@@ -943,3 +983,138 @@ Reviews no longer support bilingual content. All review comments are stored as s
 - **Headers:** `Authorization: Bearer <token>`
 - **Response:**
   - `200 OK`: Business profile info (bilingual message)
+
+---
+
+## Admin Routes
+
+### Overview
+Admin routes provide comprehensive user management functionality for system administrators. All admin endpoints require authentication and admin role authorization.
+
+### 1. Create User
+- **POST** `/api/admin/users`
+- **Description:** Create any type of user (customer, business, magnet_employee, admin).
+- **Headers:** `Authorization: Bearer <token>`
+- **Body:**
+  - `firstname` (string, required)
+  - `lastname` (string, required)
+  - `email` (string, required)
+  - `phone` (string, optional)
+  - `password` (string, required)
+  - `role` (string, required, enum: 'customer', 'business', 'magnet_employee', 'admin')
+  - `country` (string, required)
+  - `language` (string, optional, default: 'en')
+  - `businessInfo` (object, required if role is 'business')
+    - `crNumber` (string, required for business)
+    - `vatNumber` (string, required for business)
+    - `companyName` (string, required for business)
+    - `companyType` (string, required for business)
+    - `city` (string, required for business)
+    - `district` (string, required for business)
+    - `streetName` (string, required for business)
+- **Response:**
+  - `201 Created`: User created successfully (bilingual message)
+  - `400 Bad Request`: Validation errors (bilingual message)
+  - `403 Forbidden`: Insufficient permissions (bilingual message)
+
+### 2. Get All Users
+- **GET** `/api/admin/users`
+- **Description:** Get all users with pagination, filtering, and search capabilities.
+- **Headers:** `Authorization: Bearer <token>`
+- **Query Parameters:**
+  - `page` (number, optional, default: 1)
+  - `limit` (number, optional, default: 10)
+  - `role` (string, optional, filter by role)
+  - `search` (string, optional, search by name, email, or phone)
+  - `status` (string, optional, filter by disallow status: 'allowed', 'disallowed')
+- **Response:**
+  - `200 OK`: List of users with pagination info (bilingual message)
+
+### 3. Get User Statistics
+- **GET** `/api/admin/users/stats`
+- **Description:** Get comprehensive user statistics for the admin dashboard.
+- **Headers:** `Authorization: Bearer <token>`
+- **Response:**
+  - `200 OK`: User statistics including counts by role, verification status, etc. (bilingual message)
+
+### 4. Get User by ID
+- **GET** `/api/admin/users/:id`
+- **Description:** Get detailed information about a specific user.
+- **Headers:** `Authorization: Bearer <token>`
+- **Response:**
+  - `200 OK`: User details (bilingual message)
+  - `404 Not Found`: User not found (bilingual message)
+
+### 5. Update User
+- **PUT** `/api/admin/users/:id`
+- **Description:** Update user information (cannot update own account).
+- **Headers:** `Authorization: Bearer <token>`
+- **Body:**
+  - Any user field (see create user for field list)
+- **Response:**
+  - `200 OK`: User updated successfully (bilingual message)
+  - `400 Bad Request`: Validation errors (bilingual message)
+  - `404 Not Found`: User not found (bilingual message)
+
+### 6. Delete User
+- **DELETE** `/api/admin/users/:id`
+- **Description:** Permanently delete a user (cannot delete own account).
+- **Headers:** `Authorization: Bearer <token>`
+- **Response:**
+  - `200 OK`: User deleted successfully (bilingual message)
+  - `400 Bad Request`: Cannot delete own account (bilingual message)
+  - `404 Not Found`: User not found (bilingual message)
+
+### 7. Disallow User
+- **PUT** `/api/admin/users/:id/disallow`
+- **Description:** Disallow a user from logging in and performing actions.
+- **Headers:** `Authorization: Bearer <token>`
+- **Body:**
+  - `reason` (string, required) - Reason for disallowing the user
+- **Response:**
+  - `200 OK`: User disallowed successfully (bilingual message)
+  - `400 Bad Request`: Cannot disallow admin or own account (bilingual message)
+  - `404 Not Found`: User not found (bilingual message)
+
+### 8. Allow User
+- **PUT** `/api/admin/users/:id/allow`
+- **Description:** Allow a previously disallowed user to login and perform actions.
+- **Headers:** `Authorization: Bearer <token>`
+- **Response:**
+  - `200 OK`: User allowed successfully (bilingual message)
+  - `400 Bad Request`: User is not disallowed (bilingual message)
+  - `404 Not Found`: User not found (bilingual message)
+
+### Admin User Object
+- `id` (ObjectId)
+- `firstname` (string)
+- `lastname` (string)
+- `email` (string)
+- `phone` (string, optional)
+- `role` (string, enum: 'admin', 'magnet_employee', 'business', 'customer')
+- `country` (string)
+- `language` (string, enum: 'en', 'ar')
+- `imageUrl` (string, optional)
+- `isEmailVerified` (boolean)
+- `isPhoneVerified` (boolean)
+- `isDisallowed` (boolean)
+- `disallowReason` (string, if disallowed)
+- `disallowedBy` (ObjectId, reference to admin who disallowed)
+- `disallowedAt` (Date, if disallowed)
+- `allowedBy` (ObjectId, reference to admin who allowed)
+- `allowedAt` (Date, if allowed)
+- `businessInfo` (object, for business users)
+  - `crNumber` (string)
+  - `vatNumber` (string)
+  - `companyName` (string)
+  - `companyType` (string)
+  - `city` (string)
+  - `district` (string)
+  - `streetName` (string)
+  - `isApproved` (boolean)
+  - `approvalStatus` (string, enum: 'pending', 'approved', 'rejected')
+  - `approvedBy` (ObjectId)
+  - `approvedAt` (Date)
+  - `rejectionReason` (string, if rejected)
+- `createdAt` (Date)
+- `updatedAt` (Date)

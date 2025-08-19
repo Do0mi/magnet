@@ -660,6 +660,252 @@ const messages = {
   'failed_get_product': {
     en: 'Failed to get product',
     ar: 'فشل في الحصول على المنتج'
+  },
+  
+  // Admin messages
+  'insufficient_permissions': {
+    en: 'Insufficient permissions to perform this action',
+    ar: 'صلاحيات غير كافية لتنفيذ هذا الإجراء'
+  },
+  'account_disallowed': {
+    en: 'Your account has been disallowed. Please contact support.',
+    ar: 'تم منع حسابك. يرجى الاتصال بالدعم.'
+  },
+  'user_created_successfully': {
+    en: 'User created successfully',
+    ar: 'تم إنشاء المستخدم بنجاح'
+  },
+  'user_creation_failed': {
+    en: 'Failed to create user',
+    ar: 'فشل في إنشاء المستخدم'
+  },
+  'users_retrieved_successfully': {
+    en: 'Users retrieved successfully',
+    ar: 'تم استرجاع المستخدمين بنجاح'
+  },
+  'failed_get_users': {
+    en: 'Failed to get users',
+    ar: 'فشل في الحصول على المستخدمين'
+  },
+  'user_stats_retrieved': {
+    en: 'User statistics retrieved successfully',
+    ar: 'تم استرجاع إحصائيات المستخدمين بنجاح'
+  },
+  'failed_get_user_stats': {
+    en: 'Failed to get user statistics',
+    ar: 'فشل في الحصول على إحصائيات المستخدمين'
+  },
+  'user_updated_successfully': {
+    en: 'User updated successfully',
+    ar: 'تم تحديث المستخدم بنجاح'
+  },
+  'user_update_failed': {
+    en: 'Failed to update user',
+    ar: 'فشل في تحديث المستخدم'
+  },
+  'user_deleted_successfully': {
+    en: 'User deleted successfully',
+    ar: 'تم حذف المستخدم بنجاح'
+  },
+  'user_deletion_failed': {
+    en: 'Failed to delete user',
+    ar: 'فشل في حذف المستخدم'
+  },
+  'user_disallowed_successfully': {
+    en: 'User disallowed successfully',
+    ar: 'تم منع المستخدم بنجاح'
+  },
+  'user_disallow_failed': {
+    en: 'Failed to disallow user',
+    ar: 'فشل في منع المستخدم'
+  },
+  'user_allowed_successfully': {
+    en: 'User allowed successfully',
+    ar: 'تم السماح للمستخدم بنجاح'
+  },
+  'user_allow_failed': {
+    en: 'Failed to allow user',
+    ar: 'فشل في السماح للمستخدم'
+  },
+  'disallow_reason_required': {
+    en: 'Disallow reason is required',
+    ar: 'سبب المنع مطلوب'
+  },
+  'user_already_disallowed': {
+    en: 'User is already disallowed',
+    ar: 'المستخدم محظور بالفعل'
+  },
+  'user_not_disallowed': {
+    en: 'User is not disallowed',
+    ar: 'المستخدم غير محظور'
+  },
+  'cannot_disallow_admin': {
+    en: 'Cannot disallow admin users',
+    ar: 'لا يمكن منع مستخدمي المدير'
+  },
+  'cannot_disallow_self': {
+    en: 'Cannot disallow your own account',
+    ar: 'لا يمكن منع حسابك الخاص'
+  },
+  'invalid_user_id': {
+    en: 'Invalid user ID',
+    ar: 'معرف المستخدم غير صحيح'
+  },
+  'user_not_found_by_id': {
+    en: 'User not found with the provided ID',
+    ar: 'لم يتم العثور على المستخدم بالمعرف المقدم'
+  },
+  'email_phone_already_exists': {
+    en: 'Email or phone number already exists',
+    ar: 'البريد الإلكتروني أو رقم الهاتف موجود بالفعل'
+  },
+  'invalid_role': {
+    en: 'Invalid role specified',
+    ar: 'الدور المحدد غير صحيح'
+  },
+  'admin_user_created_successfully': {
+    en: 'Admin user created successfully',
+    ar: 'تم إنشاء مستخدم المدير بنجاح'
+  },
+  'admin_creation_failed': {
+    en: 'Failed to create admin user',
+    ar: 'فشل في إنشاء مستخدم المدير'
+  },
+  'magnet_employee_created_successfully': {
+    en: 'Magnet employee created successfully',
+    ar: 'تم إنشاء موظف Magnet بنجاح'
+  },
+  'magnet_employee_creation_failed': {
+    en: 'Failed to create magnet employee',
+    ar: 'فشل في إنشاء موظف Magnet'
+  },
+  'business_user_created_successfully': {
+    en: 'Business user created successfully',
+    ar: 'تم إنشاء مستخدم الأعمال بنجاح'
+  },
+  'business_creation_failed': {
+    en: 'Failed to create business user',
+    ar: 'فشل في إنشاء مستخدم الأعمال'
+  },
+  'customer_user_created_successfully': {
+    en: 'Customer user created successfully',
+    ar: 'تم إنشاء مستخدم العميل بنجاح'
+  },
+  'customer_creation_failed': {
+    en: 'Failed to create customer user',
+    ar: 'فشل في إنشاء مستخدم العميل'
+  },
+  'password_required': {
+    en: 'Password is required',
+    ar: 'كلمة المرور مطلوبة'
+  },
+  'password_too_short': {
+    en: 'Password must be at least 8 characters long',
+    ar: 'يجب أن تكون كلمة المرور 8 أحرف على الأقل'
+  },
+  'password_requirements_not_met': {
+    en: 'Password must contain at least one uppercase letter, one lowercase letter, and one number',
+    ar: 'يجب أن تحتوي كلمة المرور على حرف كبير واحد على الأقل، وحرف صغير واحد، ورقم واحد'
+  },
+  'firstname_required': {
+    en: 'First name is required',
+    ar: 'الاسم الأول مطلوب'
+  },
+  'lastname_required': {
+    en: 'Last name is required',
+    ar: 'اسم العائلة مطلوب'
+  },
+  'email_required': {
+    en: 'Email is required',
+    ar: 'البريد الإلكتروني مطلوب'
+  },
+  'country_required': {
+    en: 'Country is required',
+    ar: 'البلد مطلوب'
+  },
+  'invalid_email_format': {
+    en: 'Invalid email format',
+    ar: 'تنسيق البريد الإلكتروني غير صحيح'
+  },
+  'invalid_phone_format': {
+    en: 'Invalid phone number format',
+    ar: 'تنسيق رقم الهاتف غير صحيح'
+  },
+  'business_info_required': {
+    en: 'Business information is required for business users',
+    ar: 'معلومات الأعمال مطلوبة لمستخدمي الأعمال'
+  },
+  'cr_number_required': {
+    en: 'CR number is required for business users',
+    ar: 'رقم السجل التجاري مطلوب لمستخدمي الأعمال'
+  },
+  'vat_number_required': {
+    en: 'VAT number is required for business users',
+    ar: 'رقم الضريبة على القيمة المضافة مطلوب لمستخدمي الأعمال'
+  },
+  'company_name_required': {
+    en: 'Company name is required for business users',
+    ar: 'اسم الشركة مطلوب لمستخدمي الأعمال'
+  },
+  'company_type_required': {
+    en: 'Company type is required for business users',
+    ar: 'نوع الشركة مطلوب لمستخدمي الأعمال'
+  },
+  'city_required': {
+    en: 'City is required for business users',
+    ar: 'المدينة مطلوبة لمستخدمي الأعمال'
+  },
+  'district_required': {
+    en: 'District is required for business users',
+    ar: 'الحي مطلوب لمستخدمي الأعمال'
+  },
+  'street_name_required': {
+    en: 'Street name is required for business users',
+    ar: 'اسم الشارع مطلوب لمستخدمي الأعمال'
+  },
+  'missing_required_fields': {
+    en: 'Missing required fields',
+    ar: 'الحقول المطلوبة مفقودة'
+  },
+  'business_fields_required': {
+    en: 'Business fields are required for business users',
+    ar: 'حقول الأعمال مطلوبة لمستخدمي الأعمال'
+  },
+  'failed_create_user': {
+    en: 'Failed to create user',
+    ar: 'فشل في إنشاء المستخدم'
+  },
+  'failed_get_user': {
+    en: 'Failed to get user',
+    ar: 'فشل في الحصول على المستخدم'
+  },
+  'cannot_delete_self': {
+    en: 'Cannot delete your own account',
+    ar: 'لا يمكن حذف حسابك الخاص'
+  },
+  'failed_disallow_user': {
+    en: 'Failed to disallow user',
+    ar: 'فشل في منع المستخدم'
+  },
+  'failed_allow_user': {
+    en: 'Failed to allow user',
+    ar: 'فشل في السماح للمستخدم'
+  },
+  'review_comment_required': {
+    en: 'Review comment is required',
+    ar: 'تعليق التقييم مطلوب'
+  },
+  'address_line1_required': {
+    en: 'Address line 1 is required',
+    ar: 'عنوان السطر الأول مطلوب'
+  },
+  'state_required': {
+    en: 'State is required',
+    ar: 'الولاية مطلوبة'
+  },
+  'failed_update_user': {
+    en: 'Failed to update user',
+    ar: 'فشل في تحديث المستخدم'
   }
 };
 

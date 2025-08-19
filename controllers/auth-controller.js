@@ -207,6 +207,9 @@ exports.login = async (req, res) => {
       return res.status(401).json({ status: 'error', message: getBilingualMessage('invalid_credentials') });
     }
     if (!user.canLogin()) {
+      if (user.isDisallowed) {
+        return res.status(403).json({ status: 'error', message: getBilingualMessage('account_disallowed') });
+      }
       return res.status(403).json({ status: 'error', message: getBilingualMessage('account_not_active') });
     }
     const isPasswordValid = await bcrypt.compare(password, user.password);
@@ -237,6 +240,9 @@ exports.loginWithOTP = async (req, res) => {
       return res.status(404).json({ status: 'error', message: getBilingualMessage('user_not_found') });
     }
     if (!user.canLogin()) {
+      if (user.isDisallowed) {
+        return res.status(403).json({ status: 'error', message: getBilingualMessage('account_disallowed') });
+      }
       return res.status(403).json({ status: 'error', message: getBilingualMessage('account_not_active') });
     }
     const otp = identifierType === 'email' ? generateOTP() : generateSMSOTP();

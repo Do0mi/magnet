@@ -63,6 +63,11 @@ exports.addProductsByBusiness = async (req, res) => {
       return res.status(403).json({ status: 'error', message: getBilingualMessage('only_business_can_add_products') });
     }
     
+    // Check if user is disallowed
+    if (req.user.isDisallowed) {
+      return res.status(403).json({ status: 'error', message: getBilingualMessage('account_disallowed') });
+    }
+    
     let { code, category, name, images, description, unit, minOrder, pricePerUnit, stock, customFields, attachments } = req.body;
     
     // Validate custom fields

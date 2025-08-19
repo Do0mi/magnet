@@ -61,6 +61,21 @@ const userSchema = new Schema({
     type: Boolean,
     default: false
   },
+  isDisallowed: {
+    type: Boolean,
+    default: false
+  },
+  disallowReason: String,
+  disallowedBy: {
+    type: Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  disallowedAt: Date,
+  allowedBy: {
+    type: Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  allowedAt: Date,
   emailOTP: {
     code: String,
     expiresAt: Date
@@ -136,8 +151,13 @@ userSchema.methods.generateOTP = function() {
   return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
-// Method to check if user can login (business must be approved)
+// Method to check if user can login (business must be approved and not disallowed)
 userSchema.methods.canLogin = function() {
+  // Check if user is disallowed
+  if (this.isDisallowed) {
+    return false;
+  }
+  
   if (this.role === 'business') {
     return this.businessInfo.isApproved && this.businessInfo.approvalStatus === 'approved';
   }

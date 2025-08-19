@@ -20,6 +20,7 @@ const orderRoutes = require('./routes/order-routes');
 const reviewRoutes = require('./routes/review-routes');
 const wishlistRoutes = require('./routes/wishlist-routes');
 const addressRoutes = require('./routes/address-routes');
+const adminRoutes = require('./routes/admin-routes');
 
 // Config
 require('./config/passport-setup');
@@ -138,6 +139,7 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/wishlist', wishlistRoutes);
 app.use('/api/addresses', addressRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Health check route
 app.get('/api/health', (req, res) => {
