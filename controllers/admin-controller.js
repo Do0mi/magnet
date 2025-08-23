@@ -3,6 +3,11 @@ const User = require('../models/user-model');
 const bcrypt = require('bcryptjs');
 const { getBilingualMessage } = require('../utils/messages');
 const { formatUser, createResponse } = require('../utils/response-formatters');
+const Wishlist = require('../models/wishlist-model');
+const Review = require('../models/review-model');
+const Address = require('../models/address-model');
+const Order = require('../models/order-model');
+const Product = require('../models/product-model');
 
 // Helper function to validate admin permissions
 const validateAdminPermissions = (req, res) => {
@@ -551,5 +556,864 @@ exports.getUserStats = async (req, res) => {
       status: 'error', 
       message: getBilingualMessage('failed_get_user_stats') 
     });
+  }
+};
+
+// ========================================
+// ADMIN WISHLIST MANAGEMENT
+// ========================================
+
+exports.getAllWishlists = async (req, res) => {
+  try {
+    const { page = 1, limit = 10, userId, productId } = req.query;
+    const query = {};
+    
+    if (userId) query.user = userId;
+    if (productId) query.product = productId;
+    
+    const skip = (page - 1) * limit;
+    const wishlists = await Wishlist.find(query)
+      .populate('user', 'firstname lastname email role')
+      .populate('product', 'name code status')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+    
+    const total = await Wishlist.countDocuments(query);
+    
+    res.status(200).json(createResponse('success', {
+      wishlists: wishlists.map(wishlist => ({
+        id: wishlist._id,
+        user: wishlist.user,
+        product: wishlist.product,
+        createdAt: wishlist.createdAt
+      }))
+    }, null, {
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages: Math.ceil(total / limit),
+        totalItems: total,
+        itemsPerPage: parseInt(limit)
+      }
+    }));
+  } catch (err) {
+    console.error('Get all wishlists error:', err);
+    res.status(500).json({ status: 'error', message: getBilingualMessage('failed_get_wishlists') });
+  }
+};
+
+exports.getWishlistById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const wishlist = await Wishlist.findById(id)
+      .populate('user', 'firstname lastname email role')
+      .populate('product', 'name code status category');
+    
+    if (!wishlist) {
+      return res.status(404).json({ status: 'error', message: getBilingualMessage('wishlist_not_found') });
+    }
+    
+    res.status(200).json(createResponse('success', {
+      wishlist: {
+        id: wishlist._id,
+        user: wishlist.user,
+        product: wishlist.product,
+        createdAt: wishlist.createdAt
+      }
+    }));
+  } catch (err) {
+    console.error('Get wishlist by ID error:', err);
+    res.status(500).json({ status: 'error', message: getBilingualMessage('failed_get_wishlist') });
+  }
+};
+
+exports.createWishlist = async (req, res) => {
+  try {
+    const { userId, productId } = req.body;
+    
+    if (!userId || !productId) {
+      return res.status(400).json({ status: 'error', message: getBilingualMessage('missing_required_fields') });
+    }
+    
+    // Check if user exists
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ status: 'error', message: getBilingualMessage('user_not_found') });
+    }
+    
+    // Check if product exists and is approved
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).json({ status: 'error', message: getBilingualMessage('product_not_found') });
+    }
+    
+    if (product.status !== 'approved') {
+      return res.status(400).json({ status: 'error', message: getBilingualMessage('product_not_approved') });
+    }
+    
+    // Check if wishlist already exists
+    const existingWishlist = await Wishlist.findOne({ user: userId, product: productId });
+    if (existingWishlist) {
+      return res.status(400).json({ status: 'error', message: getBilingualMessage('product_already_in_wishlist') });
+    }
+    
+    const wishlist = new Wishlist({
+      user: userId,
+      product: productId
+    });
+    
+    await wishlist.save();
+    
+    const populatedWishlist = await Wishlist.findById(wishlist._id)
+      .populate('user', 'firstname lastname email role')
+      .populate('product', 'name code status');
+    
+    res.status(201).json(createResponse('success', {
+      wishlist: {
+        id: populatedWishlist._id,
+        user: populatedWishlist.user,
+        product: populatedWishlist.product,
+        createdAt: populatedWishlist.createdAt
+      }
+    }, getBilingualMessage('wishlist_created_successfully')));
+  } catch (err) {
+    console.error('Create wishlist error:', err);
+    res.status(500).json({ status: 'error', message: getBilingualMessage('failed_create_wishlist') });
+  }
+};
+
+exports.updateWishlist = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { userId, productId } = req.body;
+    
+    const wishlist = await Wishlist.findById(id);
+    if (!wishlist) {
+      return res.status(404).json({ status: 'error', message: getBilingualMessage('wishlist_not_found') });
+    }
+    
+    // Validate user if provided
+    if (userId) {
+      const user = await User.findById(userId);
+      if (!user) {
+        return res.status(404).json({ status: 'error', message: getBilingualMessage('user_not_found') });
+      }
+      wishlist.user = userId;
+    }
+    
+    // Validate product if provided
+    if (productId) {
+      const product = await Product.findById(productId);
+      if (!product) {
+        return res.status(404).json({ status: 'error', message: getBilingualMessage('product_not_found') });
+      }
+      if (product.status !== 'approved') {
+        return res.status(400).json({ status: 'error', message: getBilingualMessage('product_not_approved') });
+      }
+      wishlist.product = productId;
+    }
+    
+    await wishlist.save();
+    
+    const updatedWishlist = await Wishlist.findById(id)
+      .populate('user', 'firstname lastname email role')
+      .populate('product', 'name code status');
+    
+    res.status(200).json(createResponse('success', {
+      wishlist: {
+        id: updatedWishlist._id,
+        user: updatedWishlist.user,
+        product: updatedWishlist.product,
+        createdAt: updatedWishlist.createdAt
+      }
+    }, getBilingualMessage('wishlist_updated_successfully')));
+  } catch (err) {
+    console.error('Update wishlist error:', err);
+    res.status(500).json({ status: 'error', message: getBilingualMessage('failed_update_wishlist') });
+  }
+};
+
+exports.deleteWishlist = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const wishlist = await Wishlist.findById(id);
+    
+    if (!wishlist) {
+      return res.status(404).json({ status: 'error', message: getBilingualMessage('wishlist_not_found') });
+    }
+    
+    await Wishlist.findByIdAndDelete(id);
+    
+    res.status(200).json(createResponse('success', null, getBilingualMessage('wishlist_deleted_successfully')));
+  } catch (err) {
+    console.error('Delete wishlist error:', err);
+    res.status(500).json({ status: 'error', message: getBilingualMessage('failed_delete_wishlist') });
+  }
+};
+
+// ========================================
+// ADMIN REVIEW MANAGEMENT
+// ========================================
+
+exports.getAllReviews = async (req, res) => {
+  try {
+    const { page = 1, limit = 10, userId, productId, rating } = req.query;
+    const query = {};
+    
+    if (userId) query.user = userId;
+    if (productId) query.product = productId;
+    if (rating) query.rating = parseInt(rating);
+    
+    const skip = (page - 1) * limit;
+    const reviews = await Review.find(query)
+      .populate('user', 'firstname lastname email role')
+      .populate('product', 'name code status')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+    
+    const total = await Review.countDocuments(query);
+    
+    res.status(200).json(createResponse('success', {
+      reviews: reviews.map(review => ({
+        id: review._id,
+        user: review.user,
+        product: review.product,
+        rating: review.rating,
+        comment: review.comment,
+        createdAt: review.createdAt
+      }))
+    }, null, {
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages: Math.ceil(total / limit),
+        totalItems: total,
+        itemsPerPage: parseInt(limit)
+      }
+    }));
+  } catch (err) {
+    console.error('Get all reviews error:', err);
+    res.status(500).json({ status: 'error', message: getBilingualMessage('failed_get_reviews') });
+  }
+};
+
+exports.getReviewById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const review = await Review.findById(id)
+      .populate('user', 'firstname lastname email role')
+      .populate('product', 'name code status category');
+    
+    if (!review) {
+      return res.status(404).json({ status: 'error', message: getBilingualMessage('review_not_found') });
+    }
+    
+    res.status(200).json(createResponse('success', {
+      review: {
+        id: review._id,
+        user: review.user,
+        product: review.product,
+        rating: review.rating,
+        comment: review.comment,
+        createdAt: review.createdAt
+      }
+    }));
+  } catch (err) {
+    console.error('Get review by ID error:', err);
+    res.status(500).json({ status: 'error', message: getBilingualMessage('failed_get_review') });
+  }
+};
+
+exports.createReview = async (req, res) => {
+  try {
+    const { userId, productId, rating, comment } = req.body;
+    
+    if (!userId || !productId || !rating || !comment) {
+      return res.status(400).json({ status: 'error', message: getBilingualMessage('missing_required_fields') });
+    }
+    
+    if (rating < 1 || rating > 5) {
+      return res.status(400).json({ status: 'error', message: getBilingualMessage('invalid_rating') });
+    }
+    
+    // Check if user exists
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ status: 'error', message: getBilingualMessage('user_not_found') });
+    }
+    
+    // Check if product exists and is approved
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).json({ status: 'error', message: getBilingualMessage('product_not_found') });
+    }
+    
+    if (product.status !== 'approved') {
+      return res.status(400).json({ status: 'error', message: getBilingualMessage('product_not_approved') });
+    }
+    
+    // Check if user already reviewed this product
+    const existingReview = await Review.findOne({ user: userId, product: productId });
+    if (existingReview) {
+      return res.status(400).json({ status: 'error', message: getBilingualMessage('already_reviewed_product') });
+    }
+    
+    const review = new Review({
+      user: userId,
+      product: productId,
+      rating,
+      comment
+    });
+    
+    await review.save();
+    
+    const populatedReview = await Review.findById(review._id)
+      .populate('user', 'firstname lastname email role')
+      .populate('product', 'name code status');
+    
+    res.status(201).json(createResponse('success', {
+      review: {
+        id: populatedReview._id,
+        user: populatedReview.user,
+        product: populatedReview.product,
+        rating: populatedReview.rating,
+        comment: populatedReview.comment,
+        createdAt: populatedReview.createdAt
+      }
+    }, getBilingualMessage('review_created_successfully')));
+  } catch (err) {
+    console.error('Create review error:', err);
+    res.status(500).json({ status: 'error', message: getBilingualMessage('failed_create_review') });
+  }
+};
+
+exports.updateReview = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { rating, comment } = req.body;
+    
+    const review = await Review.findById(id);
+    if (!review) {
+      return res.status(404).json({ status: 'error', message: getBilingualMessage('review_not_found') });
+    }
+    
+    if (rating !== undefined) {
+      if (rating < 1 || rating > 5) {
+        return res.status(400).json({ status: 'error', message: getBilingualMessage('invalid_rating') });
+      }
+      review.rating = rating;
+    }
+    
+    if (comment !== undefined) {
+      review.comment = comment;
+    }
+    
+    await review.save();
+    
+    const updatedReview = await Review.findById(id)
+      .populate('user', 'firstname lastname email role')
+      .populate('product', 'name code status');
+    
+    res.status(200).json(createResponse('success', {
+      review: {
+        id: updatedReview._id,
+        user: updatedReview.user,
+        product: updatedReview.product,
+        rating: updatedReview.rating,
+        comment: updatedReview.comment,
+        createdAt: updatedReview.createdAt
+      }
+    }, getBilingualMessage('review_updated_successfully')));
+  } catch (err) {
+    console.error('Update review error:', err);
+    res.status(500).json({ status: 'error', message: getBilingualMessage('failed_update_review') });
+  }
+};
+
+exports.deleteReview = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const review = await Review.findById(id);
+    
+    if (!review) {
+      return res.status(404).json({ status: 'error', message: getBilingualMessage('review_not_found') });
+    }
+    
+    await Review.findByIdAndDelete(id);
+    
+    res.status(200).json(createResponse('success', null, getBilingualMessage('review_deleted_successfully')));
+  } catch (err) {
+    console.error('Delete review error:', err);
+    res.status(500).json({ status: 'error', message: getBilingualMessage('failed_delete_review') });
+  }
+};
+
+// ========================================
+// ADMIN ADDRESS MANAGEMENT
+// ========================================
+
+exports.getAllAddresses = async (req, res) => {
+  try {
+    const { page = 1, limit = 10, userId, city, country } = req.query;
+    const query = {};
+    
+    if (userId) query.user = userId;
+    if (city) query.city = { $regex: city, $options: 'i' };
+    if (country) query.country = { $regex: country, $options: 'i' };
+    
+    const skip = (page - 1) * limit;
+    const addresses = await Address.find(query)
+      .populate('user', 'firstname lastname email role')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+    
+    const total = await Address.countDocuments(query);
+    
+    res.status(200).json(createResponse('success', {
+      addresses: addresses.map(address => ({
+        id: address._id,
+        user: address.user,
+        addressLine1: address.addressLine1,
+        addressLine2: address.addressLine2,
+        city: address.city,
+        state: address.state,
+        postalCode: address.postalCode,
+        country: address.country,
+        createdAt: address.createdAt,
+        updatedAt: address.updatedAt
+      }))
+    }, null, {
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages: Math.ceil(total / limit),
+        totalItems: total,
+        itemsPerPage: parseInt(limit)
+      }
+    }));
+  } catch (err) {
+    console.error('Get all addresses error:', err);
+    res.status(500).json({ status: 'error', message: getBilingualMessage('failed_get_addresses') });
+  }
+};
+
+exports.getAddressById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const address = await Address.findById(id)
+      .populate('user', 'firstname lastname email role');
+    
+    if (!address) {
+      return res.status(404).json({ status: 'error', message: getBilingualMessage('address_not_found') });
+    }
+    
+    res.status(200).json(createResponse('success', {
+      address: {
+        id: address._id,
+        user: address.user,
+        addressLine1: address.addressLine1,
+        addressLine2: address.addressLine2,
+        city: address.city,
+        state: address.state,
+        postalCode: address.postalCode,
+        country: address.country,
+        createdAt: address.createdAt,
+        updatedAt: address.updatedAt
+      }
+    }));
+  } catch (err) {
+    console.error('Get address by ID error:', err);
+    res.status(500).json({ status: 'error', message: getBilingualMessage('failed_get_address') });
+  }
+};
+
+exports.createAddress = async (req, res) => {
+  try {
+    const { userId, addressLine1, addressLine2, city, state, postalCode, country } = req.body;
+    
+    if (!userId || !addressLine1 || !city || !state || !postalCode || !country) {
+      return res.status(400).json({ status: 'error', message: getBilingualMessage('missing_required_fields') });
+    }
+    
+    // Check if user exists
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ status: 'error', message: getBilingualMessage('user_not_found') });
+    }
+    
+    const address = new Address({
+      user: userId,
+      addressLine1,
+      addressLine2,
+      city,
+      state,
+      postalCode,
+      country
+    });
+    
+    await address.save();
+    
+    const populatedAddress = await Address.findById(address._id)
+      .populate('user', 'firstname lastname email role');
+    
+    res.status(201).json(createResponse('success', {
+      address: {
+        id: populatedAddress._id,
+        user: populatedAddress.user,
+        addressLine1: populatedAddress.addressLine1,
+        addressLine2: populatedAddress.addressLine2,
+        city: populatedAddress.city,
+        state: populatedAddress.state,
+        postalCode: populatedAddress.postalCode,
+        country: populatedAddress.country,
+        createdAt: populatedAddress.createdAt,
+        updatedAt: populatedAddress.updatedAt
+      }
+    }, getBilingualMessage('address_created_successfully')));
+  } catch (err) {
+    console.error('Create address error:', err);
+    res.status(500).json({ status: 'error', message: getBilingualMessage('failed_create_address') });
+  }
+};
+
+exports.updateAddress = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { addressLine1, addressLine2, city, state, postalCode, country } = req.body;
+    
+    const address = await Address.findById(id);
+    if (!address) {
+      return res.status(404).json({ status: 'error', message: getBilingualMessage('address_not_found') });
+    }
+    
+    if (addressLine1 !== undefined) address.addressLine1 = addressLine1;
+    if (addressLine2 !== undefined) address.addressLine2 = addressLine2;
+    if (city !== undefined) address.city = city;
+    if (state !== undefined) address.state = state;
+    if (postalCode !== undefined) address.postalCode = postalCode;
+    if (country !== undefined) address.country = country;
+    
+    address.updatedAt = new Date();
+    await address.save();
+    
+    const updatedAddress = await Address.findById(id)
+      .populate('user', 'firstname lastname email role');
+    
+    res.status(200).json(createResponse('success', {
+      address: {
+        id: updatedAddress._id,
+        user: updatedAddress.user,
+        addressLine1: updatedAddress.addressLine1,
+        addressLine2: updatedAddress.addressLine2,
+        city: updatedAddress.city,
+        state: updatedAddress.state,
+        postalCode: updatedAddress.postalCode,
+        country: updatedAddress.country,
+        createdAt: updatedAddress.createdAt,
+        updatedAt: updatedAddress.updatedAt
+      }
+    }, getBilingualMessage('address_updated_successfully')));
+  } catch (err) {
+    console.error('Update address error:', err);
+    res.status(500).json({ status: 'error', message: getBilingualMessage('failed_update_address') });
+  }
+};
+
+exports.deleteAddress = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const address = await Address.findById(id);
+    
+    if (!address) {
+      return res.status(404).json({ status: 'error', message: getBilingualMessage('address_not_found') });
+    }
+    
+    await Address.findByIdAndDelete(id);
+    
+    res.status(200).json(createResponse('success', null, getBilingualMessage('address_deleted_successfully')));
+  } catch (err) {
+    console.error('Delete address error:', err);
+    res.status(500).json({ status: 'error', message: getBilingualMessage('failed_delete_address') });
+  }
+};
+
+// ========================================
+// ADMIN ORDER MANAGEMENT
+// ========================================
+
+exports.getAllOrders = async (req, res) => {
+  try {
+    const { page = 1, limit = 10, customerId, status, startDate, endDate } = req.query;
+    const query = {};
+    
+    if (customerId) query.customer = customerId;
+    if (status) query.status = status;
+    if (startDate || endDate) {
+      query.createdAt = {};
+      if (startDate) query.createdAt.$gte = new Date(startDate);
+      if (endDate) query.createdAt.$lte = new Date(endDate);
+    }
+    
+    const skip = (page - 1) * limit;
+    const orders = await Order.find(query)
+      .populate('customer', 'firstname lastname email role')
+      .populate('shippingAddress')
+      .populate({
+        path: 'items.product',
+        select: 'name code status category'
+      })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+    
+    const total = await Order.countDocuments(query);
+    
+    res.status(200).json(createResponse('success', {
+      orders: orders.map(order => ({
+        id: order._id,
+        customer: order.customer,
+        items: order.items,
+        shippingAddress: order.shippingAddress,
+        status: order.status,
+        statusLog: order.statusLog,
+        createdAt: order.createdAt,
+        updatedAt: order.updatedAt
+      }))
+    }, null, {
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages: Math.ceil(total / limit),
+        totalItems: total,
+        itemsPerPage: parseInt(limit)
+      }
+    }));
+  } catch (err) {
+    console.error('Get all orders error:', err);
+    res.status(500).json({ status: 'error', message: getBilingualMessage('failed_get_orders') });
+  }
+};
+
+exports.getOrderById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const order = await Order.findById(id)
+      .populate('customer', 'firstname lastname email role phone')
+      .populate('shippingAddress')
+      .populate({
+        path: 'items.product',
+        select: 'name code status category description images'
+      });
+    
+    if (!order) {
+      return res.status(404).json({ status: 'error', message: getBilingualMessage('order_not_found') });
+    }
+    
+    res.status(200).json(createResponse('success', {
+      order: {
+        id: order._id,
+        customer: order.customer,
+        items: order.items,
+        shippingAddress: order.shippingAddress,
+        status: order.status,
+        statusLog: order.statusLog,
+        createdAt: order.createdAt,
+        updatedAt: order.updatedAt
+      }
+    }));
+  } catch (err) {
+    console.error('Get order by ID error:', err);
+    res.status(500).json({ status: 'error', message: getBilingualMessage('failed_get_order') });
+  }
+};
+
+exports.createOrder = async (req, res) => {
+  try {
+    const { customerId, items, shippingAddressId } = req.body;
+    
+    if (!customerId || !items || !shippingAddressId) {
+      return res.status(400).json({ status: 'error', message: getBilingualMessage('missing_required_fields') });
+    }
+    
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ status: 'error', message: getBilingualMessage('order_must_have_items') });
+    }
+    
+    // Check if customer exists
+    const customer = await User.findById(customerId);
+    if (!customer) {
+      return res.status(404).json({ status: 'error', message: getBilingualMessage('user_not_found') });
+    }
+    
+    // Check if shipping address exists
+    const shippingAddress = await Address.findById(shippingAddressId);
+    if (!shippingAddress) {
+      return res.status(404).json({ status: 'error', message: getBilingualMessage('address_not_found') });
+    }
+    
+    // Validate items
+    for (const item of items) {
+      if (!item.product || !item.quantity) {
+        return res.status(400).json({ status: 'error', message: getBilingualMessage('invalid_order_items') });
+      }
+      
+      const product = await Product.findById(item.product);
+      if (!product) {
+        return res.status(404).json({ status: 'error', message: getBilingualMessage('product_not_found') });
+      }
+      
+      if (product.status !== 'approved') {
+        return res.status(400).json({ status: 'error', message: getBilingualMessage('product_not_approved') });
+      }
+    }
+    
+    const order = new Order({
+      customer: customerId,
+      items,
+      shippingAddress: shippingAddressId,
+      status: { en: 'pending', ar: 'قيد الانتظار' },
+      statusLog: [{
+        status: { en: 'pending', ar: 'قيد الانتظار' },
+        timestamp: new Date()
+      }]
+    });
+    
+    await order.save();
+    
+    const populatedOrder = await Order.findById(order._id)
+      .populate('customer', 'firstname lastname email role')
+      .populate('shippingAddress')
+      .populate({
+        path: 'items.product',
+        select: 'name code status category'
+      });
+    
+    res.status(201).json(createResponse('success', {
+      order: {
+        id: populatedOrder._id,
+        customer: populatedOrder.customer,
+        items: populatedOrder.items,
+        shippingAddress: populatedOrder.shippingAddress,
+        status: populatedOrder.status,
+        statusLog: populatedOrder.statusLog,
+        createdAt: populatedOrder.createdAt,
+        updatedAt: populatedOrder.updatedAt
+      }
+    }, getBilingualMessage('order_created_successfully')));
+  } catch (err) {
+    console.error('Create order error:', err);
+    res.status(500).json({ status: 'error', message: getBilingualMessage('failed_create_order') });
+  }
+};
+
+exports.updateOrder = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { items, shippingAddressId, status } = req.body;
+    
+    const order = await Order.findById(id);
+    if (!order) {
+      return res.status(404).json({ status: 'error', message: getBilingualMessage('order_not_found') });
+    }
+    
+    // Update items if provided
+    if (items) {
+      if (!Array.isArray(items) || items.length === 0) {
+        return res.status(400).json({ status: 'error', message: getBilingualMessage('order_must_have_items') });
+      }
+      
+      // Validate items
+      for (const item of items) {
+        if (!item.product || !item.quantity) {
+          return res.status(400).json({ status: 'error', message: getBilingualMessage('invalid_order_items') });
+        }
+        
+        const product = await Product.findById(item.product);
+        if (!product) {
+          return res.status(404).json({ status: 'error', message: getBilingualMessage('product_not_found') });
+        }
+        
+        if (product.status !== 'approved') {
+          return res.status(400).json({ status: 'error', message: getBilingualMessage('product_not_approved') });
+        }
+      }
+      
+      order.items = items;
+    }
+    
+    // Update shipping address if provided
+    if (shippingAddressId) {
+      const shippingAddress = await Address.findById(shippingAddressId);
+      if (!shippingAddress) {
+        return res.status(404).json({ status: 'error', message: getBilingualMessage('address_not_found') });
+      }
+      order.shippingAddress = shippingAddressId;
+    }
+    
+    // Update status if provided
+    if (status) {
+      const validStatuses = ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'];
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json({ status: 'error', message: getBilingualMessage('invalid_order_status') });
+      }
+      
+      const statusMap = {
+        pending: { en: 'pending', ar: 'قيد الانتظار' },
+        confirmed: { en: 'confirmed', ar: 'مؤكد' },
+        shipped: { en: 'shipped', ar: 'تم الشحن' },
+        delivered: { en: 'delivered', ar: 'تم التوصيل' },
+        cancelled: { en: 'cancelled', ar: 'ملغي' }
+      };
+      
+      order.status = statusMap[status];
+      order.statusLog.push({
+        status: statusMap[status],
+        timestamp: new Date()
+      });
+    }
+    
+    order.updatedAt = new Date();
+    await order.save();
+    
+    const updatedOrder = await Order.findById(id)
+      .populate('customer', 'firstname lastname email role')
+      .populate('shippingAddress')
+      .populate({
+        path: 'items.product',
+        select: 'name code status category'
+      });
+    
+    res.status(200).json(createResponse('success', {
+      order: {
+        id: updatedOrder._id,
+        customer: updatedOrder.customer,
+        items: updatedOrder.items,
+        shippingAddress: updatedOrder.shippingAddress,
+        status: updatedOrder.status,
+        statusLog: updatedOrder.statusLog,
+        createdAt: updatedOrder.createdAt,
+        updatedAt: updatedOrder.updatedAt
+      }
+    }, getBilingualMessage('order_updated_successfully')));
+  } catch (err) {
+    console.error('Update order error:', err);
+    res.status(500).json({ status: 'error', message: getBilingualMessage('failed_update_order') });
+  }
+};
+
+exports.deleteOrder = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const order = await Order.findById(id);
+    
+    if (!order) {
+      return res.status(404).json({ status: 'error', message: getBilingualMessage('order_not_found') });
+    }
+    
+    await Order.findByIdAndDelete(id);
+    
+    res.status(200).json(createResponse('success', null, getBilingualMessage('order_deleted_successfully')));
+  } catch (err) {
+    console.error('Delete order error:', err);
+    res.status(500).json({ status: 'error', message: getBilingualMessage('failed_delete_order') });
   }
 };

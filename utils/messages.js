@@ -906,6 +906,130 @@ const messages = {
   'failed_update_user': {
     en: 'Failed to update user',
     ar: 'فشل في تحديث المستخدم'
+  },
+
+  // Admin Wishlist Management Messages
+  'failed_get_wishlists': {
+    en: 'Failed to get wishlists',
+    ar: 'فشل في الحصول على قوائم الرغبات'
+  },
+  'failed_get_wishlist': {
+    en: 'Failed to get wishlist',
+    ar: 'فشل في الحصول على قائمة الرغبات'
+  },
+  'wishlist_created_successfully': {
+    en: 'Wishlist created successfully',
+    ar: 'تم إنشاء قائمة الرغبات بنجاح'
+  },
+  'failed_create_wishlist': {
+    en: 'Failed to create wishlist',
+    ar: 'فشل في إنشاء قائمة الرغبات'
+  },
+  'wishlist_updated_successfully': {
+    en: 'Wishlist updated successfully',
+    ar: 'تم تحديث قائمة الرغبات بنجاح'
+  },
+  'failed_update_wishlist': {
+    en: 'Failed to update wishlist',
+    ar: 'فشل في تحديث قائمة الرغبات'
+  },
+  'wishlist_deleted_successfully': {
+    en: 'Wishlist deleted successfully',
+    ar: 'تم حذف قائمة الرغبات بنجاح'
+  },
+  'failed_delete_wishlist': {
+    en: 'Failed to delete wishlist',
+    ar: 'فشل في حذف قائمة الرغبات'
+  },
+  'product_not_approved': {
+    en: 'Product is not approved',
+    ar: 'المنتج غير معتمد'
+  },
+
+  // Admin Review Management Messages
+  'review_created_successfully': {
+    en: 'Review created successfully',
+    ar: 'تم إنشاء التقييم بنجاح'
+  },
+  'failed_create_review': {
+    en: 'Failed to create review',
+    ar: 'فشل في إنشاء التقييم'
+  },
+  'review_updated_successfully': {
+    en: 'Review updated successfully',
+    ar: 'تم تحديث التقييم بنجاح'
+  },
+  'failed_update_review': {
+    en: 'Failed to update review',
+    ar: 'فشل في تحديث التقييم'
+  },
+  'review_deleted_successfully': {
+    en: 'Review deleted successfully',
+    ar: 'تم حذف التقييم بنجاح'
+  },
+  'failed_delete_review': {
+    en: 'Failed to delete review',
+    ar: 'فشل في حذف التقييم'
+  },
+  'invalid_rating': {
+    en: 'Invalid rating. Must be between 1 and 5',
+    ar: 'تقييم غير صحيح. يجب أن يكون بين 1 و 5'
+  },
+
+  // Admin Address Management Messages
+  'address_created_successfully': {
+    en: 'Address created successfully',
+    ar: 'تم إنشاء العنوان بنجاح'
+  },
+  'failed_create_address': {
+    en: 'Failed to create address',
+    ar: 'فشل في إنشاء العنوان'
+  },
+  'address_updated_successfully': {
+    en: 'Address updated successfully',
+    ar: 'تم تحديث العنوان بنجاح'
+  },
+  'failed_update_address': {
+    en: 'Failed to update address',
+    ar: 'فشل في تحديث العنوان'
+  },
+  'address_deleted_successfully': {
+    en: 'Address deleted successfully',
+    ar: 'تم حذف العنوان بنجاح'
+  },
+  'failed_delete_address': {
+    en: 'Failed to delete address',
+    ar: 'فشل في حذف العنوان'
+  },
+
+  // Admin Order Management Messages
+  'order_created_successfully': {
+    en: 'Order created successfully',
+    ar: 'تم إنشاء الطلب بنجاح'
+  },
+  'failed_create_order': {
+    en: 'Failed to create order',
+    ar: 'فشل في إنشاء الطلب'
+  },
+  'order_updated_successfully': {
+    en: 'Order updated successfully',
+    ar: 'تم تحديث الطلب بنجاح'
+  },
+  'failed_update_order': {
+    en: 'Failed to update order',
+    ar: 'فشل في تحديث الطلب'
+  },
+  'order_deleted_successfully': {
+    en: 'Order deleted successfully',
+    ar: 'تم حذف الطلب بنجاح'
+  },
+  'failed_delete_order': {
+    en: 'Failed to delete order',
+    ar: 'فشل في حذف الطلب'
+  },
+  'invalid_order_items': {
+    en: 'Invalid order items format',
+    ar: 'تنسيق عناصر الطلب غير صحيح'
   }
 };
 

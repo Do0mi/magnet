@@ -46,6 +46,26 @@
 |             | DELETE /api/admin/users/:id | No     | Yes           | admin                         |
 |             | PUT /api/admin/users/:id/disallow | No | Yes       | admin                         |
 |             | PUT /api/admin/users/:id/allow | No | Yes         | admin                         |
+|             | GET /api/admin/wishlists    | No     | Yes           | admin                         |
+|             | GET /api/admin/wishlists/:id | No    | Yes           | admin                         |
+|             | POST /api/admin/wishlists   | No     | Yes           | admin                         |
+|             | PUT /api/admin/wishlists/:id | No    | Yes           | admin                         |
+|             | DELETE /api/admin/wishlists/:id | No | Yes        | admin                         |
+|             | GET /api/admin/reviews      | No     | Yes           | admin                         |
+|             | GET /api/admin/reviews/:id  | No     | Yes           | admin                         |
+|             | POST /api/admin/reviews     | No     | Yes           | admin                         |
+|             | PUT /api/admin/reviews/:id  | No     | Yes           | admin                         |
+|             | DELETE /api/admin/reviews/:id | No | Yes          | admin                         |
+|             | GET /api/admin/addresses    | No     | Yes           | admin                         |
+|             | GET /api/admin/addresses/:id | No    | Yes           | admin                         |
+|             | POST /api/admin/addresses   | No     | Yes           | admin                         |
+|             | PUT /api/admin/addresses/:id | No    | Yes           | admin                         |
+|             | DELETE /api/admin/addresses/:id | No | Yes        | admin                         |
+|             | GET /api/admin/orders       | No     | Yes           | admin                         |
+|             | GET /api/admin/orders/:id   | No     | Yes           | admin                         |
+|             | POST /api/admin/orders      | No     | Yes           | admin                         |
+|             | PUT /api/admin/orders/:id   | No     | Yes           | admin                         |
+|             | DELETE /api/admin/orders/:id | No | Yes           | admin                         |
 | Auth        | Registration/Login/OTP      | Yes    | No            | None                          |
 |             | Forgot Password             | No     | Yes           | Any authenticated user         |
 
@@ -1118,3 +1138,237 @@ Admin routes provide comprehensive user management functionality for system admi
   - `rejectionReason` (string, if rejected)
 - `createdAt` (Date)
 - `updatedAt` (Date)
+
+---
+
+## Admin Wishlist Management Routes
+
+### 1. Get All Wishlists
+- **GET** `/api/admin/wishlists`
+- **Description:** Get all wishlists with pagination and filtering capabilities.
+- **Headers:** `Authorization: Bearer <token>`
+- **Query Parameters:**
+  - `page` (number, optional, default: 1)
+  - `limit` (number, optional, default: 10)
+  - `userId` (string, optional, filter by user ID)
+  - `productId` (string, optional, filter by product ID)
+- **Response:**
+  - `200 OK`: List of wishlists with pagination info (bilingual message)
+
+### 2. Get Wishlist by ID
+- **GET** `/api/admin/wishlists/:id`
+- **Description:** Get detailed information about a specific wishlist.
+- **Headers:** `Authorization: Bearer <token>`
+- **Response:**
+  - `200 OK`: Wishlist details (bilingual message)
+  - `404 Not Found`: Wishlist not found (bilingual message)
+
+### 3. Create Wishlist
+- **POST** `/api/admin/wishlists`
+- **Description:** Create a new wishlist entry for any user and product.
+- **Headers:** `Authorization: Bearer <token>`
+- **Body:**
+  - `userId` (string, required) - User ID
+  - `productId` (string, required) - Product ID (must be approved)
+- **Response:**
+  - `201 Created`: Wishlist created successfully (bilingual message)
+  - `400 Bad Request`: Validation errors (bilingual message)
+
+### 4. Update Wishlist
+- **PUT** `/api/admin/wishlists/:id`
+- **Description:** Update wishlist information.
+- **Headers:** `Authorization: Bearer <token>`
+- **Body:**
+  - `userId` (string, optional) - New user ID
+  - `productId` (string, optional) - New product ID (must be approved)
+- **Response:**
+  - `200 OK`: Wishlist updated successfully (bilingual message)
+  - `404 Not Found`: Wishlist not found (bilingual message)
+
+### 5. Delete Wishlist
+- **DELETE** `/api/admin/wishlists/:id`
+- **Description:** Permanently delete a wishlist entry.
+- **Headers:** `Authorization: Bearer <token>`
+- **Response:**
+  - `200 OK`: Wishlist deleted successfully (bilingual message)
+  - `404 Not Found`: Wishlist not found (bilingual message)
+
+---
+
+## Admin Review Management Routes
+
+### 1. Get All Reviews
+- **GET** `/api/admin/reviews`
+- **Description:** Get all reviews with pagination and filtering capabilities.
+- **Headers:** `Authorization: Bearer <token>`
+- **Query Parameters:**
+  - `page` (number, optional, default: 1)
+  - `limit` (number, optional, default: 10)
+  - `userId` (string, optional, filter by user ID)
+  - `productId` (string, optional, filter by product ID)
+  - `rating` (number, optional, filter by rating)
+- **Response:**
+  - `200 OK`: List of reviews with pagination info (bilingual message)
+
+### 2. Get Review by ID
+- **GET** `/api/admin/reviews/:id`
+- **Description:** Get detailed information about a specific review.
+- **Headers:** `Authorization: Bearer <token>`
+- **Response:**
+  - `200 OK`: Review details (bilingual message)
+  - `404 Not Found`: Review not found (bilingual message)
+
+### 3. Create Review
+- **POST** `/api/admin/reviews`
+- **Description:** Create a new review for any user and product.
+- **Headers:** `Authorization: Bearer <token>`
+- **Body:**
+  - `userId` (string, required) - User ID
+  - `productId` (string, required) - Product ID (must be approved)
+  - `rating` (number, required, min: 1, max: 5) - Rating
+  - `comment` (string, required) - Review comment
+- **Response:**
+  - `201 Created`: Review created successfully (bilingual message)
+  - `400 Bad Request`: Validation errors (bilingual message)
+
+### 4. Update Review
+- **PUT** `/api/admin/reviews/:id`
+- **Description:** Update review information.
+- **Headers:** `Authorization: Bearer <token>`
+- **Body:**
+  - `rating` (number, optional, min: 1, max: 5) - New rating
+  - `comment` (string, optional) - New comment
+- **Response:**
+  - `200 OK`: Review updated successfully (bilingual message)
+  - `404 Not Found`: Review not found (bilingual message)
+
+### 5. Delete Review
+- **DELETE** `/api/admin/reviews/:id`
+- **Description:** Permanently delete a review.
+- **Headers:** `Authorization: Bearer <token>`
+- **Response:**
+  - `200 OK`: Review deleted successfully (bilingual message)
+  - `404 Not Found`: Review not found (bilingual message)
+
+---
+
+## Admin Address Management Routes
+
+### 1. Get All Addresses
+- **GET** `/api/admin/addresses`
+- **Description:** Get all addresses with pagination and filtering capabilities.
+- **Headers:** `Authorization: Bearer <token>`
+- **Query Parameters:**
+  - `page` (number, optional, default: 1)
+  - `limit` (number, optional, default: 10)
+  - `userId` (string, optional, filter by user ID)
+  - `city` (string, optional, search by city)
+  - `country` (string, optional, search by country)
+- **Response:**
+  - `200 OK`: List of addresses with pagination info (bilingual message)
+
+### 2. Get Address by ID
+- **GET** `/api/admin/addresses/:id`
+- **Description:** Get detailed information about a specific address.
+- **Headers:** `Authorization: Bearer <token>`
+- **Response:**
+  - `200 OK`: Address details (bilingual message)
+  - `404 Not Found`: Address not found (bilingual message)
+
+### 3. Create Address
+- **POST** `/api/admin/addresses`
+- **Description:** Create a new address for any user.
+- **Headers:** `Authorization: Bearer <token>`
+- **Body:**
+  - `userId` (string, required) - User ID
+  - `addressLine1` (string, required) - Primary address line
+  - `addressLine2` (string, optional) - Secondary address line
+  - `city` (string, required) - City
+  - `state` (string, required) - State/Province
+  - `postalCode` (string, required) - Postal code
+  - `country` (string, required) - Country
+- **Response:**
+  - `201 Created`: Address created successfully (bilingual message)
+  - `400 Bad Request`: Validation errors (bilingual message)
+
+### 4. Update Address
+- **PUT** `/api/admin/addresses/:id`
+- **Description:** Update address information.
+- **Headers:** `Authorization: Bearer <token>`
+- **Body:**
+  - `addressLine1` (string, optional) - Primary address line
+  - `addressLine2` (string, optional) - Secondary address line
+  - `city` (string, optional) - City
+  - `state` (string, optional) - State/Province
+  - `postalCode` (string, optional) - Postal code
+  - `country` (string, optional) - Country
+- **Response:**
+  - `200 OK`: Address updated successfully (bilingual message)
+  - `404 Not Found`: Address not found (bilingual message)
+
+### 5. Delete Address
+- **DELETE** `/api/admin/addresses/:id`
+- **Description:** Permanently delete an address.
+- **Headers:** `Authorization: Bearer <token>`
+- **Response:**
+  - `200 OK`: Address deleted successfully (bilingual message)
+  - `404 Not Found`: Address not found (bilingual message)
+
+---
+
+## Admin Order Management Routes
+
+### 1. Get All Orders
+- **GET** `/api/admin/orders`
+- **Description:** Get all orders with pagination and filtering capabilities.
+- **Headers:** `Authorization: Bearer <token>`
+- **Query Parameters:**
+  - `page` (number, optional, default: 1)
+  - `limit` (number, optional, default: 10)
+  - `customerId` (string, optional, filter by customer ID)
+  - `status` (string, optional, filter by order status)
+  - `startDate` (string, optional, filter orders from date)
+  - `endDate` (string, optional, filter orders to date)
+- **Response:**
+  - `200 OK`: List of orders with pagination info (bilingual message)
+
+### 2. Get Order by ID
+- **GET** `/api/admin/orders/:id`
+- **Description:** Get detailed information about a specific order.
+- **Headers:** `Authorization: Bearer <token>`
+- **Response:**
+  - `200 OK`: Order details (bilingual message)
+  - `404 Not Found`: Order not found (bilingual message)
+
+### 3. Create Order
+- **POST** `/api/admin/orders`
+- **Description:** Create a new order for any customer.
+- **Headers:** `Authorization: Bearer <token>`
+- **Body:**
+  - `customerId` (string, required) - Customer ID
+  - `items` (array, required) - Array of order items
+    - Each item: `{ product: string, quantity: number }`
+  - `shippingAddressId` (string, required) - Shipping address ID
+- **Response:**
+  - `201 Created`: Order created successfully (bilingual message)
+  - `400 Bad Request`: Validation errors (bilingual message)
+
+### 4. Update Order
+- **PUT** `/api/admin/orders/:id`
+- **Description:** Update order information including status.
+- **Headers:** `Authorization: Bearer <token>`
+- **Body:**
+  - `items` (array, optional) - New order items
+  - `shippingAddressId` (string, optional) - New shipping address ID
+  - `status` (string, optional) - New order status
+- **Response:**
+  - `200 OK`: Order updated successfully (bilingual message)
+  - `404 Not Found`: Order not found (bilingual message)
+
+### 5. Delete Order
+- **DELETE** `/api/admin/orders/:id`
+- **Description:** Permanently delete an order.
+- **Headers:** `Authorization: Bearer <token>`
+- **Response:**
+  - `200 OK`: Order deleted successfully (bilingual message)
+  - `404 Not Found`: Order not found (bilingual message)
