@@ -123,13 +123,7 @@ const userSchema = new Schema({
   updatedAt: {
     type: Date,
     default: Date.now
-  },
-
-  favourites: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
-  cart: [{
-    product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
-    quantity: { type: Number, default: 1 }
-  }]
+  }
 }, {
   timestamps: true
 });

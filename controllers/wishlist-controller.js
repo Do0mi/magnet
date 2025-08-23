@@ -27,7 +27,7 @@ exports.getWishlist = async (req, res) => {
       wishlist: wishlist ? wishlist.products : [] 
     }));
   } catch (err) {
-    res.status(500).json({ status: 'error', message: getBilingualMessage('failed_get_favourites') });
+    res.status(500).json({ status: 'error', message: getBilingualMessage('failed_get_wishlist') });
   }
 };
 
@@ -74,10 +74,10 @@ exports.addToWishlist = async (req, res) => {
     
     res.status(200).json(createResponse('success', 
       { wishlist: updatedWishlist ? updatedWishlist.products : [] },
-      getBilingualMessage('product_added_favourites')
+      getBilingualMessage('product_added_wishlist')
     ));
   } catch (err) {
-    res.status(500).json({ status: 'error', message: getBilingualMessage('failed_add_favourites') });
+    res.status(500).json({ status: 'error', message: getBilingualMessage('failed_add_wishlist') });
   }
 };
 
@@ -112,9 +112,9 @@ exports.removeFromWishlist = async (req, res) => {
     
     res.status(200).json(createResponse('success', 
       { wishlist: updatedWishlist ? updatedWishlist.products : [] },
-      getBilingualMessage('product_removed_favourites')
+      getBilingualMessage('product_removed_wishlist')
     ));
   } catch (err) {
-    res.status(500).json({ status: 'error', message: getBilingualMessage('failed_remove_favourites') });
+    res.status(500).json({ status: 'error', message: getBilingualMessage('failed_remove_wishlist') });
   }
 }; 

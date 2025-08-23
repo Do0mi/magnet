@@ -246,11 +246,112 @@ exports.getUserById = async (req, res) => {
       });
     }
 
+    let additionalData = {};
+
+    // Get role-specific data
+    if (user.role === 'business') {
+      // For business users: get products and their reviews
+      const products = await Product.find({ owner: id })
+        .populate('category', 'name')
+        .populate('approvedBy', 'firstname lastname email role')
+        .select('-__v');
+
+      // Get reviews for all products of this business
+      const productIds = products.map(product => product._id);
+      const reviews = await Review.find({ product: { $in: productIds } })
+        .populate('user', 'firstname lastname email role')
+        .populate('product', 'name code')
+        .select('-__v');
+
+      additionalData = {
+        products: products.map(product => ({
+          id: product._id,
+          name: product.name,
+          code: product.code,
+          status: product.status,
+          category: product.category,
+          price: product.price,
+          description: product.description,
+          images: product.images,
+          approvedBy: product.approvedBy,
+          createdAt: product.createdAt,
+          updatedAt: product.updatedAt
+        })),
+        reviews: reviews.map(review => ({
+          id: review._id,
+          user: review.user,
+          product: review.product,
+          rating: review.rating,
+          comment: review.comment,
+          createdAt: review.createdAt
+        }))
+      };
+    } else if (user.role === 'customer') {
+      // For customer users: get orders, wishlist, addresses and reviews
+      const orders = await Order.find({ customer: id })
+        .populate('shippingAddress')
+        .populate({
+          path: 'items.product',
+          select: 'name code status category'
+        })
+        .select('-__v')
+        .sort({ createdAt: -1 });
+
+      const wishlist = await Wishlist.findOne({ user: id })
+        .populate('products', 'name code status category')
+        .select('-__v');
+
+      const addresses = await Address.find({ user: id })
+        .select('-__v')
+        .sort({ createdAt: -1 });
+
+      const reviews = await Review.find({ user: id })
+        .populate('product', 'name code status category')
+        .select('-__v')
+        .sort({ createdAt: -1 });
+
+      additionalData = {
+        orders: orders.map(order => ({
+          id: order._id,
+          items: order.items,
+          shippingAddress: order.shippingAddress,
+          status: order.status,
+          statusLog: order.statusLog,
+          createdAt: order.createdAt,
+          updatedAt: order.updatedAt
+        })),
+        wishlist: wishlist ? {
+          id: wishlist._id,
+          products: wishlist.products,
+          createdAt: wishlist.createdAt
+        } : null,
+        addresses: addresses.map(address => ({
+          id: address._id,
+          addressLine1: address.addressLine1,
+          addressLine2: address.addressLine2,
+          city: address.city,
+          state: address.state,
+          postalCode: address.postalCode,
+          country: address.country,
+          createdAt: address.createdAt,
+          updatedAt: address.updatedAt
+        })),
+        reviews: reviews.map(review => ({
+          id: review._id,
+          product: review.product,
+          rating: review.rating,
+          comment: review.comment,
+          createdAt: review.createdAt
+        }))
+      };
+    }
+
     res.status(200).json(createResponse('success', {
       user: formatUser(user, { 
         includeBusinessInfo: true,
         includeVerification: true 
-      })
+      }),
+      ...additionalData
     }));
 
   } catch (err) {

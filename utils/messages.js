@@ -563,6 +563,22 @@ const messages = {
     en: 'Wishlist not found',
     ar: 'قائمة الرغبات غير موجودة'
   },
+  'product_added_wishlist': {
+    en: 'Product added to wishlist',
+    ar: 'تمت إضافة المنتج إلى قائمة الرغبات'
+  },
+  'product_removed_wishlist': {
+    en: 'Product removed from wishlist',
+    ar: 'تمت إزالة المنتج من قائمة الرغبات'
+  },
+  'failed_add_wishlist': {
+    en: 'Failed to add to wishlist',
+    ar: 'فشل في الإضافة إلى قائمة الرغبات'
+  },
+  'failed_remove_wishlist': {
+    en: 'Failed to remove from wishlist',
+    ar: 'فشل في الإزالة من قائمة الرغبات'
+  },
 
   // Bilingual product validation messages
   'product_name_required_both_languages': {
