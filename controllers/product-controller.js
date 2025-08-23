@@ -203,10 +203,10 @@ exports.addProductsByMagnetEmployee = async (req, res) => {
 // PUT /products/:id
 exports.updateProduct = async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id);
+    const product = await Product.findById(req.params.id).populate('owner', 'firstname lastname email businessInfo.companyName').populate('approvedBy', 'firstname lastname email role');
     if (!product) return res.status(404).json({ status: 'error', message: getBilingualMessage('product_not_found') });
     if (req.user.role === 'business') {
-      if (product.owner.toString() !== req.user.id) {
+      if (product.owner._id.toString() !== req.user.id) {
         return res.status(403).json({ status: 'error', message: getBilingualMessage('not_authorized_update_product') });
       }
       // Business update: set status to pending
@@ -251,10 +251,10 @@ exports.updateProduct = async (req, res) => {
 // DELETE /products/:id
 exports.deleteProduct = async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id);
+    const product = await Product.findById(req.params.id).populate('owner', 'firstname lastname email businessInfo.companyName').populate('approvedBy', 'firstname lastname email role');
     if (!product) return res.status(404).json({ status: 'error', message: getBilingualMessage('product_not_found') });
     if (req.user.role === 'business') {
-      if (product.owner.toString() !== req.user.id) {
+      if (product.owner._id.toString() !== req.user.id) {
         return res.status(403).json({ status: 'error', message: getBilingualMessage('not_authorized_delete_product') });
       }
     } else if (req.user.role !== 'admin' && req.user.role !== 'magnet_employee') {
@@ -273,14 +273,18 @@ exports.approveProduct = async (req, res) => {
     if (req.user.role !== 'admin' && req.user.role !== 'magnet_employee') {
       return res.status(403).json({ status: 'error', message: getBilingualMessage('not_authorized_approve_product') });
     }
-    const product = await Product.findById(req.params.id);
+    const product = await Product.findById(req.params.id).populate('owner', 'firstname lastname email businessInfo.companyName').populate('approvedBy', 'firstname lastname email role');
     if (!product) return res.status(404).json({ status: 'error', message: getBilingualMessage('product_not_found') });
     product.status = 'approved';
     product.approvedBy = req.user.id;
     product.updatedAt = new Date();
     await product.save();
+    
+    // Re-populate after save to get the updated approvedBy
+    const updatedProduct = await Product.findById(req.params.id).populate('owner', 'firstname lastname email businessInfo.companyName').populate('approvedBy', 'firstname lastname email role');
+    
     res.status(200).json(createResponse('success', 
-      { product: formatProduct(product) },
+      { product: formatProduct(updatedProduct) },
       getBilingualMessage('product_approved')
     ));
   } catch (err) {
@@ -294,14 +298,18 @@ exports.declineProduct = async (req, res) => {
     if (req.user.role !== 'admin' && req.user.role !== 'magnet_employee') {
       return res.status(403).json({ status: 'error', message: getBilingualMessage('not_authorized_decline_product') });
     }
-    const product = await Product.findById(req.params.id);
+    const product = await Product.findById(req.params.id).populate('owner', 'firstname lastname email businessInfo.companyName').populate('approvedBy', 'firstname lastname email role');
     if (!product) return res.status(404).json({ status: 'error', message: getBilingualMessage('product_not_found') });
     product.status = 'declined';
     product.approvedBy = req.user.id;
     product.updatedAt = new Date();
     await product.save();
+    
+    // Re-populate after save to get the updated approvedBy
+    const updatedProduct = await Product.findById(req.params.id).populate('owner', 'firstname lastname email businessInfo.companyName').populate('approvedBy', 'firstname lastname email role');
+    
     res.status(200).json(createResponse('success', 
-      { product: formatProduct(product) },
+      { product: formatProduct(updatedProduct) },
       getBilingualMessage('product_declined')
     ));
   } catch (err) {

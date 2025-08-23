@@ -27,7 +27,9 @@ exports.addReview = async (req, res) => {
     const { rating, comment } = req.body;
     const productId = req.params.id;
     // Check if product exists and is approved
-    const product = await Product.findById(productId);
+    const product = await Product.findById(productId)
+      .populate('owner', 'firstname lastname email businessInfo.companyName')
+      .populate('approvedBy', 'firstname lastname email role');
     if (!product || product.status !== 'approved') {
       return res.status(404).json({ status: 'error', message: getBilingualMessage('product_not_found_or_not_approved') });
     }
@@ -51,7 +53,25 @@ exports.addReview = async (req, res) => {
     await review.save();
     await updateProductRating(productId);
     
-    const formattedReview = formatReview(review);
+    // Re-populate to get the complete review with populated fields
+    const populatedReview = await Review.findById(review._id)
+      .populate('user', 'firstname lastname email role')
+      .populate({
+        path: 'product',
+        populate: {
+          path: 'owner',
+          select: 'firstname lastname email businessInfo.companyName'
+        }
+      })
+      .populate({
+        path: 'product',
+        populate: {
+          path: 'approvedBy',
+          select: 'firstname lastname email role'
+        }
+      });
+    
+    const formattedReview = formatReview(populatedReview);
     
     res.status(201).json(createResponse('success', 
       { review: formattedReview },
@@ -66,7 +86,22 @@ exports.addReview = async (req, res) => {
 exports.getProductReviews = async (req, res) => {
   try {
     const productId = req.params.id;
-    const reviews = await Review.find({ product: productId }).populate('user', 'firstname lastname');
+    const reviews = await Review.find({ product: productId })
+      .populate('user', 'firstname lastname email role')
+      .populate({
+        path: 'product',
+        populate: {
+          path: 'owner',
+          select: 'firstname lastname email businessInfo.companyName'
+        }
+      })
+      .populate({
+        path: 'product',
+        populate: {
+          path: 'approvedBy',
+          select: 'firstname lastname email role'
+        }
+      });
     
     const formattedReviews = reviews.map(review => formatReview(review));
     
@@ -110,8 +145,21 @@ exports.getBusinessProductsReviews = async (req, res) => {
     // Find reviews for these products
     const reviews = await Review.find({
       product: { $in: productIds }
-    }).populate('user', 'firstname lastname email')
-      .populate('product', 'name');
+    }).populate('user', 'firstname lastname email role')
+      .populate({
+        path: 'product',
+        populate: {
+          path: 'owner',
+          select: 'firstname lastname email businessInfo.companyName'
+        }
+      })
+      .populate({
+        path: 'product',
+        populate: {
+          path: 'approvedBy',
+          select: 'firstname lastname email role'
+        }
+      });
     
     const formattedReviews = reviews.map(review => formatReview(review));
     

@@ -48,7 +48,10 @@ exports.createOrder = async (req, res) => {
 exports.getMyOrders = async (req, res) => {
   try {
     const language = req.query.lang || 'en';
-    const orders = await Order.find({ customer: req.user.id }).populate('items.product').populate('shippingAddress');
+    const orders = await Order.find({ customer: req.user.id })
+      .populate('customer', 'firstname lastname email role')
+      .populate('items.product')
+      .populate('shippingAddress');
     
     const formattedOrders = orders.map(order => formatOrder(order, { language }));
     
@@ -62,7 +65,10 @@ exports.getMyOrders = async (req, res) => {
 exports.getOrderById = async (req, res) => {
   try {
     const language = req.query.lang || 'en';
-    const order = await Order.findById(req.params.id).populate('items.product').populate('shippingAddress');
+    const order = await Order.findById(req.params.id)
+      .populate('customer', 'firstname lastname email role')
+      .populate('items.product')
+      .populate('shippingAddress');
     if (!order) return res.status(404).json({ status: 'error', message: getBilingualMessage('order_not_found') });
     // Only admin, magnet_employee, or owner (customer) can view
     if (req.user.role !== 'admin' && req.user.role !== 'magnet_employee' && order.customer.toString() !== req.user.id) {
@@ -81,7 +87,10 @@ exports.getOrderById = async (req, res) => {
 exports.getAllOrders = async (req, res) => {
   try {
     const language = req.query.lang || 'en';
-    const orders = await Order.find().populate('items.product').populate('shippingAddress');
+    const orders = await Order.find()
+      .populate('customer', 'firstname lastname email role')
+      .populate('items.product')
+      .populate('shippingAddress');
     
     const formattedOrders = orders.map(order => formatOrder(order, { language }));
     
@@ -187,7 +196,9 @@ exports.getBusinessProductOrders = async (req, res) => {
     // Find orders containing any of these products
     const orders = await Order.find({
       'items.product': { $in: productIds }
-    }).populate('items.product').populate('customer', 'firstname lastname email phone').populate('shippingAddress');
+    }).populate('items.product')
+      .populate('customer', 'firstname lastname email phone role')
+      .populate('shippingAddress');
     
     const formattedOrders = orders.map(order => formatOrder(order, { language }));
     

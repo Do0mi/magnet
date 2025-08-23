@@ -645,7 +645,7 @@ exports.createWishlist = async (req, res) => {
     }
     
     // Check if product exists and is approved
-    const product = await Product.findById(productId);
+    const product = await Product.findById(productId).populate('owner', 'firstname lastname email businessInfo.companyName').populate('approvedBy', 'firstname lastname email role');
     if (!product) {
       return res.status(404).json({ status: 'error', message: getBilingualMessage('product_not_found') });
     }
@@ -713,7 +713,7 @@ exports.updateWishlist = async (req, res) => {
     
     // Handle product operations if provided
     if (productId && action) {
-      const product = await Product.findById(productId);
+      const product = await Product.findById(productId).populate('owner', 'firstname lastname email businessInfo.companyName').populate('approvedBy', 'firstname lastname email role');
       if (!product) {
         return res.status(404).json({ status: 'error', message: getBilingualMessage('product_not_found') });
       }
@@ -1276,7 +1276,7 @@ exports.createOrder = async (req, res) => {
         return res.status(400).json({ status: 'error', message: getBilingualMessage('invalid_order_items') });
       }
       
-      const product = await Product.findById(item.product);
+      const product = await Product.findById(item.product).populate('owner', 'firstname lastname email businessInfo.companyName').populate('approvedBy', 'firstname lastname email role');
       if (!product) {
         return res.status(404).json({ status: 'error', message: getBilingualMessage('product_not_found') });
       }
@@ -1347,7 +1347,7 @@ exports.updateOrder = async (req, res) => {
           return res.status(400).json({ status: 'error', message: getBilingualMessage('invalid_order_items') });
         }
         
-        const product = await Product.findById(item.product);
+        const product = await Product.findById(item.product).populate('owner', 'firstname lastname email businessInfo.companyName').populate('approvedBy', 'firstname lastname email role');
         if (!product) {
           return res.status(404).json({ status: 'error', message: getBilingualMessage('product_not_found') });
         }

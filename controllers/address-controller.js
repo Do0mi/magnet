@@ -10,7 +10,8 @@ const legacyFormatAddress = (address) => {
 // GET /addresses
 exports.getAddresses = async (req, res) => {
   try {
-    const addresses = await Address.find({ user: req.user.id });
+    const addresses = await Address.find({ user: req.user.id })
+      .populate('user', 'firstname lastname email role');
     
     const formattedAddresses = addresses.map(address => formatAddress(address));
     
@@ -53,7 +54,11 @@ exports.addAddress = async (req, res) => {
     });
     await address.save();
     
-    const formattedAddress = formatAddress(address);
+    // Re-populate to get the user details
+    const populatedAddress = await Address.findById(address._id)
+      .populate('user', 'firstname lastname email role');
+    
+    const formattedAddress = formatAddress(populatedAddress);
     
     res.status(201).json(createResponse('success', 
       { address: formattedAddress },
@@ -67,8 +72,9 @@ exports.addAddress = async (req, res) => {
 // PUT /addresses/:id
 exports.updateAddress = async (req, res) => {
   try {
-    const address = await Address.findById(req.params.id);
-    if (!address || address.user.toString() !== req.user.id) {
+    const address = await Address.findById(req.params.id)
+      .populate('user', 'firstname lastname email role');
+    if (!address || address.user._id.toString() !== req.user.id) {
       return res.status(404).json({ status: 'error', message: getBilingualMessage('address_not_found') });
     }
     
@@ -84,7 +90,11 @@ exports.updateAddress = async (req, res) => {
     address.updatedAt = new Date();
     await address.save();
     
-    const formattedAddress = formatAddress(address);
+    // Re-populate to get the updated user details
+    const updatedAddress = await Address.findById(req.params.id)
+      .populate('user', 'firstname lastname email role');
+    
+    const formattedAddress = formatAddress(updatedAddress);
     
     res.status(200).json(createResponse('success', 
       { address: formattedAddress },
@@ -98,8 +108,9 @@ exports.updateAddress = async (req, res) => {
 // DELETE /addresses/:id
 exports.deleteAddress = async (req, res) => {
   try {
-    const address = await Address.findById(req.params.id);
-    if (!address || address.user.toString() !== req.user.id) {
+    const address = await Address.findById(req.params.id)
+      .populate('user', 'firstname lastname email role');
+    if (!address || address.user._id.toString() !== req.user.id) {
       return res.status(404).json({ status: 'error', message: getBilingualMessage('address_not_found') });
     }
     await address.deleteOne();

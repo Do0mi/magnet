@@ -65,6 +65,17 @@ const formatUser = (user, options = {}) => {
       approvedAt: user.businessInfo.approvedAt,
       rejectionReason: user.businessInfo.rejectionReason
     };
+    
+    // If approvedBy is populated, format it properly
+    if (user.businessInfo.approvedBy && typeof user.businessInfo.approvedBy === 'object') {
+      formatted.businessInfo.approvedBy = {
+        id: user.businessInfo.approvedBy._id,
+        firstname: user.businessInfo.approvedBy.firstname,
+        lastname: user.businessInfo.approvedBy.lastname,
+        email: user.businessInfo.approvedBy.email,
+        role: user.businessInfo.approvedBy.role
+      };
+    }
   }
 
   if (includePassword) {
@@ -137,6 +148,20 @@ const formatProduct = (product, options = {}) => {
   if (includeOwner && product.owner) {
     if (typeof product.owner === 'object' && product.owner.businessInfo) {
       formatted.ownerCompanyName = product.owner.businessInfo.companyName;
+      formatted.owner = {
+        id: product.owner._id,
+        firstname: product.owner.firstname,
+        lastname: product.owner.lastname,
+        email: product.owner.email,
+        companyName: product.owner.businessInfo.companyName
+      };
+    } else if (typeof product.owner === 'object') {
+      formatted.owner = {
+        id: product.owner._id,
+        firstname: product.owner.firstname,
+        lastname: product.owner.lastname,
+        email: product.owner.email
+      };
     } else {
       formatted.owner = product.owner;
     }
@@ -144,7 +169,17 @@ const formatProduct = (product, options = {}) => {
 
   if (includeApproval) {
     formatted.status = product.status;
-    formatted.approvedBy = product.approvedBy;
+    if (product.approvedBy && typeof product.approvedBy === 'object') {
+      formatted.approvedBy = {
+        id: product.approvedBy._id,
+        firstname: product.approvedBy.firstname,
+        lastname: product.approvedBy.lastname,
+        email: product.approvedBy.email,
+        role: product.approvedBy.role
+      };
+    } else {
+      formatted.approvedBy = product.approvedBy;
+    }
   }
 
   return formatted;
@@ -167,7 +202,7 @@ const formatOrder = (order, options = {}) => {
   const {
     language = 'en',
     includeItems = true,
-    includeCustomer = false,
+    includeCustomer = true,
     includeAddress = true,
     includeStatusLog = false
   } = options;
@@ -246,7 +281,7 @@ const formatCategory = (category, options = {}) => {
   
   const {
     language = 'en',
-    includeCreator = false
+    includeCreator = true
   } = options;
 
   const formatted = {
@@ -291,7 +326,7 @@ const formatReview = (review, options = {}) => {
   
   const {
     includeUser = true,
-    includeProduct = false
+    includeProduct = true
   } = options;
 
   const formatted = {
@@ -335,7 +370,7 @@ const formatReview = (review, options = {}) => {
 const formatAddress = (address) => {
   if (!address) return null;
   
-  return {
+  const formatted = {
     id: address._id,
     addressLine1: address.addressLine1,
     addressLine2: address.addressLine2,
@@ -346,6 +381,16 @@ const formatAddress = (address) => {
     createdAt: address.createdAt,
     updatedAt: address.updatedAt
   };
+
+  // If user is populated, include user details
+  if (address.user && typeof address.user === 'object') {
+    formatted.user = formatUser(address.user, { 
+      includeBusinessInfo: false, 
+      includeVerification: false 
+    });
+  }
+
+  return formatted;
 };
 
 /**

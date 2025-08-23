@@ -11,7 +11,8 @@ const legacyFormatCategory = (category, language = 'en') => {
 exports.getCategories = async (req, res) => {
   try {
     const language = req.query.lang || 'en';
-    const categories = await Category.find();
+    const categories = await Category.find()
+      .populate('createdBy', 'firstname lastname email role');
     
     const formattedCategories = categories.map(category => formatCategory(category, { language }));
     
@@ -42,8 +43,12 @@ exports.createCategory = async (req, res) => {
     });
     await category.save();
     
+    // Re-populate to get the createdBy details
+    const populatedCategory = await Category.findById(category._id)
+      .populate('createdBy', 'firstname lastname email role');
+    
     const language = req.query.lang || 'en';
-    const formattedCategory = formatCategory(category, { language });
+    const formattedCategory = formatCategory(populatedCategory, { language });
     
     res.status(201).json(createResponse('success', 
       { category: formattedCategory },
@@ -57,10 +62,11 @@ exports.createCategory = async (req, res) => {
 // PUT /categories/:id
 exports.updateCategory = async (req, res) => {
   try {
-    const category = await Category.findById(req.params.id);
+    const category = await Category.findById(req.params.id)
+      .populate('createdBy', 'firstname lastname email role');
     if (!category) return res.status(404).json({ status: 'error', message: getBilingualMessage('category_not_found') });
     // Only creator, admin, or magnet_employee can update
-    if (req.user.role === 'business' && category.createdBy.toString() !== req.user.id) {
+    if (req.user.role === 'business' && category.createdBy._id.toString() !== req.user.id) {
       return res.status(403).json({ status: 'error', message: getBilingualMessage('not_authorized_update_category') });
     }
     
@@ -80,8 +86,12 @@ exports.updateCategory = async (req, res) => {
     category.updatedAt = new Date();
     await category.save();
     
+    // Re-populate to get the updated createdBy details
+    const updatedCategory = await Category.findById(req.params.id)
+      .populate('createdBy', 'firstname lastname email role');
+    
     const language = req.query.lang || 'en';
-    const formattedCategory = formatCategory(category, { language });
+    const formattedCategory = formatCategory(updatedCategory, { language });
     
     res.status(200).json(createResponse('success', 
       { category: formattedCategory },
@@ -95,10 +105,11 @@ exports.updateCategory = async (req, res) => {
 // DELETE /categories/:id
 exports.deleteCategory = async (req, res) => {
   try {
-    const category = await Category.findById(req.params.id);
+    const category = await Category.findById(req.params.id)
+      .populate('createdBy', 'firstname lastname email role');
     if (!category) return res.status(404).json({ status: 'error', message: getBilingualMessage('category_not_found') });
     // Only creator, admin, or magnet_employee can delete
-    if (req.user.role === 'business' && category.createdBy.toString() !== req.user.id) {
+    if (req.user.role === 'business' && category.createdBy._id.toString() !== req.user.id) {
       return res.status(403).json({ status: 'error', message: getBilingualMessage('not_authorized_delete_category') });
     }
     await category.deleteOne();

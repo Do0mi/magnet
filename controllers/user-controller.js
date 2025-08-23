@@ -101,8 +101,14 @@ exports.businessApproval = async (req, res) => {
       status,
       reason
     );
+    
+    // Re-populate to get the approvedBy details
+    const updatedBusiness = await User.findById(businessId)
+      .populate('businessInfo.approvedBy', 'firstname lastname email role')
+      .select('-password -emailOTP -phoneOTP -passwordResetToken');
+    
     res.status(200).json(createResponse('success', {
-      business: formatUser(business, { 
+      business: formatUser(updatedBusiness, { 
         includeBusinessInfo: true,
         includeVerification: false 
       })
