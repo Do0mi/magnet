@@ -949,7 +949,7 @@ exports.createReview = async (req, res) => {
   try {
     const { userId, productId, rating, comment } = req.body;
     
-    if (!userId || !productId || !rating || !comment) {
+    if (!userId || !productId || !rating) {
       return res.status(400).json({ status: 'error', message: getBilingualMessage('missing_required_fields') });
     }
     

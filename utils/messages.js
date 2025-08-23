@@ -634,11 +634,7 @@ const messages = {
     ar: 'وصف الفئة مطلوب باللغتين الإنجليزية والعربية'
   },
   
-  // Review validation messages
-  'review_comment_required_both_languages': {
-    en: 'Review comment is required in both English and Arabic',
-    ar: 'تعليق التقييم مطلوب باللغتين الإنجليزية والعربية'
-  },
+
   
   // Order status options messages
   'status_options_retrieved': {
@@ -907,10 +903,7 @@ const messages = {
     en: 'Failed to allow user',
     ar: 'فشل في السماح للمستخدم'
   },
-  'review_comment_required': {
-    en: 'Review comment is required',
-    ar: 'تعليق التقييم مطلوب'
-  },
+
   'address_line1_required': {
     en: 'Address line 1 is required',
     ar: 'عنوان السطر الأول مطلوب'

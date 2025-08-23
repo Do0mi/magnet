@@ -39,11 +39,6 @@ exports.addReview = async (req, res) => {
       return res.status(400).json({ status: 'error', message: getBilingualMessage('already_reviewed_product') });
     }
     
-    // Validate comment if provided
-    if (!comment) {
-      return res.status(400).json({ status: 'error', message: getBilingualMessage('review_comment_required') });
-    }
-    
     const review = new Review({
       product: productId,
       user: req.user.id,
