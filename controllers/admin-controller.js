@@ -135,6 +135,11 @@ exports.createUser = async (req, res) => {
     const newUser = new User(userData);
     await newUser.save();
 
+    // Populate the approvedBy field if it's a business user
+    if (role === 'business') {
+      await newUser.populate('businessInfo.approvedBy', 'firstname lastname email role');
+    }
+
     res.status(201).json(createResponse('success', {
       user: formatUser(newUser, { 
         includeBusinessInfo: role === 'business',
@@ -197,6 +202,7 @@ exports.getAllUsers = async (req, res) => {
 
     const skip = (page - 1) * limit;
     const users = await User.find(query)
+      .populate('businessInfo.approvedBy', 'firstname lastname email role')
       .select('-password -emailOTP -phoneOTP -passwordResetToken')
       .sort(sort)
       .skip(skip)
@@ -237,7 +243,9 @@ exports.getUserById = async (req, res) => {
     if (permissionError) return;
 
     const { id } = req.params;
-    const user = await User.findById(id).select('-password -emailOTP -phoneOTP -passwordResetToken');
+    const user = await User.findById(id)
+      .populate('businessInfo.approvedBy', 'firstname lastname email role')
+      .select('-password -emailOTP -phoneOTP -passwordResetToken');
     
     if (!user) {
       return res.status(404).json({ 
@@ -393,7 +401,8 @@ exports.updateUser = async (req, res) => {
       businessStreetName
     } = req.body;
 
-    const user = await User.findById(id);
+    const user = await User.findById(id)
+      .populate('businessInfo.approvedBy', 'firstname lastname email role');
     if (!user) {
       return res.status(404).json({ 
         status: 'error', 
@@ -526,7 +535,8 @@ exports.disallowUser = async (req, res) => {
       });
     }
 
-    const user = await User.findById(id);
+    const user = await User.findById(id)
+      .populate('businessInfo.approvedBy', 'firstname lastname email role');
     if (!user) {
       return res.status(404).json({ 
         status: 'error', 
@@ -567,7 +577,8 @@ exports.allowUser = async (req, res) => {
 
     const { id } = req.params;
 
-    const user = await User.findById(id);
+    const user = await User.findById(id)
+      .populate('businessInfo.approvedBy', 'firstname lastname email role');
     if (!user) {
       return res.status(404).json({ 
         status: 'error', 
