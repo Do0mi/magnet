@@ -77,6 +77,7 @@
 - **Public**: Anyone can access, no authentication required.
 - **All**: All HTTP methods (GET, POST, PUT, DELETE) for that endpoint.
 - **Business (if owns product in order)**: Business user can access if any product in the order is owned by them (see order tracking section).
+- **Enhanced Data Population**: All APIs now return complete user information instead of just IDs for related fields (owner, approvedBy, createdBy, customer, user, etc.).
 
 ---
 
@@ -93,6 +94,158 @@ Example:
     "ar": "تم تسجيل المستخدم بنجاح"
   },
   "data": { ... }
+}
+```
+
+---
+
+## Enhanced User Data Population
+
+All APIs now return complete user information instead of just IDs for related fields. This includes:
+
+### User Object Format
+When user data is populated, it returns:
+```json
+{
+  "id": "user_id",
+  "firstname": "John",
+  "lastname": "Doe", 
+  "email": "john@example.com",
+  "role": "customer"
+}
+```
+
+### Business User Object Format
+For business users, additional company information is included:
+```json
+{
+  "id": "user_id",
+  "firstname": "Business",
+  "lastname": "Owner",
+  "email": "business@example.com",
+  "role": "business",
+  "companyName": "ABC Company"
+}
+```
+
+### Admin User Object Format
+For admin users who approved content:
+```json
+{
+  "id": "admin_id",
+  "firstname": "Admin",
+  "lastname": "User",
+  "email": "admin@example.com",
+  "role": "admin"
+}
+```
+
+### Populated Fields
+The following fields are now populated with complete user objects instead of IDs:
+- **Product Owner**: `product.owner` - Returns business user details
+- **Product Approved By**: `product.approvedBy` - Returns admin/employee details
+- **Category Created By**: `category.createdBy` - Returns creator details
+- **Review User**: `review.user` - Returns reviewer details
+- **Order Customer**: `order.customer` - Returns customer details
+- **Address User**: `address.user` - Returns address owner details
+- **Wishlist User**: `wishlist.user` - Returns wishlist owner details
+- **Business Approved By**: `business.businessInfo.approvedBy` - Returns approver details
+
+### Example Enhanced Responses
+
+#### Product Response
+```json
+{
+  "status": "success",
+  "data": {
+    "product": {
+      "id": "product_id",
+      "name": "Product Name",
+      "code": "PROD001",
+      "owner": {
+        "id": "owner_id",
+        "firstname": "Business",
+        "lastname": "Owner",
+        "email": "business@example.com",
+        "companyName": "ABC Company"
+      },
+      "approvedBy": {
+        "id": "admin_id",
+        "firstname": "Admin",
+        "lastname": "User",
+        "email": "admin@example.com",
+        "role": "admin"
+      }
+    }
+  }
+}
+```
+
+#### Review Response
+```json
+{
+  "status": "success",
+  "data": {
+    "review": {
+      "id": "review_id",
+      "rating": 5,
+      "comment": "Great product!",
+      "user": {
+        "id": "user_id",
+        "firstname": "John",
+        "lastname": "Doe",
+        "email": "john@example.com",
+        "role": "customer"
+      },
+      "product": {
+        "id": "product_id",
+        "name": "Product Name",
+        "owner": {
+          "id": "owner_id",
+          "firstname": "Business",
+          "lastname": "Owner",
+          "email": "business@example.com",
+          "companyName": "ABC Company"
+        }
+      }
+    }
+  }
+}
+```
+
+#### Order Response
+```json
+{
+  "status": "success",
+  "data": {
+    "order": {
+      "id": "order_id",
+      "status": "pending",
+      "customer": {
+        "id": "customer_id",
+        "firstname": "John",
+        "lastname": "Doe",
+        "email": "john@example.com",
+        "role": "customer"
+      },
+      "items": [
+        {
+          "product": {
+            "id": "product_id",
+            "name": "Product Name",
+            "owner": {
+              "id": "owner_id",
+              "firstname": "Business",
+              "lastname": "Owner",
+              "email": "business@example.com",
+              "companyName": "ABC Company"
+            }
+          },
+          "quantity": 2
+        }
+      ]
+    }
+  }
 }
 ```
 
@@ -379,8 +532,8 @@ Products support bilingual content (Arabic and English). You can:
   - `stock` (number)
   - `customFields` (array of objects, min 3, max 10, each: `{ key: { en: "English Key", ar: "Arabic Key" }, value: { en: "English Value", ar: "Arabic Value" } }`)
   - `status` (string: 'pending', 'approved', 'declined')
-  - `owner` (user id, required)
-  - `approvedBy` (user id, admin/employee who approved)
+  - `owner` (object, populated with business user details)
+  - `approvedBy` (object, populated with admin/employee details who approved)
   - `createdAt` (date)
 
 ---
@@ -665,7 +818,7 @@ Categories support bilingual content (Arabic and English). You can:
 ### Category Object
 - `name` (object, required, bilingual: `{ en: "English Name", ar: "Arabic Name" }`)
 - `description` (object, optional, bilingual: `{ en: "English Description", ar: "Arabic Description" }`)
-- `createdBy` (ObjectId, reference to User)
+- `createdBy` (object, populated with creator details)
 - `createdAt` (date)
 - `updatedAt` (date)
 
@@ -716,7 +869,7 @@ Orders support bilingual content (Arabic and English). You can:
 - **Get full bilingual data**: Use `?lang=both` to get both languages
 
 ### Order Object
-- `customer` (ObjectId, required, reference to User)
+- `customer` (object, populated with customer details)
 - `items` (array of objects, required)
   - Each item: `{ product: ObjectId, quantity: Number }`
 - `shippingAddress` (ObjectId, reference to Address)
@@ -826,7 +979,7 @@ Orders support bilingual content (Arabic and English). You can:
 Addresses no longer support bilingual content. All address fields are stored as simple strings.
 
 ### Address Object
-- `user` (ObjectId, required, reference to User)
+- `user` (object, populated with user details)
 - `addressLine1` (string, required)
 - `addressLine2` (string, optional)
 - `city` (string, required)
@@ -878,6 +1031,11 @@ Addresses no longer support bilingual content. All address fields are stored as 
 
 ## Wishlist Routes
 
+### Wishlist Object
+- `user` (object, populated with wishlist owner details)
+- `products` (array of objects, populated with product details including owner and approvedBy)
+- `createdAt` (date)
+
 ### 1. Get Wishlist
 - **GET** `/api/wishlist`
 - **Description:** Get the authenticated customer's wishlist.
@@ -909,8 +1067,8 @@ Addresses no longer support bilingual content. All address fields are stored as 
 Reviews no longer support bilingual content. All review comments are stored as simple strings.
 
 ### Review Object
-- `product` (ObjectId, required, reference to Product)
-- `user` (ObjectId, required, reference to User)
+- `product` (object, populated with product details including owner and approvedBy)
+- `user` (object, populated with reviewer details)
 - `rating` (number, required, min: 1, max: 5)
 - `comment` (string, required)
 - `createdAt` (date)
@@ -1119,9 +1277,9 @@ Admin routes provide comprehensive user management functionality for system admi
 - `isPhoneVerified` (boolean)
 - `isDisallowed` (boolean)
 - `disallowReason` (string, if disallowed)
-- `disallowedBy` (ObjectId, reference to admin who disallowed)
+- `disallowedBy` (object, populated with admin details who disallowed)
 - `disallowedAt` (Date, if disallowed)
-- `allowedBy` (ObjectId, reference to admin who allowed)
+- `allowedBy` (object, populated with admin details who allowed)
 - `allowedAt` (Date, if allowed)
 - `businessInfo` (object, for business users)
   - `crNumber` (string)
@@ -1133,7 +1291,7 @@ Admin routes provide comprehensive user management functionality for system admi
   - `streetName` (string)
   - `isApproved` (boolean)
   - `approvalStatus` (string, enum: 'pending', 'approved', 'rejected')
-  - `approvedBy` (ObjectId)
+  - `approvedBy` (object, populated with admin details who approved)
   - `approvedAt` (Date)
   - `rejectionReason` (string, if rejected)
 - `createdAt` (Date)
