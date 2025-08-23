@@ -1030,6 +1030,10 @@ const messages = {
   'invalid_order_items': {
     en: 'Invalid order items format',
     ar: 'تنسيق عناصر الطلب غير صحيح'
+  },
+  'invalid_action': {
+    en: 'Invalid action. Must be "add" or "remove"',
+    ar: 'إجراء غير صحيح. يجب أن يكون "إضافة" أو "إزالة"'
   }
 };
 

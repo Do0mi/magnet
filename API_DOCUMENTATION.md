@@ -1154,6 +1154,41 @@ Admin routes provide comprehensive user management functionality for system admi
   - `productId` (string, optional, filter by product ID)
 - **Response:**
   - `200 OK`: List of wishlists with pagination info (bilingual message)
+  - **Example Response:**
+    ```json
+    {
+      "status": "success",
+      "data": {
+        "wishlists": [
+          {
+            "id": "wishlist_id",
+            "user": {
+              "id": "user_id",
+              "firstname": "John",
+              "lastname": "Doe",
+              "email": "john@example.com",
+              "role": "customer"
+            },
+            "products": [
+              {
+                "id": "product_id",
+                "name": "Product Name",
+                "code": "PROD001",
+                "status": "approved"
+              }
+            ],
+            "createdAt": "2024-01-01T00:00:00.000Z"
+          }
+        ]
+      },
+      "pagination": {
+        "currentPage": 1,
+        "totalPages": 1,
+        "totalItems": 1,
+        "itemsPerPage": 10
+      }
+    }
+    ```
 
 ### 2. Get Wishlist by ID
 - **GET** `/api/admin/wishlists/:id`
@@ -1165,22 +1200,23 @@ Admin routes provide comprehensive user management functionality for system admi
 
 ### 3. Create Wishlist
 - **POST** `/api/admin/wishlists`
-- **Description:** Create a new wishlist entry for any user and product.
+- **Description:** Add a product to a user's wishlist (creates wishlist if it doesn't exist).
 - **Headers:** `Authorization: Bearer <token>`
 - **Body:**
   - `userId` (string, required) - User ID
   - `productId` (string, required) - Product ID (must be approved)
 - **Response:**
-  - `201 Created`: Wishlist created successfully (bilingual message)
+  - `201 Created`: Product added to wishlist successfully (bilingual message)
   - `400 Bad Request`: Validation errors (bilingual message)
 
 ### 4. Update Wishlist
 - **PUT** `/api/admin/wishlists/:id`
-- **Description:** Update wishlist information.
+- **Description:** Update wishlist information or add/remove products.
 - **Headers:** `Authorization: Bearer <token>`
 - **Body:**
   - `userId` (string, optional) - New user ID
-  - `productId` (string, optional) - New product ID (must be approved)
+  - `productId` (string, optional) - Product ID to add or remove
+  - `action` (string, optional, enum: 'add', 'remove') - Action to perform on product
 - **Response:**
   - `200 OK`: Wishlist updated successfully (bilingual message)
   - `404 Not Found`: Wishlist not found (bilingual message)

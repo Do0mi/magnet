@@ -569,12 +569,15 @@ exports.getAllWishlists = async (req, res) => {
     const query = {};
     
     if (userId) query.user = userId;
-    if (productId) query.product = productId;
+    if (productId) {
+      // For product filtering, we need to check if the product exists in the products array
+      query.products = productId;
+    }
     
     const skip = (page - 1) * limit;
     const wishlists = await Wishlist.find(query)
       .populate('user', 'firstname lastname email role')
-      .populate('product', 'name code status')
+      .populate('products', 'name code status')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
@@ -585,7 +588,7 @@ exports.getAllWishlists = async (req, res) => {
       wishlists: wishlists.map(wishlist => ({
         id: wishlist._id,
         user: wishlist.user,
-        product: wishlist.product,
+        products: wishlist.products,
         createdAt: wishlist.createdAt
       }))
     }, null, {
@@ -607,7 +610,7 @@ exports.getWishlistById = async (req, res) => {
     const { id } = req.params;
     const wishlist = await Wishlist.findById(id)
       .populate('user', 'firstname lastname email role')
-      .populate('product', 'name code status category');
+      .populate('products', 'name code status category');
     
     if (!wishlist) {
       return res.status(404).json({ status: 'error', message: getBilingualMessage('wishlist_not_found') });
@@ -617,7 +620,7 @@ exports.getWishlistById = async (req, res) => {
       wishlist: {
         id: wishlist._id,
         user: wishlist.user,
-        product: wishlist.product,
+        products: wishlist.products,
         createdAt: wishlist.createdAt
       }
     }));
@@ -651,28 +654,35 @@ exports.createWishlist = async (req, res) => {
       return res.status(400).json({ status: 'error', message: getBilingualMessage('product_not_approved') });
     }
     
-    // Check if wishlist already exists
-    const existingWishlist = await Wishlist.findOne({ user: userId, product: productId });
-    if (existingWishlist) {
-      return res.status(400).json({ status: 'error', message: getBilingualMessage('product_already_in_wishlist') });
-    }
+    // Find or create wishlist for user
+    let wishlist = await Wishlist.findOne({ user: userId });
     
-    const wishlist = new Wishlist({
-      user: userId,
-      product: productId
-    });
+    if (!wishlist) {
+      // Create new wishlist for user
+      wishlist = new Wishlist({
+        user: userId,
+        products: [productId]
+      });
+    } else {
+      // Check if product already exists in wishlist
+      if (wishlist.products.includes(productId)) {
+        return res.status(400).json({ status: 'error', message: getBilingualMessage('product_already_in_wishlist') });
+      }
+      // Add product to existing wishlist
+      wishlist.products.push(productId);
+    }
     
     await wishlist.save();
     
     const populatedWishlist = await Wishlist.findById(wishlist._id)
       .populate('user', 'firstname lastname email role')
-      .populate('product', 'name code status');
+      .populate('products', 'name code status');
     
     res.status(201).json(createResponse('success', {
       wishlist: {
         id: populatedWishlist._id,
         user: populatedWishlist.user,
-        product: populatedWishlist.product,
+        products: populatedWishlist.products,
         createdAt: populatedWishlist.createdAt
       }
     }, getBilingualMessage('wishlist_created_successfully')));
@@ -685,7 +695,7 @@ exports.createWishlist = async (req, res) => {
 exports.updateWishlist = async (req, res) => {
   try {
     const { id } = req.params;
-    const { userId, productId } = req.body;
+    const { userId, productId, action } = req.body; // action: 'add' or 'remove'
     
     const wishlist = await Wishlist.findById(id);
     if (!wishlist) {
@@ -701,8 +711,8 @@ exports.updateWishlist = async (req, res) => {
       wishlist.user = userId;
     }
     
-    // Validate product if provided
-    if (productId) {
+    // Handle product operations if provided
+    if (productId && action) {
       const product = await Product.findById(productId);
       if (!product) {
         return res.status(404).json({ status: 'error', message: getBilingualMessage('product_not_found') });
@@ -710,20 +720,30 @@ exports.updateWishlist = async (req, res) => {
       if (product.status !== 'approved') {
         return res.status(400).json({ status: 'error', message: getBilingualMessage('product_not_approved') });
       }
-      wishlist.product = productId;
+      
+      if (action === 'add') {
+        if (wishlist.products.includes(productId)) {
+          return res.status(400).json({ status: 'error', message: getBilingualMessage('product_already_in_wishlist') });
+        }
+        wishlist.products.push(productId);
+      } else if (action === 'remove') {
+        wishlist.products = wishlist.products.filter(pid => pid.toString() !== productId);
+      } else {
+        return res.status(400).json({ status: 'error', message: getBilingualMessage('invalid_action') });
+      }
     }
     
     await wishlist.save();
     
     const updatedWishlist = await Wishlist.findById(id)
       .populate('user', 'firstname lastname email role')
-      .populate('product', 'name code status');
+      .populate('products', 'name code status');
     
     res.status(200).json(createResponse('success', {
       wishlist: {
         id: updatedWishlist._id,
         user: updatedWishlist.user,
-        product: updatedWishlist.product,
+        products: updatedWishlist.products,
         createdAt: updatedWishlist.createdAt
       }
     }, getBilingualMessage('wishlist_updated_successfully')));
