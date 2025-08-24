@@ -1043,6 +1043,64 @@ const messages = {
   'invalid_action': {
     en: 'Invalid action. Must be "add" or "remove"',
     ar: 'إجراء غير صحيح. يجب أن يكون "إضافة" أو "إزالة"'
+  },
+
+  // Admin Verification Management Messages
+  'email_already_verified': {
+    en: 'Email is already verified',
+    ar: 'البريد الإلكتروني مُتحقق منه بالفعل'
+  },
+  'email_verified_successfully': {
+    en: 'Email verified successfully',
+    ar: 'تم التحقق من البريد الإلكتروني بنجاح'
+  },
+  'failed_verify_email': {
+    en: 'Failed to verify email',
+    ar: 'فشل في التحقق من البريد الإلكتروني'
+  },
+  'email_not_verified': {
+    en: 'Email is not verified',
+    ar: 'البريد الإلكتروني غير مُتحقق منه'
+  },
+  'email_unverified_successfully': {
+    en: 'Email unverified successfully',
+    ar: 'تم إلغاء التحقق من البريد الإلكتروني بنجاح'
+  },
+  'failed_unverify_email': {
+    en: 'Failed to unverify email',
+    ar: 'فشل في إلغاء التحقق من البريد الإلكتروني'
+  },
+  'phone_already_verified': {
+    en: 'Phone is already verified',
+    ar: 'الهاتف مُتحقق منه بالفعل'
+  },
+  'phone_verified_successfully': {
+    en: 'Phone verified successfully',
+    ar: 'تم التحقق من الهاتف بنجاح'
+  },
+  'failed_verify_phone': {
+    en: 'Failed to verify phone',
+    ar: 'فشل في التحقق من الهاتف'
+  },
+  'phone_not_verified': {
+    en: 'Phone is not verified',
+    ar: 'الهاتف غير مُتحقق منه'
+  },
+  'phone_unverified_successfully': {
+    en: 'Phone unverified successfully',
+    ar: 'تم إلغاء التحقق من الهاتف بنجاح'
+  },
+  'failed_unverify_phone': {
+    en: 'Failed to unverify phone',
+    ar: 'فشل في إلغاء التحقق من الهاتف'
+  },
+  'user_has_no_phone': {
+    en: 'User has no phone number',
+    ar: 'المستخدم ليس لديه رقم هاتف'
+  },
+  'failed_fix_approved_by': {
+    en: 'Failed to fix approvedBy field',
+    ar: 'فشل في إصلاح حقل المعتمد عليه'
   }
 };
 

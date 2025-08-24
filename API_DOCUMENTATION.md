@@ -16,11 +16,13 @@
 |             | POST /api/categories        | No     | Yes           | business, admin, magnet_employee |
 |             | PUT /api/categories/:id     | No     | Yes           | business (own), admin, magnet_employee |
 |             | DELETE /api/categories/:id  | No     | Yes           | business (own), admin, magnet_employee |
-| Orders      | POST /api/orders            | No     | Yes           | customer                      |
+| Orders      | GET /api/orders/status-options | Yes    | No            | None                          |
+|             | POST /api/orders            | No     | Yes           | customer                      |
 |             | GET /api/orders/my          | No     | Yes           | customer                      |
 |             | GET /api/orders/business-products | No     | Yes           | business                      |
 |             | GET /api/orders/:id         | No     | Yes           | admin, magnet_employee, customer (own) |
 |             | GET /api/orders             | No     | Yes           | admin, magnet_employee         |
+|             | PUT /api/orders/:id/status  | No     | Yes           | admin, magnet_employee         |
 | Reviews     | POST /api/reviews/products/:id/reviews  | No     | Yes           | customer                      |
 |             | GET /api/reviews/products/:id/reviews   | Yes    | No            | None                          |
 |             | GET /api/reviews/business-products-reviews | No  | Yes           | business                      |
@@ -46,6 +48,11 @@
 |             | DELETE /api/admin/users/:id | No     | Yes           | admin                         |
 |             | PUT /api/admin/users/:id/disallow | No | Yes       | admin                         |
 |             | PUT /api/admin/users/:id/allow | No | Yes         | admin                         |
+|             | POST /api/admin/fix-approved-by | No | Yes         | admin                         |
+|             | PUT /api/admin/users/:id/verify-email | No | Yes    | admin, magnet_employee         |
+|             | PUT /api/admin/users/:id/unverify-email | No | Yes  | admin, magnet_employee         |
+|             | PUT /api/admin/users/:id/verify-phone | No | Yes    | admin, magnet_employee         |
+|             | PUT /api/admin/users/:id/unverify-phone | No | Yes  | admin, magnet_employee         |
 |             | GET /api/admin/wishlists    | No     | Yes           | admin                         |
 |             | GET /api/admin/wishlists/:id | No    | Yes           | admin                         |
 |             | POST /api/admin/wishlists   | No     | Yes           | admin                         |
@@ -326,7 +333,7 @@ This applies to both customer and business registration.
 
 ### Review Validation
 - **Rating**: Required number, min: 1, max: 5
-- **Comment**: Required string
+- **Comment**: Optional string
 
 ### Admin User Management Validation
 - **Role**: Must be one of: 'admin', 'magnet_employee', 'business', 'customer'
@@ -1070,7 +1077,7 @@ Reviews no longer support bilingual content. All review comments are stored as s
 - `product` (object, populated with product details including owner and approvedBy)
 - `user` (object, populated with reviewer details)
 - `rating` (number, required, min: 1, max: 5)
-- `comment` (string, required)
+- `comment` (string, optional)
 - `createdAt` (date)
 
 ### 1. Add Review
@@ -1079,7 +1086,7 @@ Reviews no longer support bilingual content. All review comments are stored as s
 - **Headers:** `Authorization: Bearer <token>`
 - **Body:**
   - `rating` (number, required, min: 1, max: 5)
-  - `comment` (string, required)
+  - `comment` (string, optional)
 - **Response:**
   - `201 Created`: Review info (bilingual message)
 
@@ -1168,6 +1175,15 @@ Reviews no longer support bilingual content. All review comments are stored as s
 
 ### Overview
 Admin routes provide comprehensive user management functionality for system administrators. All admin endpoints require authentication and admin role authorization.
+
+**Key Features:**
+- **User Management**: Create, read, update, delete users (admin only)
+- **User Status Control**: Allow/disallow users from accessing the system (admin only)
+- **Verification Management**: Manually verify/unverify user email and phone numbers (admin or magnet_employee)
+- **Business Approval**: Manage business user approvals and rejections
+- **Statistics**: Get comprehensive user statistics for dashboard
+- **Role-based Access**: Support for all user roles (customer, business, magnet_employee, admin)
+- **Enhanced Data**: All APIs return complete user information with populated related fields
 
 ### 1. Create User
 - **POST** `/api/admin/users`
@@ -1262,6 +1278,179 @@ Admin routes provide comprehensive user management functionality for system admi
   - `200 OK`: User allowed successfully (bilingual message)
   - `400 Bad Request`: User is not disallowed (bilingual message)
   - `404 Not Found`: User not found (bilingual message)
+
+### 9. Fix ApprovedBy Field
+- **POST** `/api/admin/fix-approved-by`
+- **Description:** Fix the approvedBy field for businesses that are approved but don't have this field set (admin only).
+- **Headers:** `Authorization: Bearer <token>`
+- **Response:**
+  - `200 OK`: Fix operation completed (bilingual message)
+  - `403 Forbidden`: Insufficient permissions (bilingual message)
+- **Example Response:**
+  ```json
+  {
+    "status": "success",
+    "data": {
+      "result": {
+        "fixed": 1,
+        "message": "Fixed 1 businesses",
+        "approver": {
+          "id": "admin_id",
+          "name": "Admin User",
+          "email": "admin@example.com"
+        }
+      }
+    },
+    "message": {
+      "en": "Fixed 1 businesses",
+      "ar": "تم إصلاح 1 من الأعمال"
+    }
+  }
+  ```
+
+### 10. Verify User Email
+- **PUT** `/api/admin/users/:id/verify-email`
+- **Description:** Manually verify a user's email address.
+- **Headers:** `Authorization: Bearer <token>`
+- **Response:**
+  - `200 OK`: Email verified successfully (bilingual message)
+  - `400 Bad Request`: Email is already verified (bilingual message)
+  - `404 Not Found`: User not found (bilingual message)
+- **Example Response:**
+  ```json
+  {
+    "status": "success",
+    "data": {
+      "user": {
+        "id": "user_id",
+        "firstname": "John",
+        "lastname": "Doe",
+        "email": "john@example.com",
+        "isEmailVerified": true,
+        "isPhoneVerified": false
+      }
+    },
+    "message": {
+      "en": "Email verified successfully",
+      "ar": "تم التحقق من البريد الإلكتروني بنجاح"
+    }
+  }
+  ```
+
+### 11. Unverify User Email
+- **PUT** `/api/admin/users/:id/unverify-email`
+- **Description:** Manually unverify a user's email address.
+- **Headers:** `Authorization: Bearer <token>`
+- **Response:**
+  - `200 OK`: Email unverified successfully (bilingual message)
+  - `400 Bad Request`: Email is not verified (bilingual message)
+  - `404 Not Found`: User not found (bilingual message)
+- **Example Response:**
+  ```json
+  {
+    "status": "success",
+    "data": {
+      "user": {
+        "id": "user_id",
+        "firstname": "John",
+        "lastname": "Doe",
+        "email": "john@example.com",
+        "isEmailVerified": false,
+        "isPhoneVerified": false
+      }
+    },
+    "message": {
+      "en": "Email unverified successfully",
+      "ar": "تم إلغاء التحقق من البريد الإلكتروني بنجاح"
+    }
+  }
+  ```
+
+### 12. Verify User Phone
+- **PUT** `/api/admin/users/:id/verify-phone`
+- **Description:** Manually verify a user's phone number.
+- **Headers:** `Authorization: Bearer <token>`
+- **Response:**
+  - `200 OK`: Phone verified successfully (bilingual message)
+  - `400 Bad Request`: Phone is already verified or user has no phone (bilingual message)
+  - `404 Not Found`: User not found (bilingual message)
+- **Example Response:**
+  ```json
+  {
+    "status": "success",
+    "data": {
+      "user": {
+        "id": "user_id",
+        "firstname": "John",
+        "lastname": "Doe",
+        "phone": "+1234567890",
+        "isEmailVerified": true,
+        "isPhoneVerified": true
+      }
+    },
+    "message": {
+      "en": "Phone verified successfully",
+      "ar": "تم التحقق من الهاتف بنجاح"
+    }
+  }
+  ```
+
+### 13. Unverify User Phone
+- **PUT** `/api/admin/users/:id/unverify-phone`
+- **Description:** Manually unverify a user's phone number.
+- **Headers:** `Authorization: Bearer <token>`
+- **Response:**
+  - `200 OK`: Phone unverified successfully (bilingual message)
+  - `400 Bad Request`: Phone is not verified (bilingual message)
+  - `404 Not Found`: User not found (bilingual message)
+- **Example Response:**
+  ```json
+  {
+    "status": "success",
+    "data": {
+      "user": {
+        "id": "user_id",
+        "firstname": "John",
+        "lastname": "Doe",
+        "phone": "+1234567890",
+        "isEmailVerified": true,
+        "isPhoneVerified": false
+      }
+    },
+    "message": {
+      "en": "Phone unverified successfully",
+      "ar": "تم إلغاء التحقق من الهاتف بنجاح"
+    }
+  }
+  ```
+
+### Verification Management Features
+
+The admin verification management system provides comprehensive control over user verification status:
+
+**Email Verification:**
+- **Verify Email**: Manually mark a user's email as verified
+- **Unverify Email**: Remove email verification status
+- **Validation**: Prevents duplicate verification or unverification of already unverified emails
+
+**Phone Verification:**
+- **Verify Phone**: Manually mark a user's phone as verified
+- **Unverify Phone**: Remove phone verification status
+- **Validation**: 
+  - Prevents verification if user has no phone number
+  - Prevents duplicate verification or unverification of already unverified phones
+
+**Security Features:**
+- **Admin or Magnet Employee**: All verification endpoints require admin or magnet_employee authentication
+- **Audit Trail**: All verification changes are tracked with timestamps
+- **Bilingual Support**: All responses include English and Arabic messages
+- **Error Handling**: Comprehensive validation with appropriate error messages
+
+**Use Cases:**
+- **Manual Verification**: Admins can verify users who completed verification through other means
+- **Account Recovery**: Help users regain access by re-verifying their contact information
+- **Security Management**: Unverify suspicious accounts for security review
+- **Compliance**: Ensure verification status meets regulatory requirements
 
 ### Admin User Object
 - `id` (ObjectId)
@@ -1420,7 +1609,7 @@ Admin routes provide comprehensive user management functionality for system admi
   - `userId` (string, required) - User ID
   - `productId` (string, required) - Product ID (must be approved)
   - `rating` (number, required, min: 1, max: 5) - Rating
-  - `comment` (string, required) - Review comment
+  - `comment` (string, optional) - Review comment
 - **Response:**
   - `201 Created`: Review created successfully (bilingual message)
   - `400 Bad Request`: Validation errors (bilingual message)

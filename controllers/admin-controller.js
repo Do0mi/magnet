@@ -20,12 +20,80 @@ const validateAdminPermissions = (req, res) => {
   return null;
 };
 
+// Helper function to validate admin or magnet employee permissions
+const validateAdminOrEmployeePermissions = (req, res) => {
+  if (req.user.role !== 'admin' && req.user.role !== 'magnet_employee') {
+    return res.status(403).json({ 
+      status: 'error', 
+      message: getBilingualMessage('insufficient_permissions') 
+    });
+  }
+  return null;
+};
+
 // Helper function to check if email/phone already exists
 const checkExistingUser = async (email, phone) => {
   const existingEmail = email ? await User.findOne({ email }) : null;
   const existingPhone = phone ? await User.findOne({ phone }) : null;
   
   return { existingEmail, existingPhone };
+};
+
+// Helper function to fix approvedBy field for approved businesses
+const fixApprovedByField = async () => {
+  try {
+    // Find businesses that are approved but don't have approvedBy set
+    const approvedBusinessesWithoutApprover = await User.find({
+      role: 'business',
+      'businessInfo.isApproved': true,
+      'businessInfo.approvalStatus': 'approved',
+      $or: [
+        { 'businessInfo.approvedBy': { $exists: false } },
+        { 'businessInfo.approvedBy': null }
+      ]
+    });
+
+    if (approvedBusinessesWithoutApprover.length === 0) {
+      return { fixed: 0, message: 'No businesses need fixing' };
+    }
+
+    // Get the first admin user to set as the approver
+    const adminUser = await User.findOne({ role: 'admin' });
+    if (!adminUser) {
+      return { fixed: 0, message: 'No admin user found to set as approver' };
+    }
+
+    // Update all approved businesses without approver
+    const updateResult = await User.updateMany(
+      {
+        role: 'business',
+        'businessInfo.isApproved': true,
+        'businessInfo.approvalStatus': 'approved',
+        $or: [
+          { 'businessInfo.approvedBy': { $exists: false } },
+          { 'businessInfo.approvedBy': null }
+        ]
+      },
+      {
+        $set: {
+          'businessInfo.approvedBy': adminUser._id
+        }
+      }
+    );
+
+    return { 
+      fixed: updateResult.modifiedCount, 
+      message: `Fixed ${updateResult.modifiedCount} businesses`,
+      approver: {
+        id: adminUser._id,
+        name: adminUser.getFullName(),
+        email: adminUser.email
+      }
+    };
+  } catch (error) {
+    console.error('Error fixing approvedBy field:', error);
+    return { fixed: 0, message: 'Error fixing approvedBy field', error: error.message };
+  }
 };
 
 // POST /admin/users - Create any type of user
@@ -667,6 +735,227 @@ exports.getUserStats = async (req, res) => {
     res.status(500).json({ 
       status: 'error', 
       message: getBilingualMessage('failed_get_user_stats') 
+    });
+  }
+};
+
+// ========================================
+// ADMIN VERIFICATION MANAGEMENT
+// ========================================
+
+// PUT /admin/users/:id/verify-email - Verify user email
+exports.verifyUserEmail = async (req, res) => {
+  try {
+    // Validate admin or magnet employee permissions
+    const permissionError = validateAdminOrEmployeePermissions(req, res);
+    if (permissionError) return;
+
+    const { id } = req.params;
+
+    const user = await User.findById(id)
+      .populate('businessInfo.approvedBy', 'firstname lastname email role');
+    
+    if (!user) {
+      return res.status(404).json({ 
+        status: 'error', 
+        message: getBilingualMessage('user_not_found') 
+      });
+    }
+
+    if (user.isEmailVerified) {
+      return res.status(400).json({ 
+        status: 'error', 
+        message: getBilingualMessage('email_already_verified') 
+      });
+    }
+
+    user.isEmailVerified = true;
+    user.updatedAt = new Date();
+
+    await user.save();
+
+    res.status(200).json(createResponse('success', {
+      user: formatUser(user, { 
+        includeBusinessInfo: true,
+        includeVerification: true 
+      })
+    }, getBilingualMessage('email_verified_successfully')));
+
+  } catch (err) {
+    console.error('Verify email error:', err);
+    res.status(500).json({ 
+      status: 'error', 
+      message: getBilingualMessage('failed_verify_email') 
+    });
+  }
+};
+
+// PUT /admin/users/:id/unverify-email - Unverify user email
+exports.unverifyUserEmail = async (req, res) => {
+  try {
+    // Validate admin or magnet employee permissions
+    const permissionError = validateAdminOrEmployeePermissions(req, res);
+    if (permissionError) return;
+
+    const { id } = req.params;
+
+    const user = await User.findById(id)
+      .populate('businessInfo.approvedBy', 'firstname lastname email role');
+    
+    if (!user) {
+      return res.status(404).json({ 
+        status: 'error', 
+        message: getBilingualMessage('user_not_found') 
+      });
+    }
+
+    if (!user.isEmailVerified) {
+      return res.status(400).json({ 
+        status: 'error', 
+        message: getBilingualMessage('email_not_verified') 
+      });
+    }
+
+    user.isEmailVerified = false;
+    user.updatedAt = new Date();
+
+    await user.save();
+
+    res.status(200).json(createResponse('success', {
+      user: formatUser(user, { 
+        includeBusinessInfo: true,
+        includeVerification: true 
+      })
+    }, getBilingualMessage('email_unverified_successfully')));
+
+  } catch (err) {
+    console.error('Unverify email error:', err);
+    res.status(500).json({ 
+      status: 'error', 
+      message: getBilingualMessage('failed_unverify_email') 
+    });
+  }
+};
+
+// PUT /admin/users/:id/verify-phone - Verify user phone
+exports.verifyUserPhone = async (req, res) => {
+  try {
+    // Validate admin or magnet employee permissions
+    const permissionError = validateAdminOrEmployeePermissions(req, res);
+    if (permissionError) return;
+
+    const { id } = req.params;
+
+    const user = await User.findById(id)
+      .populate('businessInfo.approvedBy', 'firstname lastname email role');
+    
+    if (!user) {
+      return res.status(404).json({ 
+        status: 'error', 
+        message: getBilingualMessage('user_not_found') 
+      });
+    }
+
+    if (!user.phone) {
+      return res.status(400).json({ 
+        status: 'error', 
+        message: getBilingualMessage('user_has_no_phone') 
+      });
+    }
+
+    if (user.isPhoneVerified) {
+      return res.status(400).json({ 
+        status: 'error', 
+        message: getBilingualMessage('phone_already_verified') 
+      });
+    }
+
+    user.isPhoneVerified = true;
+    user.updatedAt = new Date();
+
+    await user.save();
+
+    res.status(200).json(createResponse('success', {
+      user: formatUser(user, { 
+        includeBusinessInfo: true,
+        includeVerification: true 
+      })
+    }, getBilingualMessage('phone_verified_successfully')));
+
+  } catch (err) {
+    console.error('Verify phone error:', err);
+    res.status(500).json({ 
+      status: 'error', 
+      message: getBilingualMessage('failed_verify_phone') 
+    });
+  }
+};
+
+// PUT /admin/users/:id/unverify-phone - Unverify user phone
+exports.unverifyUserPhone = async (req, res) => {
+  try {
+    // Validate admin or magnet employee permissions
+    const permissionError = validateAdminOrEmployeePermissions(req, res);
+    if (permissionError) return;
+
+    const { id } = req.params;
+
+    const user = await User.findById(id)
+      .populate('businessInfo.approvedBy', 'firstname lastname email role');
+    
+    if (!user) {
+      return res.status(404).json({ 
+        status: 'error', 
+        message: getBilingualMessage('user_not_found') 
+      });
+    }
+
+    if (!user.isPhoneVerified) {
+      return res.status(400).json({ 
+        status: 'error', 
+        message: getBilingualMessage('phone_not_verified') 
+      });
+    }
+
+    user.isPhoneVerified = false;
+    user.updatedAt = new Date();
+
+    await user.save();
+
+    res.status(200).json(createResponse('success', {
+      user: formatUser(user, { 
+        includeBusinessInfo: true,
+        includeVerification: true 
+      })
+    }, getBilingualMessage('phone_unverified_successfully')));
+
+  } catch (err) {
+    console.error('Unverify phone error:', err);
+    res.status(500).json({ 
+      status: 'error', 
+      message: getBilingualMessage('failed_unverify_phone') 
+    });
+  }
+};
+
+// POST /admin/fix-approved-by - Fix approvedBy field for approved businesses
+exports.fixApprovedByField = async (req, res) => {
+  try {
+    // Validate admin permissions (only admin can fix this)
+    const permissionError = validateAdminPermissions(req, res);
+    if (permissionError) return;
+
+    const result = await fixApprovedByField();
+
+    res.status(200).json(createResponse('success', {
+      result
+    }, result.message));
+
+  } catch (err) {
+    console.error('Fix approvedBy field error:', err);
+    res.status(500).json({ 
+      status: 'error', 
+      message: getBilingualMessage('failed_fix_approved_by') 
     });
   }
 };
