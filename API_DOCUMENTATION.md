@@ -48,7 +48,6 @@
 |             | DELETE /api/admin/users/:id | No     | Yes           | admin                         |
 |             | PUT /api/admin/users/:id/disallow | No | Yes       | admin                         |
 |             | PUT /api/admin/users/:id/allow | No | Yes         | admin                         |
-|             | POST /api/admin/fix-approved-by | No | Yes         | admin                         |
 |             | PUT /api/admin/users/:id/verify-email | No | Yes    | admin, magnet_employee         |
 |             | PUT /api/admin/users/:id/unverify-email | No | Yes  | admin, magnet_employee         |
 |             | PUT /api/admin/users/:id/verify-phone | No | Yes    | admin, magnet_employee         |
@@ -1213,7 +1212,7 @@ Admin routes provide comprehensive user management functionality for system admi
 
 ### 2. Get All Users
 - **GET** `/api/admin/users`
-- **Description:** Get all users with pagination, filtering, and search capabilities.
+- **Description:** Get all users with pagination, filtering, and search capabilities. Automatically fixes missing `approvedBy` field for approved business users.
 - **Headers:** `Authorization: Bearer <token>`
 - **Query Parameters:**
   - `page` (number, optional, default: 1)
@@ -1233,7 +1232,7 @@ Admin routes provide comprehensive user management functionality for system admi
 
 ### 4. Get User by ID
 - **GET** `/api/admin/users/:id`
-- **Description:** Get detailed information about a specific user.
+- **Description:** Get detailed information about a specific user. Automatically fixes missing `approvedBy` field for approved business users.
 - **Headers:** `Authorization: Bearer <token>`
 - **Response:**
   - `200 OK`: User details (bilingual message)
@@ -1279,36 +1278,7 @@ Admin routes provide comprehensive user management functionality for system admi
   - `400 Bad Request`: User is not disallowed (bilingual message)
   - `404 Not Found`: User not found (bilingual message)
 
-### 9. Fix ApprovedBy Field
-- **POST** `/api/admin/fix-approved-by`
-- **Description:** Fix the approvedBy field for businesses that are approved but don't have this field set (admin only).
-- **Headers:** `Authorization: Bearer <token>`
-- **Response:**
-  - `200 OK`: Fix operation completed (bilingual message)
-  - `403 Forbidden`: Insufficient permissions (bilingual message)
-- **Example Response:**
-  ```json
-  {
-    "status": "success",
-    "data": {
-      "result": {
-        "fixed": 1,
-        "message": "Fixed 1 businesses",
-        "approver": {
-          "id": "admin_id",
-          "name": "Admin User",
-          "email": "admin@example.com"
-        }
-      }
-    },
-    "message": {
-      "en": "Fixed 1 businesses",
-      "ar": "تم إصلاح 1 من الأعمال"
-    }
-  }
-  ```
-
-### 10. Verify User Email
+### 9. Verify User Email
 - **PUT** `/api/admin/users/:id/verify-email`
 - **Description:** Manually verify a user's email address.
 - **Headers:** `Authorization: Bearer <token>`
@@ -1337,7 +1307,7 @@ Admin routes provide comprehensive user management functionality for system admi
   }
   ```
 
-### 11. Unverify User Email
+### 10. Unverify User Email
 - **PUT** `/api/admin/users/:id/unverify-email`
 - **Description:** Manually unverify a user's email address.
 - **Headers:** `Authorization: Bearer <token>`
@@ -1366,7 +1336,7 @@ Admin routes provide comprehensive user management functionality for system admi
   }
   ```
 
-### 12. Verify User Phone
+### 11. Verify User Phone
 - **PUT** `/api/admin/users/:id/verify-phone`
 - **Description:** Manually verify a user's phone number.
 - **Headers:** `Authorization: Bearer <token>`
@@ -1395,7 +1365,7 @@ Admin routes provide comprehensive user management functionality for system admi
   }
   ```
 
-### 13. Unverify User Phone
+### 12. Unverify User Phone
 - **PUT** `/api/admin/users/:id/unverify-phone`
 - **Description:** Manually unverify a user's phone number.
 - **Headers:** `Authorization: Bearer <token>`

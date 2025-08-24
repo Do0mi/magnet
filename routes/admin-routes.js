@@ -32,9 +32,6 @@ router.put('/users/:id/disallow', requireAdmin, AdminController.disallowUser);
 // PUT /admin/users/:id/allow - Allow user
 router.put('/users/:id/allow', requireAdmin, AdminController.allowUser);
 
-// POST /admin/fix-approved-by - Fix approvedBy field for approved businesses
-router.post('/fix-approved-by', requireAdmin, AdminController.fixApprovedByField);
-
 // ========================================
 // ADMIN VERIFICATION MANAGEMENT ROUTES (Admin or Magnet Employee)
 // ========================================

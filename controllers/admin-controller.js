@@ -39,62 +39,7 @@ const checkExistingUser = async (email, phone) => {
   return { existingEmail, existingPhone };
 };
 
-// Helper function to fix approvedBy field for approved businesses
-const fixApprovedByField = async () => {
-  try {
-    // Find businesses that are approved but don't have approvedBy set
-    const approvedBusinessesWithoutApprover = await User.find({
-      role: 'business',
-      'businessInfo.isApproved': true,
-      'businessInfo.approvalStatus': 'approved',
-      $or: [
-        { 'businessInfo.approvedBy': { $exists: false } },
-        { 'businessInfo.approvedBy': null }
-      ]
-    });
 
-    if (approvedBusinessesWithoutApprover.length === 0) {
-      return { fixed: 0, message: 'No businesses need fixing' };
-    }
-
-    // Get the first admin user to set as the approver
-    const adminUser = await User.findOne({ role: 'admin' });
-    if (!adminUser) {
-      return { fixed: 0, message: 'No admin user found to set as approver' };
-    }
-
-    // Update all approved businesses without approver
-    const updateResult = await User.updateMany(
-      {
-        role: 'business',
-        'businessInfo.isApproved': true,
-        'businessInfo.approvalStatus': 'approved',
-        $or: [
-          { 'businessInfo.approvedBy': { $exists: false } },
-          { 'businessInfo.approvedBy': null }
-        ]
-      },
-      {
-        $set: {
-          'businessInfo.approvedBy': adminUser._id
-        }
-      }
-    );
-
-    return { 
-      fixed: updateResult.modifiedCount, 
-      message: `Fixed ${updateResult.modifiedCount} businesses`,
-      approver: {
-        id: adminUser._id,
-        name: adminUser.getFullName(),
-        email: adminUser.email
-      }
-    };
-  } catch (error) {
-    console.error('Error fixing approvedBy field:', error);
-    return { fixed: 0, message: 'Error fixing approvedBy field', error: error.message };
-  }
-};
 
 // POST /admin/users - Create any type of user
 exports.createUser = async (req, res) => {
@@ -276,6 +221,39 @@ exports.getAllUsers = async (req, res) => {
       .skip(skip)
       .limit(parseInt(limit));
 
+    // Auto-fix approvedBy field for business users that are approved but have null approvedBy
+    const businessUsersToFix = users.filter(user => 
+      user.role === 'business' && 
+      user.businessInfo?.isApproved === true && 
+      user.businessInfo?.approvalStatus === 'approved' && 
+      !user.businessInfo?.approvedBy
+    );
+
+    if (businessUsersToFix.length > 0) {
+      // Get the first admin user to set as the approver
+      const adminUser = await User.findOne({ role: 'admin' }).select('_id firstname lastname email');
+      
+      if (adminUser) {
+        // Update all business users that need fixing
+        const userIdsToFix = businessUsersToFix.map(user => user._id);
+        await User.updateMany(
+          { _id: { $in: userIdsToFix } },
+          { $set: { 'businessInfo.approvedBy': adminUser._id } }
+        );
+
+        // Re-populate the approvedBy field for the fixed users
+        for (let user of businessUsersToFix) {
+          user.businessInfo.approvedBy = {
+            _id: adminUser._id,
+            firstname: adminUser.firstname,
+            lastname: adminUser.lastname,
+            email: adminUser.email,
+            role: 'admin'
+          };
+        }
+      }
+    }
+
     const total = await User.countDocuments(query);
 
     const formattedUsers = users.map(user => formatUser(user, { 
@@ -320,6 +298,33 @@ exports.getUserById = async (req, res) => {
         status: 'error', 
         message: getBilingualMessage('user_not_found') 
       });
+    }
+
+    // Auto-fix approvedBy field for business user if needed
+    if (user.role === 'business' && 
+        user.businessInfo?.isApproved === true && 
+        user.businessInfo?.approvalStatus === 'approved' && 
+        !user.businessInfo?.approvedBy) {
+      
+      // Get the first admin user to set as the approver
+      const adminUser = await User.findOne({ role: 'admin' }).select('_id firstname lastname email');
+      
+      if (adminUser) {
+        // Update the business user's approvedBy field
+        await User.updateOne(
+          { _id: id },
+          { $set: { 'businessInfo.approvedBy': adminUser._id } }
+        );
+
+        // Update the current user object for the response
+        user.businessInfo.approvedBy = {
+          _id: adminUser._id,
+          firstname: adminUser.firstname,
+          lastname: adminUser.lastname,
+          email: adminUser.email,
+          role: 'admin'
+        };
+      }
     }
 
     let additionalData = {};
@@ -938,27 +943,7 @@ exports.unverifyUserPhone = async (req, res) => {
   }
 };
 
-// POST /admin/fix-approved-by - Fix approvedBy field for approved businesses
-exports.fixApprovedByField = async (req, res) => {
-  try {
-    // Validate admin permissions (only admin can fix this)
-    const permissionError = validateAdminPermissions(req, res);
-    if (permissionError) return;
 
-    const result = await fixApprovedByField();
-
-    res.status(200).json(createResponse('success', {
-      result
-    }, result.message));
-
-  } catch (err) {
-    console.error('Fix approvedBy field error:', err);
-    res.status(500).json({ 
-      status: 'error', 
-      message: getBilingualMessage('failed_fix_approved_by') 
-    });
-  }
-};
 
 // ========================================
 // ADMIN WISHLIST MANAGEMENT

@@ -1097,10 +1097,6 @@ const messages = {
   'user_has_no_phone': {
     en: 'User has no phone number',
     ar: 'المستخدم ليس لديه رقم هاتف'
-  },
-  'failed_fix_approved_by': {
-    en: 'Failed to fix approvedBy field',
-    ar: 'فشل في إصلاح حقل المعتمد عليه'
   }
 };
 
