@@ -1197,6 +1197,7 @@ Admin routes provide comprehensive user management functionality for system admi
   - `role` (string, required, enum: 'customer', 'business', 'magnet_employee', 'admin')
   - `country` (string, required)
   - `language` (string, optional, default: 'en')
+  - `imageUrl` (string, optional) - Profile image URL
   - `businessInfo` (object, required if role is 'business')
     - `crNumber` (string, required for business)
     - `vatNumber` (string, required for business)
@@ -1243,7 +1244,26 @@ Admin routes provide comprehensive user management functionality for system admi
 - **Description:** Update user information (cannot update own account).
 - **Headers:** `Authorization: Bearer <token>`
 - **Body:**
-  - Any user field (see create user for field list)
+  - `firstname` (string, optional)
+  - `lastname` (string, optional)
+  - `email` (string, optional)
+  - `phone` (string, optional)
+  - `password` (string, optional)
+  - `role` (string, optional, enum: 'customer', 'business', 'magnet_employee', 'admin')
+  - `country` (string, optional)
+  - `language` (string, optional)
+  - `imageUrl` (string, optional) - Profile image URL
+  - `isEmailVerified` (boolean, optional)
+  - `isPhoneVerified` (boolean, optional)
+  - `isDisallowed` (boolean, optional)
+  - `businessInfo` (object, optional for business users)
+    - `crNumber` (string, optional)
+    - `vatNumber` (string, optional)
+    - `companyName` (string, optional)
+    - `companyType` (string, optional)
+    - `city` (string, optional)
+    - `district` (string, optional)
+    - `streetName` (string, optional)
 - **Response:**
   - `200 OK`: User updated successfully (bilingual message)
   - `400 Bad Request`: Validation errors (bilingual message)

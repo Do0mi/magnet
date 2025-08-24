@@ -57,6 +57,7 @@ exports.createUser = async (req, res) => {
       role, 
       country, 
       language = 'en',
+      imageUrl,
       // Business specific fields
       crNumber,
       vatNumber,
@@ -123,6 +124,7 @@ exports.createUser = async (req, res) => {
       role,
       country,
       language,
+      imageUrl,
       isEmailVerified: true,
       isPhoneVerified: phone ? true : false,
       isDisallowed: false
@@ -461,6 +463,7 @@ exports.updateUser = async (req, res) => {
       role,
       country,
       language,
+      imageUrl,
       isEmailVerified,
       isPhoneVerified,
       isDisallowed,
@@ -512,6 +515,7 @@ exports.updateUser = async (req, res) => {
     if (role) user.role = role;
     if (country) user.country = country;
     if (language) user.language = language;
+    if (imageUrl !== undefined) user.imageUrl = imageUrl; // Allow setting to null/empty string
     if (typeof isEmailVerified === 'boolean') user.isEmailVerified = isEmailVerified;
     if (typeof isPhoneVerified === 'boolean') user.isPhoneVerified = isPhoneVerified;
     if (typeof isDisallowed === 'boolean') user.isDisallowed = isDisallowed;
