@@ -147,9 +147,51 @@ const sendBusinessUnderReviewNotification = async (to, companyName) => {
   }
 };
 
+// Function to send review rejection notification
+const sendReviewRejectionNotification = async (to, userName, productName, rejectionReason) => {
+  try {
+    const transporter = createTransporter();
+    
+    const mailOptions = {
+      from: process.env.EMAIL_USER || '"Magnet" <noreply@magnetproject.com>',
+      to: to,
+      subject: 'Review Rejected',
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #333;">Review Rejected</h2>
+          <p>Dear ${userName},</p>
+          <p>Your review for the product <strong>${productName}</strong> has been rejected by our moderation team.</p>
+          ${rejectionReason ? `<p><strong>Reason:</strong> ${rejectionReason}</p>` : ''}
+          <p>Please review our community guidelines and ensure your future reviews comply with our standards.</p>
+          <p>If you believe this was an error, please contact our support team.</p>
+          <p>Thanks,<br>The Magnet Team</p>
+        </div>
+      `
+    };
+    
+    const info = await transporter.sendMail(mailOptions);
+    console.log('Review rejection notification sent:', info.messageId);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error('Review rejection notification failed:', {
+      error: error.message,
+      to,
+      time: new Date().toISOString()
+    });
+    return { 
+      success: false, 
+      error: 'Failed to send review rejection notification',
+      details: error.response || error.message 
+    };
+  }
+};
+
+
+
 module.exports = {
   generateOTP,
   sendOTPEmail,
   sendBusinessApprovalNotification,
-  sendBusinessUnderReviewNotification
+  sendBusinessUnderReviewNotification,
+  sendReviewRejectionNotification
 };

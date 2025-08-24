@@ -333,8 +333,16 @@ const formatReview = (review, options = {}) => {
     id: review._id,
     rating: review.rating,
     comment: review.comment,
+    status: review.status,
     createdAt: review.createdAt
   };
+
+  // Add rejection details if review is rejected
+  if (review.status === 'reject') {
+    formatted.rejectedBy = review.rejectedBy;
+    formatted.rejectedAt = review.rejectedAt;
+    formatted.rejectionReason = review.rejectionReason;
+  }
 
   if (includeUser && review.user) {
     if (typeof review.user === 'object') {

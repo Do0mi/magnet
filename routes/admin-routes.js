@@ -86,6 +86,11 @@ router.put('/reviews/:id', requireAdmin, AdminController.updateReview);
 // DELETE /admin/reviews/:id - Delete review
 router.delete('/reviews/:id', requireAdmin, AdminController.deleteReview);
 
+// PUT /admin/reviews/:id/reject - Reject review
+router.put('/reviews/:id/reject', requireAdmin, AdminController.rejectReview);
+
+
+
 // ========================================
 // ADMIN ADDRESS MANAGEMENT ROUTES (Admin only)
 // ========================================

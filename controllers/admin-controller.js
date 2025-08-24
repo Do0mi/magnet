@@ -1191,6 +1191,10 @@ exports.getAllReviews = async (req, res) => {
         product: review.product,
         rating: review.rating,
         comment: review.comment,
+        status: review.status,
+        rejectedBy: review.rejectedBy,
+        rejectedAt: review.rejectedAt,
+        rejectionReason: review.rejectionReason,
         createdAt: review.createdAt
       }))
     }, null, {
@@ -1225,6 +1229,10 @@ exports.getReviewById = async (req, res) => {
         product: review.product,
         rating: review.rating,
         comment: review.comment,
+        status: review.status,
+        rejectedBy: review.rejectedBy,
+        rejectedAt: review.rejectedAt,
+        rejectionReason: review.rejectionReason,
         createdAt: review.createdAt
       }
     }));
@@ -1272,7 +1280,8 @@ exports.createReview = async (req, res) => {
       user: userId,
       product: productId,
       rating,
-      comment
+      comment,
+      status: 'accept' // Admin-created reviews are accepted by default
     });
     
     await review.save();
@@ -1288,6 +1297,7 @@ exports.createReview = async (req, res) => {
         product: populatedReview.product,
         rating: populatedReview.rating,
         comment: populatedReview.comment,
+        status: populatedReview.status,
         createdAt: populatedReview.createdAt
       }
     }, getBilingualMessage('review_created_successfully')));
@@ -1331,6 +1341,10 @@ exports.updateReview = async (req, res) => {
         product: updatedReview.product,
         rating: updatedReview.rating,
         comment: updatedReview.comment,
+        status: updatedReview.status,
+        rejectedBy: updatedReview.rejectedBy,
+        rejectedAt: updatedReview.rejectedAt,
+        rejectionReason: updatedReview.rejectionReason,
         createdAt: updatedReview.createdAt
       }
     }, getBilingualMessage('review_updated_successfully')));
@@ -1357,6 +1371,89 @@ exports.deleteReview = async (req, res) => {
     res.status(500).json({ status: 'error', message: getBilingualMessage('failed_delete_review') });
   }
 };
+
+exports.rejectReview = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+    
+    // Validate admin permissions
+    const permissionError = validateAdminPermissions(req, res);
+    if (permissionError) return;
+    
+    // Validate rejection reason
+    if (!reason || reason.trim() === '') {
+      return res.status(400).json({ 
+        status: 'error', 
+        message: getBilingualMessage('rejection_reason_required') 
+      });
+    }
+    
+    const review = await Review.findById(id)
+      .populate('user', 'firstname lastname email')
+      .populate('product', 'name');
+    
+    if (!review) {
+      return res.status(404).json({ status: 'error', message: getBilingualMessage('review_not_found') });
+    }
+    
+    // Check if review is already rejected
+    if (review.status === 'reject') {
+      return res.status(400).json({ 
+        status: 'error', 
+        message: getBilingualMessage('review_already_rejected') 
+      });
+    }
+    
+    // Update review status
+    review.status = 'reject';
+    review.rejectedBy = req.user.id;
+    review.rejectedAt = new Date();
+    review.rejectionReason = reason.trim();
+    
+    await review.save();
+    
+    // Send email notification to the user
+    try {
+      const { sendReviewRejectionNotification } = require('../utils/email-utils');
+      const userName = `${review.user.firstname} ${review.user.lastname}`;
+      const productName = review.product.name.en || review.product.name; // Handle bilingual name
+      
+      await sendReviewRejectionNotification(
+        review.user.email,
+        userName,
+        productName,
+        review.rejectionReason
+      );
+    } catch (emailError) {
+      console.error('Failed to send review rejection email:', emailError);
+      // Don't fail the request if email fails, just log it
+    }
+    
+    // Populate the rejectedBy field for response
+    await review.populate('rejectedBy', 'firstname lastname email role');
+    
+    res.status(200).json(createResponse('success', {
+      review: {
+        id: review._id,
+        user: review.user,
+        product: review.product,
+        rating: review.rating,
+        comment: review.comment,
+        status: review.status,
+        rejectedBy: review.rejectedBy,
+        rejectedAt: review.rejectedAt,
+        rejectionReason: review.rejectionReason,
+        createdAt: review.createdAt
+      }
+    }, getBilingualMessage('review_rejected_successfully')));
+  } catch (err) {
+    console.error('Reject review error:', err);
+    res.status(500).json({ status: 'error', message: getBilingualMessage('failed_reject_review') });
+  }
+};
+
+
 
 // ========================================
 // ADMIN ADDRESS MANAGEMENT

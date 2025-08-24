@@ -61,6 +61,8 @@
 |             | GET /api/admin/reviews/:id  | No     | Yes           | admin                         |
 |             | POST /api/admin/reviews     | No     | Yes           | admin                         |
 |             | PUT /api/admin/reviews/:id  | No     | Yes           | admin                         |
+|             | PUT /api/admin/reviews/:id/reject | No     | Yes           | admin                         |
+
 |             | DELETE /api/admin/reviews/:id | No | Yes          | admin                         |
 |             | GET /api/admin/addresses    | No     | Yes           | admin                         |
 |             | GET /api/admin/addresses/:id | No    | Yes           | admin                         |
@@ -1077,6 +1079,10 @@ Reviews no longer support bilingual content. All review comments are stored as s
 - `user` (object, populated with reviewer details)
 - `rating` (number, required, min: 1, max: 5)
 - `comment` (string, optional)
+- `status` (string, enum: 'accept', 'reject', default: 'accept')
+- `rejectedBy` (object, populated with admin details who rejected, only if status is 'reject')
+- `rejectedAt` (date, only if status is 'reject')
+- `rejectionReason` (string, only if status is 'reject')
 - `createdAt` (date)
 
 ### 1. Add Review
@@ -1622,6 +1628,62 @@ The admin verification management system provides comprehensive control over use
 - **Response:**
   - `200 OK`: Review deleted successfully (bilingual message)
   - `404 Not Found`: Review not found (bilingual message)
+
+### 6. Reject Review
+- **PUT** `/api/admin/reviews/:id/reject`
+- **Description:** Reject a review and send email notification to the reviewer.
+- **Headers:** `Authorization: Bearer <token>`
+- **Body:**
+  - `reason` (string, required) - Reason for rejecting the review
+- **Response:**
+  - `200 OK`: Review rejected successfully (bilingual message)
+  - `400 Bad Request`: Review already rejected or missing rejection reason (bilingual message)
+  - `404 Not Found`: Review not found (bilingual message)
+- **Features:**
+  - **Email Notification**: Automatically sends email to the reviewer informing them of the rejection
+  - **Status Tracking**: Updates review status to 'reject' and tracks rejection details
+  - **Audit Trail**: Records who rejected the review, when, and why
+  - **Validation**: Prevents rejecting already rejected reviews
+- **Example Response:**
+  ```json
+  {
+    "status": "success",
+    "data": {
+      "review": {
+        "id": "review_id",
+        "user": {
+          "id": "user_id",
+          "firstname": "John",
+          "lastname": "Doe",
+          "email": "john@example.com"
+        },
+        "product": {
+          "id": "product_id",
+          "name": "Product Name"
+        },
+        "rating": 4,
+        "comment": "Great product!",
+        "status": "reject",
+        "rejectedBy": {
+          "id": "admin_id",
+          "firstname": "Admin",
+          "lastname": "User",
+          "email": "admin@example.com",
+          "role": "admin"
+        },
+        "rejectedAt": "2024-01-01T12:00:00.000Z",
+        "rejectionReason": "Inappropriate content",
+        "createdAt": "2024-01-01T10:00:00.000Z"
+      }
+    },
+    "message": {
+      "en": "Review rejected successfully",
+      "ar": "تم رفض التقييم بنجاح"
+    }
+  }
+  ```
+
+
 
 ---
 

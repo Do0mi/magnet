@@ -51,6 +51,7 @@ exports.addReview = async (req, res) => {
     // Re-populate to get the complete review with populated fields
     const populatedReview = await Review.findById(review._id)
       .populate('user', 'firstname lastname email role')
+      .populate('rejectedBy', 'firstname lastname email role')
       .populate({
         path: 'product',
         populate: {
@@ -83,6 +84,7 @@ exports.getProductReviews = async (req, res) => {
     const productId = req.params.id;
     const reviews = await Review.find({ product: productId })
       .populate('user', 'firstname lastname email role')
+      .populate('rejectedBy', 'firstname lastname email role')
       .populate({
         path: 'product',
         populate: {
@@ -141,6 +143,7 @@ exports.getBusinessProductsReviews = async (req, res) => {
     const reviews = await Review.find({
       product: { $in: productIds }
     }).populate('user', 'firstname lastname email role')
+      .populate('rejectedBy', 'firstname lastname email role')
       .populate({
         path: 'product',
         populate: {

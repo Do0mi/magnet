@@ -980,6 +980,22 @@ const messages = {
     en: 'Failed to delete review',
     ar: 'فشل في حذف التقييم'
   },
+  'review_rejected_successfully': {
+    en: 'Review rejected successfully',
+    ar: 'تم رفض التقييم بنجاح'
+  },
+  'failed_reject_review': {
+    en: 'Failed to reject review',
+    ar: 'فشل في رفض التقييم'
+  },
+  'review_already_rejected': {
+    en: 'Review is already rejected',
+    ar: 'التقييم مرفوض بالفعل'
+  },
+  'rejection_reason_required': {
+    en: 'Rejection reason is required',
+    ar: 'سبب الرفض مطلوب'
+  },
   'invalid_rating': {
     en: 'Invalid rating. Must be between 1 and 5',
     ar: 'تقييم غير صحيح. يجب أن يكون بين 1 و 5'
