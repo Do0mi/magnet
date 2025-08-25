@@ -330,6 +330,7 @@ exports.getUserById = async (req, res) => {
     }
 
     let additionalData = {};
+    let firstProductImageUrl = null;
 
     // Get role-specific data
     if (user.role === 'business') {
@@ -338,6 +339,14 @@ exports.getUserById = async (req, res) => {
         .populate('category', 'name')
         .populate('approvedBy', 'firstname lastname email role')
         .select('-__v');
+
+      // Get the first product image URL
+      if (products.length > 0) {
+        const firstProduct = products.find(product => product.images && product.images.length > 0);
+        if (firstProduct) {
+          firstProductImageUrl = firstProduct.images[0];
+        }
+      }
 
       // Get reviews for all products of this business
       const productIds = products.map(product => product._id);
@@ -375,13 +384,13 @@ exports.getUserById = async (req, res) => {
         .populate('shippingAddress')
         .populate({
           path: 'items.product',
-          select: 'name code status category'
+          select: 'name code status category images'
         })
         .select('-__v')
         .sort({ createdAt: -1 });
 
       const wishlist = await Wishlist.findOne({ user: id })
-        .populate('products', 'name code status category')
+        .populate('products', 'name code status category images')
         .select('-__v');
 
       const addresses = await Address.find({ user: id })
@@ -392,6 +401,28 @@ exports.getUserById = async (req, res) => {
         .populate('product', 'name code status category')
         .select('-__v')
         .sort({ createdAt: -1 });
+
+      // Get the first product image URL from wishlist or orders
+      if (wishlist && wishlist.products && wishlist.products.length > 0) {
+        const firstWishlistProduct = wishlist.products.find(product => product.images && product.images.length > 0);
+        if (firstWishlistProduct) {
+          firstProductImageUrl = firstWishlistProduct.images[0];
+        }
+      }
+      
+      if (!firstProductImageUrl && orders.length > 0) {
+        for (const order of orders) {
+          if (order.items && order.items.length > 0) {
+            const firstOrderProduct = order.items.find(item => 
+              item.product && item.product.images && item.product.images.length > 0
+            );
+            if (firstOrderProduct) {
+              firstProductImageUrl = firstOrderProduct.product.images[0];
+              break;
+            }
+          }
+        }
+      }
 
       additionalData = {
         orders: orders.map(order => ({
@@ -434,6 +465,7 @@ exports.getUserById = async (req, res) => {
         includeBusinessInfo: true,
         includeVerification: true 
       }),
+      firstProductImageUrl,
       ...additionalData
     }));
 

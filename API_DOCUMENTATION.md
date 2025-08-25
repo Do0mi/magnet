@@ -1239,11 +1239,20 @@ Admin routes provide comprehensive user management functionality for system admi
 
 ### 4. Get User by ID
 - **GET** `/api/admin/users/:id`
-- **Description:** Get detailed information about a specific user. Automatically fixes missing `approvedBy` field for approved business users.
+- **Description:** Get detailed information about a specific user. Automatically fixes missing `approvedBy` field for approved business users. Returns the first product image URL for business and customer users.
 - **Headers:** `Authorization: Bearer <token>`
 - **Response:**
-  - `200 OK`: User details (bilingual message)
+  - `200 OK`: User details with first product image URL (bilingual message)
   - `404 Not Found`: User not found (bilingual message)
+- **Response Fields:**
+  - `user` (object): User details
+  - `firstProductImageUrl` (string, optional): First product image URL from user's products (business) or wishlist/orders (customer)
+  - `products` (array, business users only): User's products with reviews
+  - `reviews` (array, business users only): Reviews for user's products
+  - `orders` (array, customer users only): User's orders
+  - `wishlist` (object, customer users only): User's wishlist
+  - `addresses` (array, customer users only): User's addresses
+  - `reviews` (array, customer users only): User's reviews
 
 ### 5. Update User
 - **PUT** `/api/admin/users/:id`
