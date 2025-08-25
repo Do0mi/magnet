@@ -371,6 +371,7 @@ exports.getUserById = async (req, res) => {
           },
           rating: review.rating,
           comment: review.comment,
+          status: review.status,
           createdAt: review.createdAt
         }))
       };
@@ -453,6 +454,7 @@ exports.getUserById = async (req, res) => {
           },
           rating: review.rating,
           comment: review.comment,
+          status: review.status,
           createdAt: review.createdAt
         }))
       };
@@ -474,19 +476,17 @@ exports.getUserById = async (req, res) => {
         .sort({ rejectedAt: -1 });
 
       // Get orders that this admin/employee has updated (confirmed, shipped, cancelled)
-      // Note: Since we don't track who made order status changes, we'll show recent orders
-      // that have been updated (this is a simplified approach)
-      const recentOrders = await Order.find({
-        updatedAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } // Last 30 days
+      const moderatedOrders = await Order.find({
+        'statusLog.updatedBy': id
       })
         .populate('customer', 'firstname lastname email role')
         .populate({
           path: 'items.product',
           select: 'name code status category images'
         })
+        .populate('statusLog.updatedBy', 'firstname lastname email role')
         .select('-__v')
-        .sort({ updatedAt: -1 })
-        .limit(20); // Limit to recent 20 orders
+        .sort({ updatedAt: -1 });
 
       additionalData = {
         moderatedProducts: moderatedProducts.map(product => ({
@@ -520,7 +520,7 @@ exports.getUserById = async (req, res) => {
           rejectionReason: review.rejectionReason,
           createdAt: review.createdAt
         })),
-        moderatedOrders: recentOrders.map(order => ({
+        moderatedOrders: moderatedOrders.map(order => ({
           id: order._id,
           customer: order.customer,
           items: order.items.map(item => ({

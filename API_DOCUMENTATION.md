@@ -1255,7 +1255,7 @@ Admin routes provide comprehensive user management functionality for system admi
 - **Admin/Magnet Employee User Response:**
   - `moderatedProducts`: Array of products approved/declined by this admin/employee with owner details and `imageUrl`
   - `rejectedReviews`: Array of reviews rejected by this admin/employee with user and product details including `imageUrl`
-  - `moderatedOrders`: Array of recent orders (last 30 days) that may have been updated by this admin/employee
+  - `moderatedOrders`: Array of orders where this admin/employee made status changes (confirmed, shipped, cancelled, etc.)
 - **Product Object in Responses:**
   - `id`: Product ID
   - `name`: Product name (bilingual object)

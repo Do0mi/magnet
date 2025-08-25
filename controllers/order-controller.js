@@ -28,7 +28,11 @@ exports.createOrder = async (req, res) => {
       items,
       shippingAddress,
       status: bilingualStatus,
-      statusLog: [{ status: bilingualStatus, timestamp: new Date() }]
+      statusLog: [{ 
+        status: bilingualStatus, 
+        timestamp: new Date(),
+        updatedBy: req.user.id
+      }]
     });
     await order.save();
     
@@ -122,7 +126,11 @@ exports.updateOrderStatus = async (req, res) => {
     const bilingualStatus = Order.convertStatusToBilingual(status);
     
     order.status = bilingualStatus;
-    order.statusLog.push({ status: bilingualStatus, timestamp: new Date() });
+    order.statusLog.push({ 
+      status: bilingualStatus, 
+      timestamp: new Date(),
+      updatedBy: req.user.id
+    });
     order.updatedAt = new Date();
     await order.save();
     

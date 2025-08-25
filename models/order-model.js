@@ -26,7 +26,8 @@ const validEnglishStatuses = Object.keys(statusMapping);
 
 const statusLogSchema = new mongoose.Schema({
   status: bilingualFieldSchema,
-  timestamp: { type: Date, default: Date.now }
+  timestamp: { type: Date, default: Date.now },
+  updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
 });
 
 const orderSchema = new mongoose.Schema({
