@@ -1256,6 +1256,7 @@ Admin routes provide comprehensive user management functionality for system admi
   - `moderatedProducts`: Array of products approved/declined by this admin/employee with owner details and `imageUrl`
   - `rejectedReviews`: Array of reviews rejected by this admin/employee with user and product details including `imageUrl`
   - `moderatedOrders`: Array of orders where this admin/employee made status changes (confirmed, shipped, cancelled, etc.)
+  - `approvedBusinessUsers`: Array of business users approved by this admin/employee with complete business information
 - **Product Object in Responses:**
   - `id`: Product ID
   - `name`: Product name (bilingual object)

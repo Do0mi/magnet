@@ -488,6 +488,15 @@ exports.getUserById = async (req, res) => {
         .select('-__v')
         .sort({ updatedAt: -1 });
 
+      // Get business users approved by this admin/employee
+      const approvedBusinessUsers = await User.find({
+        role: 'business',
+        'businessInfo.approvedBy': id,
+        'businessInfo.isApproved': true
+      })
+        .select('firstname lastname email phone role country language imageUrl createdAt updatedAt businessInfo')
+        .sort({ 'businessInfo.approvedAt': -1 });
+
       additionalData = {
         moderatedProducts: moderatedProducts.map(product => ({
           id: product._id,
@@ -539,6 +548,32 @@ exports.getUserById = async (req, res) => {
           statusLog: order.statusLog,
           createdAt: order.createdAt,
           updatedAt: order.updatedAt
+        })),
+        approvedBusinessUsers: approvedBusinessUsers.map(businessUser => ({
+          id: businessUser._id,
+          firstname: businessUser.firstname,
+          lastname: businessUser.lastname,
+          email: businessUser.email,
+          phone: businessUser.phone,
+          role: businessUser.role,
+          country: businessUser.country,
+          language: businessUser.language,
+          imageUrl: businessUser.imageUrl,
+          createdAt: businessUser.createdAt,
+          updatedAt: businessUser.updatedAt,
+          businessInfo: {
+            crNumber: businessUser.businessInfo.crNumber,
+            vatNumber: businessUser.businessInfo.vatNumber,
+            companyName: businessUser.businessInfo.companyName,
+            companyType: businessUser.businessInfo.companyType,
+            city: businessUser.businessInfo.city,
+            district: businessUser.businessInfo.district,
+            streetName: businessUser.businessInfo.streetName,
+            isApproved: businessUser.businessInfo.isApproved,
+            approvalStatus: businessUser.businessInfo.approvalStatus,
+            approvedBy: businessUser.businessInfo.approvedBy,
+            approvedAt: businessUser.businessInfo.approvedAt
+          }
         }))
       };
     }
