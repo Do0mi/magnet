@@ -197,7 +197,7 @@ exports.getAllUsers = async (req, res) => {
     
     if (status === 'disallowed') {
       query.isDisallowed = true;
-    } else if (status === 'active') {
+    } else if (status === 'allowed') {
       query.isDisallowed = false;
     }
     
