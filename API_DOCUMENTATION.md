@@ -523,10 +523,16 @@ Products support bilingual content (Arabic and English). You can:
 - **GET** `/api/products?lang=en` (English only)
 - **GET** `/api/products?lang=ar` (Arabic only)
 - **GET** `/api/products?lang=both` (Both languages)
-- **Description:** Get all approved products (requires authentication). Admin/magnet_employee can see all products.
+- **Description:** Get all approved products with pagination and filtering (requires authentication). Admin/magnet_employee can see all products.
 - **Headers:** `Authorization: Bearer <token>`
+- **Query Parameters:**
+  - `page` (number, optional, default: 1) - Page number for pagination
+  - `limit` (number, optional, default: 10) - Number of items per page
+  - `category` (string, optional) - Filter by category (searches in English category name)
+  - `search` (string, optional) - Search by product name (English/Arabic), code, or owner company name
+  - `status` (string, optional) - Filter by status: 'pending', 'approved', 'declined' (admin/business/magnet_employee only)
 - **Response:**
-  - `200 OK`: List of products
+  - `200 OK`: List of products with pagination info
 - **Product Object:**
   - `code` (string, auto-generated if not provided, e.g. "A001")
   - `category` (object, required, bilingual: `{ en: "English Category", ar: "Arabic Category" }`)
@@ -543,6 +549,34 @@ Products support bilingual content (Arabic and English). You can:
   - `owner` (object, populated with business user details)
   - `approvedBy` (object, populated with admin/employee details who approved)
   - `createdAt` (date)
+- **Example Response:**
+  ```json
+  {
+    "status": "success",
+    "data": {
+      "products": [
+        {
+          "id": "product_id",
+          "code": "A001",
+          "name": { "en": "Product Name", "ar": "اسم المنتج" },
+          "category": { "en": "Electronics", "ar": "إلكترونيات" },
+          "status": "approved",
+          "owner": {
+            "id": "owner_id",
+            "email": "business@example.com",
+            "businessInfo": { "companyName": "ABC Company" }
+          }
+        }
+      ]
+    },
+    "pagination": {
+      "currentPage": 1,
+      "totalPages": 5,
+      "totalItems": 50,
+      "itemsPerPage": 10
+    }
+  }
+  ```
 
 ---
 
