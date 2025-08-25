@@ -330,7 +330,6 @@ exports.getUserById = async (req, res) => {
     }
 
     let additionalData = {};
-    let firstProductImageUrl = null;
 
     // Get role-specific data
     if (user.role === 'business') {
@@ -339,14 +338,6 @@ exports.getUserById = async (req, res) => {
         .populate('category', 'name')
         .populate('approvedBy', 'firstname lastname email role')
         .select('-__v');
-
-      // Get the first product image URL
-      if (products.length > 0) {
-        const firstProduct = products.find(product => product.images && product.images.length > 0);
-        if (firstProduct) {
-          firstProductImageUrl = firstProduct.images[0];
-        }
-      }
 
       // Get reviews for all products of this business
       const productIds = products.map(product => product._id);
@@ -365,6 +356,7 @@ exports.getUserById = async (req, res) => {
           price: product.price,
           description: product.description,
           images: product.images,
+          firstImageUrl: product.images && product.images.length > 0 ? product.images[0] : null,
           approvedBy: product.approvedBy,
           createdAt: product.createdAt,
           updatedAt: product.updatedAt
@@ -372,7 +364,10 @@ exports.getUserById = async (req, res) => {
         reviews: reviews.map(review => ({
           id: review._id,
           user: review.user,
-          product: review.product,
+          product: {
+            ...review.product,
+            firstImageUrl: review.product.images && review.product.images.length > 0 ? review.product.images[0] : null
+          },
           rating: review.rating,
           comment: review.comment,
           createdAt: review.createdAt
@@ -402,33 +397,14 @@ exports.getUserById = async (req, res) => {
         .select('-__v')
         .sort({ createdAt: -1 });
 
-      // Get the first product image URL from wishlist or orders
-      if (wishlist && wishlist.products && wishlist.products.length > 0) {
-        const firstWishlistProduct = wishlist.products.find(product => product.images && product.images.length > 0);
-        if (firstWishlistProduct) {
-          firstProductImageUrl = firstWishlistProduct.images[0];
-        }
-      }
-      
-      if (!firstProductImageUrl && orders.length > 0) {
-        for (const order of orders) {
-          if (order.items && order.items.length > 0) {
-            const firstOrderProduct = order.items.find(item => 
-              item.product && item.product.images && item.product.images.length > 0
-            );
-            if (firstOrderProduct) {
-              firstProductImageUrl = firstOrderProduct.product.images[0];
-              break;
-            }
-          }
-        }
-      }
-
       additionalData = {
         orders: orders.map(order => ({
           id: order._id,
           items: order.items.map(item => ({
-            product: item.product,
+            product: {
+              ...item.product,
+              firstImageUrl: item.product.images && item.product.images.length > 0 ? item.product.images[0] : null
+            },
             quantity: item.quantity
           })),
           shippingAddress: order.shippingAddress,
@@ -439,7 +415,10 @@ exports.getUserById = async (req, res) => {
         })),
         wishlist: wishlist ? {
           id: wishlist._id,
-          products: wishlist.products,
+          products: wishlist.products.map(product => ({
+            ...product,
+            firstImageUrl: product.images && product.images.length > 0 ? product.images[0] : null
+          })),
           createdAt: wishlist.createdAt
         } : null,
         addresses: addresses.map(address => ({
@@ -455,7 +434,10 @@ exports.getUserById = async (req, res) => {
         })),
         reviews: reviews.map(review => ({
           id: review._id,
-          product: review.product,
+          product: {
+            ...review.product,
+            firstImageUrl: review.product.images && review.product.images.length > 0 ? review.product.images[0] : null
+          },
           rating: review.rating,
           comment: review.comment,
           createdAt: review.createdAt
@@ -468,7 +450,6 @@ exports.getUserById = async (req, res) => {
         includeBusinessInfo: true,
         includeVerification: true 
       }),
-      firstProductImageUrl,
       ...additionalData
     }));
 

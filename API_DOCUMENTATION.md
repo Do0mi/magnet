@@ -1239,20 +1239,19 @@ Admin routes provide comprehensive user management functionality for system admi
 
 ### 4. Get User by ID
 - **GET** `/api/admin/users/:id`
-- **Description:** Get detailed information about a specific user. Automatically fixes missing `approvedBy` field for approved business users. Returns the first product image URL for business and customer users.
+- **Description:** Get detailed information about a specific user. Automatically fixes missing `approvedBy` field for approved business users. Each product includes its first image URL.
 - **Headers:** `Authorization: Bearer <token>`
 - **Response:**
-  - `200 OK`: User details with first product image URL (bilingual message)
+  - `200 OK`: User details with product information (bilingual message)
   - `404 Not Found`: User not found (bilingual message)
 - **Response Fields:**
   - `user` (object): User details
-  - `firstProductImageUrl` (string, optional): First product image URL from user's products (business) or wishlist/orders (customer)
-  - `products` (array, business users only): User's products with reviews (includes images array)
-  - `reviews` (array, business users only): Reviews for user's products (product objects include images)
-  - `orders` (array, customer users only): User's orders (each item.product includes images array)
-  - `wishlist` (object, customer users only): User's wishlist (products include images array)
+  - `products` (array, business users only): User's products (each product includes firstImageUrl)
+  - `reviews` (array, business users only): Reviews for user's products (each product includes firstImageUrl)
+  - `orders` (array, customer users only): User's orders (each item.product includes firstImageUrl)
+  - `wishlist` (object, customer users only): User's wishlist (each product includes firstImageUrl)
   - `addresses` (array, customer users only): User's addresses
-  - `reviews` (array, customer users only): User's reviews (product objects include images)
+  - `reviews` (array, customer users only): User's reviews (each product includes firstImageUrl)
 
 ### 5. Update User
 - **PUT** `/api/admin/users/:id`
