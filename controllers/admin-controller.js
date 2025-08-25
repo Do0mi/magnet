@@ -456,6 +456,91 @@ exports.getUserById = async (req, res) => {
           createdAt: review.createdAt
         }))
       };
+    } else if (user.role === 'admin' || user.role === 'magnet_employee') {
+      // For admin/magnet_employee users: get products they approved/declined, reviews they rejected, and orders they updated
+      
+      // Get products approved/declined by this admin/employee
+      const moderatedProducts = await Product.find({ approvedBy: id })
+        .populate('owner', 'firstname lastname email role businessInfo.companyName')
+        .populate('category', 'name')
+        .select('-__v')
+        .sort({ updatedAt: -1 });
+
+      // Get reviews rejected by this admin/employee
+      const rejectedReviews = await Review.find({ rejectedBy: id })
+        .populate('user', 'firstname lastname email role')
+        .populate('product', 'name code status category images')
+        .select('-__v')
+        .sort({ rejectedAt: -1 });
+
+      // Get orders that this admin/employee has updated (confirmed, shipped, cancelled)
+      // Note: Since we don't track who made order status changes, we'll show recent orders
+      // that have been updated (this is a simplified approach)
+      const recentOrders = await Order.find({
+        updatedAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } // Last 30 days
+      })
+        .populate('customer', 'firstname lastname email role')
+        .populate({
+          path: 'items.product',
+          select: 'name code status category images'
+        })
+        .select('-__v')
+        .sort({ updatedAt: -1 })
+        .limit(20); // Limit to recent 20 orders
+
+      additionalData = {
+        moderatedProducts: moderatedProducts.map(product => ({
+          id: product._id,
+          name: product.name,
+          code: product.code,
+          status: product.status,
+          category: product.category,
+          price: product.price,
+          description: product.description,
+          imageUrl: product.images && product.images.length > 0 ? product.images[0] : null,
+          owner: product.owner,
+          createdAt: product.createdAt,
+          updatedAt: product.updatedAt
+        })),
+        rejectedReviews: rejectedReviews.map(review => ({
+          id: review._id,
+          user: review.user,
+          product: {
+            id: review.product._id,
+            name: review.product.name,
+            code: review.product.code,
+            status: review.product.status,
+            category: review.product.category,
+            imageUrl: review.product.images && review.product.images.length > 0 ? review.product.images[0] : null
+          },
+          rating: review.rating,
+          comment: review.comment,
+          status: review.status,
+          rejectedAt: review.rejectedAt,
+          rejectionReason: review.rejectionReason,
+          createdAt: review.createdAt
+        })),
+        moderatedOrders: recentOrders.map(order => ({
+          id: order._id,
+          customer: order.customer,
+          items: order.items.map(item => ({
+            ...item.toObject(),
+            product: {
+              id: item.product._id,
+              name: item.product.name,
+              code: item.product.code,
+              status: item.product.status,
+              category: item.product.category,
+              imageUrl: item.product.images && item.product.images.length > 0 ? item.product.images[0] : null
+            }
+          })),
+          shippingAddress: order.shippingAddress,
+          status: order.status,
+          statusLog: order.statusLog,
+          createdAt: order.createdAt,
+          updatedAt: order.updatedAt
+        }))
+      };
     }
 
     res.status(200).json(createResponse('success', {
