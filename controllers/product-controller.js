@@ -134,8 +134,8 @@ exports.addProductsByBusiness = async (req, res) => {
 // POST /addProductsByMagnet_employee
 exports.addProductsByMagnetEmployee = async (req, res) => {
   try {
-    if (!req.user || req.user.role !== 'magnet_employee') {
-      return res.status(403).json({ status: 'error', message: getBilingualMessage('only_magnet_employee_can_add_products') });
+    if (!req.user || (req.user.role !== 'magnet_employee' && req.user.role !== 'admin')) {
+      return res.status(403).json({ status: 'error', message: getBilingualMessage('only_admin_or_magnet_employee_can_add_products') });
     }
     
     let { code, category, name, images, description, unit, minOrder, pricePerUnit, stock, customFields, attachments, owner } = req.body;

@@ -473,6 +473,10 @@ const messages = {
     en: 'Only magnet employees can add products',
     ar: 'فقط موظفي مغناطيس يمكنهم إضافة المنتجات'
   },
+  'only_admin_or_magnet_employee_can_add_products': {
+    en: 'Only admin or magnet employees can add products',
+    ar: 'فقط المدير أو موظفي مغناطيس يمكنهم إضافة المنتجات'
+  },
   'product_added_and_approved': {
     en: 'Product added and approved',
     ar: 'تمت إضافة المنتج والموافقة عليه'

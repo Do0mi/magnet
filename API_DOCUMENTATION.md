@@ -578,9 +578,9 @@ Products support bilingual content (Arabic and English). You can:
 
 ---
 
-### 3. Add Product (Magnet Employee)
+### 3. Add Product (Admin/Magnet Employee)
 - **POST** `/api/products/addProductsByMagnet_employee`
-- **Description:** Magnet employee adds a new product (approved immediately). Product code is auto-generated if not provided.
+- **Description:** Admin or magnet employee adds a new product (approved immediately). Product code is auto-generated if not provided.
 - **Headers:** `Authorization: Bearer <token>`
 - **Body:**
   - `category` (object, required, bilingual: `{ en: "English Category", ar: "Arabic Category" }`)
