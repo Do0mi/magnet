@@ -444,7 +444,11 @@ exports.getUserById = async (req, res) => {
         reviews: reviews.map(review => ({
           id: review._id,
           product: {
-            ...review.product.toObject(),
+            id: review.product._id,
+            name: review.product.name,
+            code: review.product.code,
+            status: review.product.status,
+            category: review.product.category,
             imageUrl: review.product.images && review.product.images.length > 0 ? review.product.images[0] : null
           },
           rating: review.rating,
