@@ -1247,12 +1247,12 @@ Admin routes provide comprehensive user management functionality for system admi
 - **Response Fields:**
   - `user` (object): User details
   - `firstProductImageUrl` (string, optional): First product image URL from user's products (business) or wishlist/orders (customer)
-  - `products` (array, business users only): User's products with reviews
-  - `reviews` (array, business users only): Reviews for user's products
-  - `orders` (array, customer users only): User's orders
-  - `wishlist` (object, customer users only): User's wishlist
+  - `products` (array, business users only): User's products with reviews (includes images array)
+  - `reviews` (array, business users only): Reviews for user's products (product objects include images)
+  - `orders` (array, customer users only): User's orders (each item.product includes images array)
+  - `wishlist` (object, customer users only): User's wishlist (products include images array)
   - `addresses` (array, customer users only): User's addresses
-  - `reviews` (array, customer users only): User's reviews
+  - `reviews` (array, customer users only): User's reviews (product objects include images)
 
 ### 5. Update User
 - **PUT** `/api/admin/users/:id`

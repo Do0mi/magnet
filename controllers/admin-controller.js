@@ -352,7 +352,7 @@ exports.getUserById = async (req, res) => {
       const productIds = products.map(product => product._id);
       const reviews = await Review.find({ product: { $in: productIds } })
         .populate('user', 'firstname lastname email role')
-        .populate('product', 'name code')
+        .populate('product', 'name code images')
         .select('-__v');
 
       additionalData = {
@@ -398,7 +398,7 @@ exports.getUserById = async (req, res) => {
         .sort({ createdAt: -1 });
 
       const reviews = await Review.find({ user: id })
-        .populate('product', 'name code status category')
+        .populate('product', 'name code status category images')
         .select('-__v')
         .sort({ createdAt: -1 });
 
@@ -427,7 +427,10 @@ exports.getUserById = async (req, res) => {
       additionalData = {
         orders: orders.map(order => ({
           id: order._id,
-          items: order.items,
+          items: order.items.map(item => ({
+            product: item.product,
+            quantity: item.quantity
+          })),
           shippingAddress: order.shippingAddress,
           status: order.status,
           statusLog: order.statusLog,
