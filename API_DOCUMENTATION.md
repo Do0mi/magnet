@@ -1245,13 +1245,20 @@ Admin routes provide comprehensive user management functionality for system admi
   - `200 OK`: User details with role-specific data (bilingual message)
   - `404 Not Found`: User not found (bilingual message)
 - **Business User Response:**
-  - `products`: Array of products with `imageUrl` (first image from images array)
+  - `products`: Array of products with `imageUrl` (first image from product's images array)
   - `reviews`: Array of reviews with product details including `imageUrl`
 - **Customer User Response:**
   - `orders`: Array of orders with product details including `imageUrl`
   - `wishlist`: Wishlist with products including `imageUrl`
   - `addresses`: Array of addresses
   - `reviews`: Array of reviews with product details including `imageUrl`
+- **Product Object in Responses:**
+  - `id`: Product ID
+  - `name`: Product name (bilingual object)
+  - `code`: Product code
+  - `status`: Product status
+  - `category`: Product category (bilingual object)
+  - `imageUrl`: First image URL from product's images array (null if no images)
 
 ### 5. Update User
 - **PUT** `/api/admin/users/:id`

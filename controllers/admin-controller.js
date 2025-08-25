@@ -355,7 +355,7 @@ exports.getUserById = async (req, res) => {
           category: product.category,
           price: product.price,
           description: product.description,
-          images: product.images,
+          imageUrl: product.images && product.images.length > 0 ? product.images[0] : null,
           approvedBy: product.approvedBy,
           createdAt: product.createdAt,
           updatedAt: product.updatedAt
@@ -364,7 +364,9 @@ exports.getUserById = async (req, res) => {
           id: review._id,
           user: review.user,
           product: {
-            ...review.product.toObject(),
+            id: review.product._id,
+            name: review.product.name,
+            code: review.product.code,
             imageUrl: review.product.images && review.product.images.length > 0 ? review.product.images[0] : null
           },
           rating: review.rating,
@@ -402,7 +404,11 @@ exports.getUserById = async (req, res) => {
           items: order.items.map(item => ({
             ...item.toObject(),
             product: {
-              ...item.product.toObject(),
+              id: item.product._id,
+              name: item.product.name,
+              code: item.product.code,
+              status: item.product.status,
+              category: item.product.category,
               imageUrl: item.product.images && item.product.images.length > 0 ? item.product.images[0] : null
             }
           })),
@@ -415,7 +421,11 @@ exports.getUserById = async (req, res) => {
         wishlist: wishlist ? {
           id: wishlist._id,
           products: wishlist.products.map(product => ({
-            ...product.toObject(),
+            id: product._id,
+            name: product.name,
+            code: product.code,
+            status: product.status,
+            category: product.category,
             imageUrl: product.images && product.images.length > 0 ? product.images[0] : null
           })),
           createdAt: wishlist.createdAt
