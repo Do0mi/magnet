@@ -343,7 +343,7 @@ exports.getUserById = async (req, res) => {
       const productIds = products.map(product => product._id);
       const reviews = await Review.find({ product: { $in: productIds } })
         .populate('user', 'firstname lastname email role')
-        .populate('product', 'name code images')
+        .populate('product', 'name code')
         .select('-__v');
 
       additionalData = {
@@ -356,7 +356,6 @@ exports.getUserById = async (req, res) => {
           price: product.price,
           description: product.description,
           images: product.images,
-          firstImageUrl: product.images && product.images.length > 0 ? product.images[0] : null,
           approvedBy: product.approvedBy,
           createdAt: product.createdAt,
           updatedAt: product.updatedAt
@@ -365,8 +364,8 @@ exports.getUserById = async (req, res) => {
           id: review._id,
           user: review.user,
           product: {
-            ...review.product,
-            firstImageUrl: review.product.images && review.product.images.length > 0 ? review.product.images[0] : null
+            ...review.product.toObject(),
+            imageUrl: review.product.images && review.product.images.length > 0 ? review.product.images[0] : null
           },
           rating: review.rating,
           comment: review.comment,
@@ -401,11 +400,11 @@ exports.getUserById = async (req, res) => {
         orders: orders.map(order => ({
           id: order._id,
           items: order.items.map(item => ({
+            ...item.toObject(),
             product: {
-              ...item.product,
-              firstImageUrl: item.product.images && item.product.images.length > 0 ? item.product.images[0] : null
-            },
-            quantity: item.quantity
+              ...item.product.toObject(),
+              imageUrl: item.product.images && item.product.images.length > 0 ? item.product.images[0] : null
+            }
           })),
           shippingAddress: order.shippingAddress,
           status: order.status,
@@ -416,8 +415,8 @@ exports.getUserById = async (req, res) => {
         wishlist: wishlist ? {
           id: wishlist._id,
           products: wishlist.products.map(product => ({
-            ...product,
-            firstImageUrl: product.images && product.images.length > 0 ? product.images[0] : null
+            ...product.toObject(),
+            imageUrl: product.images && product.images.length > 0 ? product.images[0] : null
           })),
           createdAt: wishlist.createdAt
         } : null,
@@ -435,8 +434,8 @@ exports.getUserById = async (req, res) => {
         reviews: reviews.map(review => ({
           id: review._id,
           product: {
-            ...review.product,
-            firstImageUrl: review.product.images && review.product.images.length > 0 ? review.product.images[0] : null
+            ...review.product.toObject(),
+            imageUrl: review.product.images && review.product.images.length > 0 ? review.product.images[0] : null
           },
           rating: review.rating,
           comment: review.comment,

@@ -1239,19 +1239,19 @@ Admin routes provide comprehensive user management functionality for system admi
 
 ### 4. Get User by ID
 - **GET** `/api/admin/users/:id`
-- **Description:** Get detailed information about a specific user. Automatically fixes missing `approvedBy` field for approved business users. Each product includes its first image URL.
+- **Description:** Get detailed information about a specific user. Automatically fixes missing `approvedBy` field for approved business users. For business users, returns products and their reviews. For customer users, returns orders, wishlist, addresses, and reviews. All products include their first image URL.
 - **Headers:** `Authorization: Bearer <token>`
 - **Response:**
-  - `200 OK`: User details with product information (bilingual message)
+  - `200 OK`: User details with role-specific data (bilingual message)
   - `404 Not Found`: User not found (bilingual message)
-- **Response Fields:**
-  - `user` (object): User details
-  - `products` (array, business users only): User's products (each product includes firstImageUrl)
-  - `reviews` (array, business users only): Reviews for user's products (each product includes firstImageUrl)
-  - `orders` (array, customer users only): User's orders (each item.product includes firstImageUrl)
-  - `wishlist` (object, customer users only): User's wishlist (each product includes firstImageUrl)
-  - `addresses` (array, customer users only): User's addresses
-  - `reviews` (array, customer users only): User's reviews (each product includes firstImageUrl)
+- **Business User Response:**
+  - `products`: Array of products with `imageUrl` (first image from images array)
+  - `reviews`: Array of reviews with product details including `imageUrl`
+- **Customer User Response:**
+  - `orders`: Array of orders with product details including `imageUrl`
+  - `wishlist`: Wishlist with products including `imageUrl`
+  - `addresses`: Array of addresses
+  - `reviews`: Array of reviews with product details including `imageUrl`
 
 ### 5. Update User
 - **PUT** `/api/admin/users/:id`
