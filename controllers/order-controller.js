@@ -19,13 +19,41 @@ exports.createOrder = async (req, res) => {
       return res.status(400).json({ status: 'error', message: getBilingualMessage('order_must_have_items') });
     }
     
+    // Validate products and prepare items with prices for calculation
+    const orderItems = [];
+    const productPrices = {};
+    
+    for (const item of items) {
+      if (!item.product || !item.quantity || item.quantity <= 0) {
+        return res.status(400).json({ status: 'error', message: getBilingualMessage('invalid_order_item') });
+      }
+      
+      // Fetch product to get current price
+      const product = await Product.findById(item.product);
+      if (!product) {
+        return res.status(404).json({ status: 'error', message: getBilingualMessage('product_not_found') });
+      }
+      
+      if (product.status !== 'approved') {
+        return res.status(400).json({ status: 'error', message: getBilingualMessage('product_not_approved') });
+      }
+      
+      const price = parseFloat(product.pricePerUnit) || 0;
+      productPrices[item.product] = price;
+      
+      orderItems.push({
+        product: item.product,
+        quantity: item.quantity,
+        itemTotal: price * item.quantity
+      });
+    }
+    
     // Convert English status to bilingual format using model's static method
     const bilingualStatus = Order.convertStatusToBilingual('pending');
     
-    // Optionally: check product availability, etc.
     const order = new Order({
       customer: req.user.id,
-      items,
+      items: orderItems,
       shippingAddress,
       status: bilingualStatus,
       statusLog: [{ 
@@ -34,7 +62,15 @@ exports.createOrder = async (req, res) => {
         updatedBy: req.user.id
       }]
     });
+    
+    // Calculate total using the product prices we fetched
+    order.calculateTotal(productPrices);
     await order.save();
+    
+    // Populate the order for response
+    await order.populate('customer', 'firstname lastname email role');
+    await order.populate('items.product', 'name code status category pricePerUnit images');
+    await order.populate('shippingAddress');
     
     const language = req.query.lang || 'en';
     const formattedOrder = formatOrder(order, { language });
@@ -44,6 +80,7 @@ exports.createOrder = async (req, res) => {
       getBilingualMessage('order_created')
     ));
   } catch (err) {
+    console.error('Create order error:', err);
     res.status(500).json({ status: 'error', message: getBilingualMessage('failed_create_order') });
   }
 };
@@ -54,7 +91,7 @@ exports.getMyOrders = async (req, res) => {
     const language = req.query.lang || 'en';
     const orders = await Order.find({ customer: req.user.id })
       .populate('customer', 'firstname lastname email role')
-      .populate('items.product')
+      .populate('items.product', 'name code status category pricePerUnit images')
       .populate('shippingAddress');
     
     const formattedOrders = orders.map(order => formatOrder(order, { language }));
@@ -71,7 +108,7 @@ exports.getOrderById = async (req, res) => {
     const language = req.query.lang || 'en';
     const order = await Order.findById(req.params.id)
       .populate('customer', 'firstname lastname email role')
-      .populate('items.product')
+      .populate('items.product', 'name code status category pricePerUnit images')
       .populate('shippingAddress');
     if (!order) return res.status(404).json({ status: 'error', message: getBilingualMessage('order_not_found') });
     // Only admin, magnet_employee, or owner (customer) can view
@@ -93,7 +130,7 @@ exports.getAllOrders = async (req, res) => {
     const language = req.query.lang || 'en';
     const orders = await Order.find()
       .populate('customer', 'firstname lastname email role')
-      .populate('items.product')
+      .populate('items.product', 'name code status category pricePerUnit images')
       .populate('shippingAddress');
     
     const formattedOrders = orders.map(order => formatOrder(order, { language }));
@@ -204,7 +241,7 @@ exports.getBusinessProductOrders = async (req, res) => {
     // Find orders containing any of these products
     const orders = await Order.find({
       'items.product': { $in: productIds }
-    }).populate('items.product')
+    }).populate('items.product', 'name code status category pricePerUnit images')
       .populate('customer', 'firstname lastname email phone role')
       .populate('shippingAddress');
     

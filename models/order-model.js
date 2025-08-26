@@ -35,9 +35,11 @@ const orderSchema = new mongoose.Schema({
   items: [
     {
       product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
-      quantity: Number
+      quantity: Number,
+      itemTotal: { type: Number, required: true } // Store calculated item total
     }
   ],
+  total: { type: Number, required: true, default: 0 }, // Store total order amount
   shippingAddress: { type: mongoose.Schema.Types.ObjectId, ref: 'Address' },
   status: bilingualFieldSchema,
   statusLog: [statusLogSchema],
@@ -104,6 +106,30 @@ orderSchema.statics.getStatusInLanguage = function(englishStatus, language = 'en
     throw new Error(`Invalid status: ${englishStatus}`);
   }
   return statusMapping[englishStatus][language] || statusMapping[englishStatus].en;
+};
+
+// Method to calculate and update total (requires products to be populated or prices provided)
+orderSchema.methods.calculateTotal = function(productPrices = {}) {
+  let total = 0;
+  this.items.forEach(item => {
+    let price = 0;
+    
+    // If product is populated, use its pricePerUnit
+    if (item.product && typeof item.product === 'object' && item.product.pricePerUnit) {
+      price = parseFloat(item.product.pricePerUnit) || 0;
+    }
+    // If productPrices object is provided, use it
+    else if (productPrices[item.product]) {
+      price = productPrices[item.product];
+    }
+    
+    if (price > 0 && item.quantity) {
+      item.itemTotal = price * item.quantity;
+      total += item.itemTotal;
+    }
+  });
+  this.total = total;
+  return this.total;
 };
 
 module.exports = mongoose.model('Order', orderSchema); 

@@ -94,7 +94,6 @@
 ### **New Fields in Order Responses**
 - **`total`** (number): Overall order total (sum of all item totals)
 - **`itemTotal`** (number): Individual item total for each order item (quantity × pricePerUnit)
-- **`price`** (number): Individual item price (parsed from pricePerUnit string) for each order item
 
 ### **Affected Endpoints**
 All order routes in both customer and admin APIs now include these calculated fields:
@@ -277,7 +276,6 @@ The following fields are now populated with complete user objects instead of IDs
             }
           },
           "quantity": 2,
-          "price": 25.50,
           "itemTotal": 51.00
         }
       ],
@@ -296,7 +294,7 @@ All order responses now include automatic total calculation:
 #### **Total Fields**
 - **`total`** (number): Overall order total (sum of all item totals)
 - **`itemTotal`** (number): Individual item total (quantity × pricePerUnit) for each item
-- **`price`** (number): Individual item price (parsed from pricePerUnit string) for each item
+- **`pricePerUnit`** (string): Product price per unit shown in product object within each order item
 
 #### **Calculation Logic**
 - Each item's `itemTotal` = `quantity` × `pricePerUnit`
@@ -312,13 +310,11 @@ All order responses now include automatic total calculation:
     {
       "product": { "pricePerUnit": "25.50" },
       "quantity": 2,
-      "price": 25.50,
       "itemTotal": 51.00  // 25.50 × 2
     },
     {
       "product": { "pricePerUnit": "15.00" },
       "quantity": 1,
-      "price": 15.00,
       "itemTotal": 15.00  // 15.00 × 1
     }
   ],

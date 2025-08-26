@@ -381,7 +381,7 @@ exports.getUserById = async (req, res) => {
         .populate('shippingAddress')
         .populate({
           path: 'items.product',
-          select: 'name code status category images'
+          select: 'name code status category pricePerUnit images'
         })
         .select('-__v')
         .sort({ createdAt: -1 });
@@ -473,7 +473,7 @@ exports.getUserById = async (req, res) => {
         .populate('customer', 'firstname lastname email role')
         .populate({
           path: 'items.product',
-          select: 'name code status category images'
+          select: 'name code status category pricePerUnit images'
         })
         .populate('statusLog.updatedBy', 'firstname lastname email role')
         .select('-__v')
@@ -1830,7 +1830,7 @@ exports.getAllOrders = async (req, res) => {
         .populate('shippingAddress')
         .populate({
           path: 'items.product',
-          select: 'name code status category'
+          select: 'name code status category pricePerUnit'
         })
         .sort({ createdAt: -1 })
         .skip(skip)
@@ -1841,7 +1841,7 @@ exports.getAllOrders = async (req, res) => {
         .populate('shippingAddress')
         .populate({
           path: 'items.product',
-          select: 'name code status category'
+          select: 'name code status category pricePerUnit'
         })
         .sort({ createdAt: -1 })
         .skip(skip)
@@ -1884,7 +1884,7 @@ exports.getOrderById = async (req, res) => {
       .populate('shippingAddress')
       .populate({
         path: 'items.product',
-        select: 'name code status category description images'
+        select: 'name code status category description pricePerUnit images'
       });
     
     if (!order) {
@@ -1934,9 +1934,12 @@ exports.createOrder = async (req, res) => {
       return res.status(404).json({ status: 'error', message: getBilingualMessage('address_not_found') });
     }
     
-    // Validate items
+    // Validate items and prepare for calculation
+    const orderItems = [];
+    const productPrices = {};
+    
     for (const item of items) {
-      if (!item.product || !item.quantity) {
+      if (!item.product || !item.quantity || item.quantity <= 0) {
         return res.status(400).json({ status: 'error', message: getBilingualMessage('invalid_order_items') });
       }
       
@@ -1948,11 +1951,20 @@ exports.createOrder = async (req, res) => {
       if (product.status !== 'approved') {
         return res.status(400).json({ status: 'error', message: getBilingualMessage('product_not_approved') });
       }
+      
+      const price = parseFloat(product.pricePerUnit) || 0;
+      productPrices[item.product] = price;
+      
+      orderItems.push({
+        product: item.product,
+        quantity: item.quantity,
+        itemTotal: price * item.quantity
+      });
     }
     
     const order = new Order({
       customer: customerId,
-      items,
+      items: orderItems,
       shippingAddress: shippingAddressId,
       status: { en: 'pending', ar: 'قيد الانتظار' },
       statusLog: [{
@@ -1961,6 +1973,8 @@ exports.createOrder = async (req, res) => {
       }]
     });
     
+    // Calculate total using the product prices we fetched
+    order.calculateTotal(productPrices);
     await order.save();
     
     const populatedOrder = await Order.findById(order._id)
@@ -2006,9 +2020,12 @@ exports.updateOrder = async (req, res) => {
         return res.status(400).json({ status: 'error', message: getBilingualMessage('order_must_have_items') });
       }
       
-      // Validate items
+      // Validate items and prepare for calculation
+      const orderItems = [];
+      const productPrices = {};
+      
       for (const item of items) {
-        if (!item.product || !item.quantity) {
+        if (!item.product || !item.quantity || item.quantity <= 0) {
           return res.status(400).json({ status: 'error', message: getBilingualMessage('invalid_order_items') });
         }
         
@@ -2020,9 +2037,20 @@ exports.updateOrder = async (req, res) => {
         if (product.status !== 'approved') {
           return res.status(400).json({ status: 'error', message: getBilingualMessage('product_not_approved') });
         }
+        
+        const price = parseFloat(product.pricePerUnit) || 0;
+        productPrices[item.product] = price;
+        
+        orderItems.push({
+          product: item.product,
+          quantity: item.quantity,
+          itemTotal: price * item.quantity
+        });
       }
       
-      order.items = items;
+      order.items = orderItems;
+      // Recalculate total with new items
+      order.calculateTotal(productPrices);
     }
     
     // Update shipping address if provided

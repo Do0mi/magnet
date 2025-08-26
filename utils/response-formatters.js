@@ -249,8 +249,7 @@ const formatOrder = (order, options = {}) => {
     }
   }
 
-  // Calculate total and format items
-  let total = 0;
+  // Format items and use stored totals
   if (includeItems && order.items) {
     formatted.items = order.items.map(item => {
       const formattedItem = {
@@ -262,22 +261,18 @@ const formatOrder = (order, options = {}) => {
         quantity: item.quantity
       };
 
-      // Calculate item total and add price information
-      if (includeTotal && item.product && typeof item.product === 'object' && item.product.pricePerUnit) {
-        const price = parseFloat(item.product.pricePerUnit) || 0;
-        const itemTotal = price * item.quantity;
-        formattedItem.price = price;
-        formattedItem.itemTotal = itemTotal;
-        total += itemTotal;
+      // Use stored itemTotal from order
+      if (includeTotal) {
+        formattedItem.itemTotal = item.itemTotal || 0;
       }
 
       return formattedItem;
     });
   }
 
-  // Add total to formatted order
+  // Use stored total from order
   if (includeTotal) {
-    formatted.total = total;
+    formatted.total = order.total || 0;
   }
 
   if (includeStatusLog && order.statusLog) {

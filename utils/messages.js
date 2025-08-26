@@ -1060,6 +1060,10 @@ const messages = {
     en: 'Invalid order items format',
     ar: 'تنسيق عناصر الطلب غير صحيح'
   },
+  'invalid_order_item': {
+    en: 'Invalid order item. Product and quantity are required',
+    ar: 'عنصر طلب غير صحيح. المنتج والكمية مطلوبان'
+  },
   'invalid_action': {
     en: 'Invalid action. Must be "add" or "remove"',
     ar: 'إجراء غير صحيح. يجب أن يكون "إضافة" أو "إزالة"'
