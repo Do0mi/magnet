@@ -1814,10 +1814,19 @@ The admin verification management system provides comprehensive control over use
 - **Query Parameters:**
   - `page` (number, optional, default: 1)
   - `limit` (number, optional, default: 10)
-  - `customerId` (string, optional, filter by customer ID)
+  - `customerName` (string, optional, search by customer name, email, or phone - supports partial matches and multiple search patterns)
   - `status` (string, optional, filter by order status)
   - `startDate` (string, optional, filter orders from date)
   - `endDate` (string, optional, filter orders to date)
+- **Search Functionality:**
+  - The `customerName` parameter performs a comprehensive search across:
+    - Customer first name (exact match, contains, starts with, ends with)
+    - Customer last name (exact match, contains, starts with, ends with)
+    - Customer email address
+    - Customer phone number
+    - Full name (concatenated firstname + lastname)
+  - Search is case-insensitive and supports partial matching
+  - Examples: `?customerName=john` will find "John", "Johnny", "Johnson", etc.
 - **Response:**
   - `200 OK`: List of orders with pagination info (bilingual message)
 

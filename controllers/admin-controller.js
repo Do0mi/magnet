@@ -1799,10 +1799,9 @@ exports.deleteAddress = async (req, res) => {
 
 exports.getAllOrders = async (req, res) => {
   try {
-    const { page = 1, limit = 10, customerId, status, startDate, endDate } = req.query;
+    const { page = 1, limit = 10, customerName, status, startDate, endDate } = req.query;
     const query = {};
     
-    if (customerId) query.customer = customerId;
     if (status) query.status = status;
     if (startDate || endDate) {
       query.createdAt = {};
@@ -1811,16 +1810,64 @@ exports.getAllOrders = async (req, res) => {
     }
     
     const skip = (page - 1) * limit;
-    const orders = await Order.find(query)
-      .populate('customer', 'firstname lastname email role')
-      .populate('shippingAddress')
-      .populate({
-        path: 'items.product',
-        select: 'name code status category'
-      })
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(parseInt(limit));
+    
+    // If customerName is provided, search for customers with matching names
+    let customerFilter = {};
+    if (customerName && customerName.trim()) {
+      const searchTerm = customerName.trim();
+      // Create search patterns for better matching
+      const searchPatterns = [
+        searchTerm, // Exact match
+        `.*${searchTerm}.*`, // Contains anywhere
+        `^${searchTerm}.*`, // Starts with
+        `.*${searchTerm}$` // Ends with
+      ];
+      
+      customerFilter = {
+        $or: [
+          // Search in firstname with multiple patterns
+          ...searchPatterns.map(pattern => ({ firstname: { $regex: pattern, $options: 'i' } })),
+          // Search in lastname with multiple patterns
+          ...searchPatterns.map(pattern => ({ lastname: { $regex: pattern, $options: 'i' } })),
+          // Search in email
+          { email: { $regex: searchTerm, $options: 'i' } },
+          // Search in phone
+          { phone: { $regex: searchTerm, $options: 'i' } },
+          // Search in full name (concatenated)
+          { $expr: { $regexMatch: { input: { $concat: ['$firstname', ' ', '$lastname'] }, regex: searchTerm, options: 'i' } } }
+        ]
+      };
+    }
+    
+    let orders;
+    if (customerName) {
+      // Find customers first, then find their orders
+      const customers = await User.find(customerFilter).select('_id');
+      const customerIds = customers.map(customer => customer._id);
+      query.customer = { $in: customerIds };
+      
+      orders = await Order.find(query)
+        .populate('customer', 'firstname lastname email role')
+        .populate('shippingAddress')
+        .populate({
+          path: 'items.product',
+          select: 'name code status category'
+        })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(parseInt(limit));
+    } else {
+      orders = await Order.find(query)
+        .populate('customer', 'firstname lastname email role')
+        .populate('shippingAddress')
+        .populate({
+          path: 'items.product',
+          select: 'name code status category'
+        })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(parseInt(limit));
+    }
     
     const total = await Order.countDocuments(query);
     
