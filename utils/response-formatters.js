@@ -249,7 +249,8 @@ const formatOrder = (order, options = {}) => {
     }
   }
 
-  // Format items and use stored totals
+  // Format items and calculate totals (with fallback for existing orders)
+  let calculatedTotal = 0;
   if (includeItems && order.items) {
     formatted.items = order.items.map(item => {
       const formattedItem = {
@@ -261,18 +262,28 @@ const formatOrder = (order, options = {}) => {
         quantity: item.quantity
       };
 
-      // Use stored itemTotal from order
       if (includeTotal) {
-        formattedItem.itemTotal = item.itemTotal || 0;
+        // Use stored itemTotal if available, otherwise calculate it
+        let itemTotal = item.itemTotal || 0;
+        
+        // If itemTotal is 0 and we have product info, calculate it dynamically
+        if (itemTotal === 0 && item.product && typeof item.product === 'object' && item.product.pricePerUnit && item.quantity) {
+          const price = parseFloat(item.product.pricePerUnit) || 0;
+          itemTotal = price * item.quantity;
+        }
+        
+        formattedItem.itemTotal = itemTotal;
+        calculatedTotal += itemTotal;
       }
 
       return formattedItem;
     });
   }
 
-  // Use stored total from order
+  // Use stored total or calculated total
   if (includeTotal) {
-    formatted.total = order.total || 0;
+    // If stored total is 0 but we calculated a total, use the calculated one
+    formatted.total = (order.total && order.total > 0) ? order.total : calculatedTotal;
   }
 
   if (includeStatusLog && order.statusLog) {
