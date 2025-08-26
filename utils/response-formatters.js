@@ -194,6 +194,7 @@ const formatProduct = (product, options = {}) => {
  * @param {boolean} options.includeCustomer - Include customer details (default: false)
  * @param {boolean} options.includeAddress - Include shipping address (default: true)
  * @param {boolean} options.includeStatusLog - Include status log (default: false)
+ * @param {boolean} options.includeTotal - Include total calculation (default: true)
  * @returns {Object} Formatted order object
  */
 const formatOrder = (order, options = {}) => {
@@ -204,7 +205,8 @@ const formatOrder = (order, options = {}) => {
     includeItems = true,
     includeCustomer = true,
     includeAddress = true,
-    includeStatusLog = false
+    includeStatusLog = false,
+    includeTotal = true
   } = options;
 
   const formatted = {
@@ -247,15 +249,35 @@ const formatOrder = (order, options = {}) => {
     }
   }
 
+  // Calculate total and format items
+  let total = 0;
   if (includeItems && order.items) {
-    formatted.items = order.items.map(item => ({
-      product: typeof item.product === 'object' ? formatProduct(item.product, { 
-        language, 
-        includeOwner: false, 
-        includeApproval: false 
-      }) : item.product,
-      quantity: item.quantity
-    }));
+    formatted.items = order.items.map(item => {
+      const formattedItem = {
+        product: typeof item.product === 'object' ? formatProduct(item.product, { 
+          language, 
+          includeOwner: false, 
+          includeApproval: false 
+        }) : item.product,
+        quantity: item.quantity
+      };
+
+      // Calculate item total and add price information
+      if (includeTotal && item.product && typeof item.product === 'object' && item.product.pricePerUnit) {
+        const price = parseFloat(item.product.pricePerUnit) || 0;
+        const itemTotal = price * item.quantity;
+        formattedItem.price = price;
+        formattedItem.itemTotal = itemTotal;
+        total += itemTotal;
+      }
+
+      return formattedItem;
+    });
+  }
+
+  // Add total to formatted order
+  if (includeTotal) {
+    formatted.total = total;
   }
 
   if (includeStatusLog && order.statusLog) {

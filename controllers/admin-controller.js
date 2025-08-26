@@ -399,25 +399,16 @@ exports.getUserById = async (req, res) => {
         .select('-__v')
         .sort({ createdAt: -1 });
 
+      const { formatOrder } = require('../utils/response-formatters');
+      
       additionalData = {
-        orders: orders.map(order => ({
-          id: order._id,
-          items: order.items.map(item => ({
-            ...item.toObject(),
-            product: {
-              id: item.product._id,
-              name: item.product.name,
-              code: item.product.code,
-              status: item.product.status,
-              category: item.product.category,
-              imageUrl: item.product.images && item.product.images.length > 0 ? item.product.images[0] : null
-            }
-          })),
-          shippingAddress: order.shippingAddress,
-          status: order.status,
-          statusLog: order.statusLog,
-          createdAt: order.createdAt,
-          updatedAt: order.updatedAt
+        orders: orders.map(order => formatOrder(order, { 
+          language: 'en', // Default to English for admin view, could be made configurable
+          includeItems: true,
+          includeCustomer: false, // We already know the customer
+          includeAddress: true,
+          includeStatusLog: true,
+          includeTotal: true
         })),
         wishlist: wishlist ? {
           id: wishlist._id,
@@ -529,25 +520,13 @@ exports.getUserById = async (req, res) => {
           rejectionReason: review.rejectionReason,
           createdAt: review.createdAt
         })),
-        moderatedOrders: moderatedOrders.map(order => ({
-          id: order._id,
-          customer: order.customer,
-          items: order.items.map(item => ({
-            ...item.toObject(),
-            product: {
-              id: item.product._id,
-              name: item.product.name,
-              code: item.product.code,
-              status: item.product.status,
-              category: item.product.category,
-              imageUrl: item.product.images && item.product.images.length > 0 ? item.product.images[0] : null
-            }
-          })),
-          shippingAddress: order.shippingAddress,
-          status: order.status,
-          statusLog: order.statusLog,
-          createdAt: order.createdAt,
-          updatedAt: order.updatedAt
+        moderatedOrders: moderatedOrders.map(order => formatOrder(order, { 
+          language: 'en', // Default to English for admin view, could be made configurable
+          includeItems: true,
+          includeCustomer: true,
+          includeAddress: true,
+          includeStatusLog: true,
+          includeTotal: true
         })),
         approvedBusinessUsers: approvedBusinessUsers.map(businessUser => ({
           id: businessUser._id,
@@ -1871,16 +1850,17 @@ exports.getAllOrders = async (req, res) => {
     
     const total = await Order.countDocuments(query);
     
+    const language = req.query.lang || 'en';
+    const { formatOrder } = require('../utils/response-formatters');
+    
     res.status(200).json(createResponse('success', {
-      orders: orders.map(order => ({
-        id: order._id,
-        customer: order.customer,
-        items: order.items,
-        shippingAddress: order.shippingAddress,
-        status: order.status,
-        statusLog: order.statusLog,
-        createdAt: order.createdAt,
-        updatedAt: order.updatedAt
+      orders: orders.map(order => formatOrder(order, { 
+        language,
+        includeItems: true,
+        includeCustomer: true,
+        includeAddress: true,
+        includeStatusLog: false,
+        includeTotal: true
       }))
     }, null, {
       pagination: {
@@ -1911,17 +1891,18 @@ exports.getOrderById = async (req, res) => {
       return res.status(404).json({ status: 'error', message: getBilingualMessage('order_not_found') });
     }
     
+    const language = req.query.lang || 'en';
+    const { formatOrder } = require('../utils/response-formatters');
+    
     res.status(200).json(createResponse('success', {
-      order: {
-        id: order._id,
-        customer: order.customer,
-        items: order.items,
-        shippingAddress: order.shippingAddress,
-        status: order.status,
-        statusLog: order.statusLog,
-        createdAt: order.createdAt,
-        updatedAt: order.updatedAt
-      }
+      order: formatOrder(order, { 
+        language,
+        includeItems: true,
+        includeCustomer: true,
+        includeAddress: true,
+        includeStatusLog: true,
+        includeTotal: true
+      })
     }));
   } catch (err) {
     console.error('Get order by ID error:', err);
@@ -1990,17 +1971,18 @@ exports.createOrder = async (req, res) => {
         select: 'name code status category'
       });
     
+    const language = req.query.lang || 'en';
+    const { formatOrder } = require('../utils/response-formatters');
+    
     res.status(201).json(createResponse('success', {
-      order: {
-        id: populatedOrder._id,
-        customer: populatedOrder.customer,
-        items: populatedOrder.items,
-        shippingAddress: populatedOrder.shippingAddress,
-        status: populatedOrder.status,
-        statusLog: populatedOrder.statusLog,
-        createdAt: populatedOrder.createdAt,
-        updatedAt: populatedOrder.updatedAt
-      }
+      order: formatOrder(populatedOrder, { 
+        language,
+        includeItems: true,
+        includeCustomer: true,
+        includeAddress: true,
+        includeStatusLog: true,
+        includeTotal: true
+      })
     }, getBilingualMessage('order_created_successfully')));
   } catch (err) {
     console.error('Create order error:', err);
@@ -2085,17 +2067,18 @@ exports.updateOrder = async (req, res) => {
         select: 'name code status category'
       });
     
+    const language = req.query.lang || 'en';
+    const { formatOrder } = require('../utils/response-formatters');
+    
     res.status(200).json(createResponse('success', {
-      order: {
-        id: updatedOrder._id,
-        customer: updatedOrder.customer,
-        items: updatedOrder.items,
-        shippingAddress: updatedOrder.shippingAddress,
-        status: updatedOrder.status,
-        statusLog: updatedOrder.statusLog,
-        createdAt: updatedOrder.createdAt,
-        updatedAt: updatedOrder.updatedAt
-      }
+      order: formatOrder(updatedOrder, { 
+        language,
+        includeItems: true,
+        includeCustomer: true,
+        includeAddress: true,
+        includeStatusLog: true,
+        includeTotal: true
+      })
     }, getBilingualMessage('order_updated_successfully')));
   } catch (err) {
     console.error('Update order error:', err);

@@ -87,6 +87,32 @@
 - **Business (if owns product in order)**: Business user can access if any product in the order is owned by them (see order tracking section).
 - **Enhanced Data Population**: All APIs now return complete user information instead of just IDs for related fields (owner, approvedBy, createdBy, customer, user, etc.).
 
+## 🆕 Order Total Calculation Feature
+
+**All order-related endpoints now include automatic total calculation:**
+
+### **New Fields in Order Responses**
+- **`total`** (number): Overall order total (sum of all item totals)
+- **`itemTotal`** (number): Individual item total for each order item (quantity × pricePerUnit)
+- **`price`** (number): Individual item price (parsed from pricePerUnit string) for each order item
+
+### **Affected Endpoints**
+All order routes in both customer and admin APIs now include these calculated fields:
+- **Customer Order Routes**: `/api/orders/*`
+- **Admin Order Routes**: `/api/admin/orders/*`
+- **Business Order Routes**: `/api/orders/business-products`
+
+### **Calculation Details**
+- Server-side calculation ensures consistency
+- Prices parsed from string format to numbers
+- Invalid/missing prices default to 0
+- Works with all language preferences (`lang=en`, `lang=ar`, `lang=both`)
+
+### **Backward Compatibility**
+- Existing API structure unchanged
+- New fields added without breaking changes
+- All existing functionality preserved
+
 ---
 
 ## Message Format
@@ -241,6 +267,7 @@ The following fields are now populated with complete user objects instead of IDs
           "product": {
             "id": "product_id",
             "name": "Product Name",
+            "pricePerUnit": "25.50",
             "owner": {
               "id": "owner_id",
               "firstname": "Business",
@@ -249,13 +276,60 @@ The following fields are now populated with complete user objects instead of IDs
               "companyName": "ABC Company"
             }
           },
-          "quantity": 2
+          "quantity": 2,
+          "price": 25.50,
+          "itemTotal": 51.00
         }
-      ]
+      ],
+      "total": 51.00,
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
     }
   }
 }
 ```
+
+### Order Total Calculation
+
+All order responses now include automatic total calculation:
+
+#### **Total Fields**
+- **`total`** (number): Overall order total (sum of all item totals)
+- **`itemTotal`** (number): Individual item total (quantity × pricePerUnit) for each item
+- **`price`** (number): Individual item price (parsed from pricePerUnit string) for each item
+
+#### **Calculation Logic**
+- Each item's `itemTotal` = `quantity` × `pricePerUnit`
+- Order `total` = sum of all item totals
+- Prices are parsed from string format to numbers for calculation
+- Invalid or missing prices default to 0
+- All calculations are performed server-side for consistency
+
+#### **Example Calculation**
+```json
+{
+  "items": [
+    {
+      "product": { "pricePerUnit": "25.50" },
+      "quantity": 2,
+      "price": 25.50,
+      "itemTotal": 51.00  // 25.50 × 2
+    },
+    {
+      "product": { "pricePerUnit": "15.00" },
+      "quantity": 1,
+      "price": 15.00,
+      "itemTotal": 15.00  // 15.00 × 1
+    }
+  ],
+  "total": 66.00  // 51.00 + 15.00
+}
+```
+
+#### **Language Support**
+- Total calculations work with all language preferences (`lang=en`, `lang=ar`, `lang=both`)
+- Numeric values remain consistent across languages
+- Currency formatting is handled client-side based on locale
 
 ---
 
@@ -935,7 +1009,8 @@ Orders support bilingual content (Arabic and English). You can:
 - **Body:**
   - Order details (see order model)
 - **Response:**
-  - `201 Created`: Order info (bilingual message)
+  - `201 Created`: Order info with calculated total (bilingual message)
+  - **Note:** Response includes `total` and `itemTotal` fields automatically calculated from product prices and quantities
 
 ### 2. Get My Orders
 - **GET** `/api/orders/my`
@@ -945,7 +1020,8 @@ Orders support bilingual content (Arabic and English). You can:
 - **Description:** Get all orders for the authenticated customer.
 - **Headers:** `Authorization: Bearer <token>`
 - **Response:**
-  - `200 OK`: List of orders (bilingual message)
+  - `200 OK`: List of orders with calculated totals (bilingual message)
+  - **Note:** Each order includes `total` and `itemTotal` fields automatically calculated
 
 ### 3. Get Order by ID
 - **GET** `/api/orders/:id`
@@ -955,7 +1031,8 @@ Orders support bilingual content (Arabic and English). You can:
 - **Description:** Get order by ID (admin, magnet_employee, or owner).
 - **Headers:** `Authorization: Bearer <token>`
 - **Response:**
-  - `200 OK`: Order info (bilingual message)
+  - `200 OK`: Order info with calculated total (bilingual message)
+  - **Note:** Response includes `total` and `itemTotal` fields automatically calculated
 
 ### 4. Get All Orders
 - **GET** `/api/orders`
@@ -965,7 +1042,8 @@ Orders support bilingual content (Arabic and English). You can:
 - **Description:** Get all orders (admin, magnet_employee only).
 - **Headers:** `Authorization: Bearer <token>`
 - **Response:**
-  - `200 OK`: List of orders (bilingual message)
+  - `200 OK`: List of orders with calculated totals (bilingual message)
+  - **Note:** Each order includes `total` and `itemTotal` fields automatically calculated
 
 ### 5. Update Order Status
 - **PUT** `/api/orders/:id/status`
@@ -974,7 +1052,8 @@ Orders support bilingual content (Arabic and English). You can:
 - **Body:**
   - `status` (string, required, enum: 'pending', 'confirmed', 'shipped', 'delivered', 'cancelled')
 - **Response:**
-  - `200 OK`: Updated order info (bilingual message)
+  - `200 OK`: Updated order info with calculated total (bilingual message)
+  - **Note:** Response includes `total` and `itemTotal` fields automatically calculated
 
 ### 6. Get Status Options
 - **GET** `/api/orders/status-options`
@@ -1010,8 +1089,8 @@ Orders support bilingual content (Arabic and English). You can:
 - **Description:** Get all orders containing products owned by the authenticated business user.
 - **Headers:** `Authorization: Bearer <token>`
 - **Response:**
-  - `200 OK`: List of orders containing the business user's products
-  - **Note:** This endpoint returns orders that contain any product owned by the business user, with customer details for order fulfillment.
+  - `200 OK`: List of orders containing the business user's products with calculated totals
+  - **Note:** This endpoint returns orders that contain any product owned by the business user, with customer details for order fulfillment. Each order includes `total` and `itemTotal` fields automatically calculated.
 
 ---
 
@@ -1818,6 +1897,7 @@ The admin verification management system provides comprehensive control over use
   - `status` (string, optional, filter by order status)
   - `startDate` (string, optional, filter orders from date)
   - `endDate` (string, optional, filter orders to date)
+  - `lang` (string, optional, language preference: 'en', 'ar', 'both')
 - **Search Functionality:**
   - The `customerName` parameter performs a comprehensive search across:
     - Customer first name (exact match, contains, starts with, ends with)
@@ -1828,15 +1908,19 @@ The admin verification management system provides comprehensive control over use
   - Search is case-insensitive and supports partial matching
   - Examples: `?customerName=john` will find "John", "Johnny", "Johnson", etc.
 - **Response:**
-  - `200 OK`: List of orders with pagination info (bilingual message)
+  - `200 OK`: List of orders with pagination info and calculated totals (bilingual message)
+  - **Note:** Each order includes `total` and `itemTotal` fields automatically calculated from product prices and quantities
 
 ### 2. Get Order by ID
 - **GET** `/api/admin/orders/:id`
 - **Description:** Get detailed information about a specific order.
 - **Headers:** `Authorization: Bearer <token>`
+- **Query Parameters:**
+  - `lang` (string, optional, language preference: 'en', 'ar', 'both')
 - **Response:**
-  - `200 OK`: Order details (bilingual message)
+  - `200 OK`: Order details with calculated total (bilingual message)
   - `404 Not Found`: Order not found (bilingual message)
+  - **Note:** Response includes `total` and `itemTotal` fields automatically calculated
 
 ### 3. Create Order
 - **POST** `/api/admin/orders`
@@ -1847,9 +1931,12 @@ The admin verification management system provides comprehensive control over use
   - `items` (array, required) - Array of order items
     - Each item: `{ product: string, quantity: number }`
   - `shippingAddressId` (string, required) - Shipping address ID
+- **Query Parameters:**
+  - `lang` (string, optional, language preference: 'en', 'ar', 'both')
 - **Response:**
-  - `201 Created`: Order created successfully (bilingual message)
+  - `201 Created`: Order created successfully with calculated total (bilingual message)
   - `400 Bad Request`: Validation errors (bilingual message)
+  - **Note:** Response includes `total` and `itemTotal` fields automatically calculated from product prices and quantities
 
 ### 4. Update Order
 - **PUT** `/api/admin/orders/:id`
@@ -1859,9 +1946,12 @@ The admin verification management system provides comprehensive control over use
   - `items` (array, optional) - New order items
   - `shippingAddressId` (string, optional) - New shipping address ID
   - `status` (string, optional) - New order status
+- **Query Parameters:**
+  - `lang` (string, optional, language preference: 'en', 'ar', 'both')
 - **Response:**
-  - `200 OK`: Order updated successfully (bilingual message)
+  - `200 OK`: Order updated successfully with calculated total (bilingual message)
   - `404 Not Found`: Order not found (bilingual message)
+  - **Note:** Response includes `total` and `itemTotal` fields automatically calculated when items are updated
 
 ### 5. Delete Order
 - **DELETE** `/api/admin/orders/:id`
