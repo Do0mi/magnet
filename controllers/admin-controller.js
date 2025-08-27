@@ -1778,7 +1778,7 @@ exports.deleteAddress = async (req, res) => {
 
 exports.getAllOrders = async (req, res) => {
   try {
-    const { page = 1, limit = 10, customerName, status, startDate, endDate } = req.query;
+    const { page = 1, limit = 10, customerName, status, date } = req.query;
     const query = {};
     
     if (status) {
@@ -1788,10 +1788,18 @@ exports.getAllOrders = async (req, res) => {
         { 'status.ar': status }
       ];
     }
-    if (startDate || endDate) {
-      query.createdAt = {};
-      if (startDate) query.createdAt.$gte = new Date(startDate);
-      if (endDate) query.createdAt.$lte = new Date(endDate);
+    if (date) {
+      // Filter orders created on a specific date
+      const startOfDay = new Date(date);
+      startOfDay.setHours(0, 0, 0, 0);
+      
+      const endOfDay = new Date(date);
+      endOfDay.setHours(23, 59, 59, 999);
+      
+      query.createdAt = {
+        $gte: startOfDay,
+        $lte: endOfDay
+      };
     }
     
     const skip = (page - 1) * limit;

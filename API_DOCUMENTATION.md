@@ -1891,8 +1891,7 @@ The admin verification management system provides comprehensive control over use
   - `limit` (number, optional, default: 10)
   - `customerName` (string, optional, search by customer name, email, or phone - supports partial matches and multiple search patterns)
   - `status` (string, optional, filter by order status)
-  - `startDate` (string, optional, filter orders from date)
-  - `endDate` (string, optional, filter orders to date)
+  - `date` (string, optional, filter orders created on specific date - format: YYYY-MM-DD)
   - `lang` (string, optional, language preference: 'en', 'ar', 'both')
 - **Search Functionality:**
   - The `customerName` parameter performs a comprehensive search across:
