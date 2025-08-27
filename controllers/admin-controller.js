@@ -1781,7 +1781,13 @@ exports.getAllOrders = async (req, res) => {
     const { page = 1, limit = 10, customerName, status, startDate, endDate } = req.query;
     const query = {};
     
-    if (status) query.status = status;
+    if (status) {
+      // Handle bilingual status field - search in both English and Arabic
+      query.$or = [
+        { 'status.en': status },
+        { 'status.ar': status }
+      ];
+    }
     if (startDate || endDate) {
       query.createdAt = {};
       if (startDate) query.createdAt.$gte = new Date(startDate);
