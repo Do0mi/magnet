@@ -13,7 +13,7 @@ exports.getCategories = async (req, res) => {
     const language = req.query.lang || 'en';
     const { status } = req.query;
     
-    // Build query - by default show only active categories
+    // Build query - by default show all categories (active and inactive)
     const query = {};
     if (status) {
       if (['active', 'inactive'].includes(status)) {
@@ -23,13 +23,8 @@ exports.getCategories = async (req, res) => {
           { 'status.ar': status === 'active' ? 'نشط' : 'غير نشط' }
         ];
       }
-    } else {
-      // Default to active categories only
-      query.$or = [
-        { 'status.en': 'active' },
-        { 'status.ar': 'نشط' }
-      ];
     }
+    // If no status filter is provided, return all categories (no query filter)
     
     const categories = await Category.find(query)
       .populate('createdBy', 'firstname lastname email role');

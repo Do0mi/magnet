@@ -945,10 +945,11 @@ Categories support bilingual content (Arabic and English). You can:
 - **GET** `/api/categories?lang=en` (English only)
 - **GET** `/api/categories?lang=ar` (Arabic only)
 - **GET** `/api/categories?lang=both` (Both languages)
-- **GET** `/api/categories?status=active` (Active categories only - default)
+- **GET** `/api/categories` (All categories - default)
+- **GET** `/api/categories?status=active` (Active categories only)
 - **GET** `/api/categories?status=inactive` (Inactive categories only)
 - **GET** `/api/categories?status=active&lang=en` (Active categories in English)
-- **Description:** Get categories (public). By default shows only active categories.
+- **Description:** Get categories (public). By default shows all categories (active and inactive).
 - **Query Parameters:**
   - `lang` (string, optional, language preference: 'en', 'ar', 'both')
   - `status` (string, optional, filter by status: 'active', 'inactive' - searches both English and Arabic status fields)
@@ -1167,6 +1168,32 @@ POST /api/categories
   }
 }
 ```
+
+### Category Filtering Examples
+
+#### Example 9: Get All Categories (Default)
+```
+GET /api/categories
+```
+**Description:** Returns all categories regardless of status (active and inactive)
+
+#### Example 10: Get Only Active Categories
+```
+GET /api/categories?status=active
+```
+**Description:** Returns only categories with active status
+
+#### Example 11: Get Only Inactive Categories
+```
+GET /api/categories?status=inactive
+```
+**Description:** Returns only categories with inactive status
+
+#### Example 12: Get Active Categories in English
+```
+GET /api/categories?status=active&lang=en
+```
+**Description:** Returns only active categories with English language formatting
 
 ---
 
@@ -2251,7 +2278,7 @@ GET /api/admin/orders?date=2025-08-27&status=pending&customerName=hussien&page=1
 - **✅ Enhanced Error Handling**: Specific error messages for duplicate category names and incomplete status fields
 - **✅ Improved Validation**: Better validation for bilingual category fields including status values
 - **✅ Updated API Responses**: Added detailed error responses for create and update operations
-- **✅ Status Filtering**: GET categories now filters by bilingual status (default: active only)
+- **✅ Status Filtering**: GET categories now filters by bilingual status (default: all categories)
 
 #### Admin Addresses API Improvements
 - **✅ Enhanced User Search**: Replaced `userId` parameter with `userName` for comprehensive user search
