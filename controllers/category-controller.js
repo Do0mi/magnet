@@ -11,10 +11,12 @@ const legacyFormatCategory = (category, language = 'en') => {
 exports.getCategories = async (req, res) => {
   try {
     const language = req.query.lang || 'en';
-    const { status } = req.query;
+    const { status, search } = req.query;
     
     // Build query - by default show all categories (active and inactive)
     const query = {};
+    
+    // Handle status filtering
     if (status) {
       if (['active', 'inactive'].includes(status)) {
         // Handle bilingual status field - search in both English and Arabic
@@ -24,7 +26,38 @@ exports.getCategories = async (req, res) => {
         ];
       }
     }
-    // If no status filter is provided, return all categories (no query filter)
+    
+    // Handle name search
+    if (search && search.trim()) {
+      const searchTerm = search.trim();
+      // Create search patterns for better matching
+      const searchPatterns = [
+        searchTerm, // Exact match
+        `.*${searchTerm}.*`, // Contains anywhere
+        `^${searchTerm}.*`, // Starts with
+        `.*${searchTerm}$` // Ends with
+      ];
+      
+      const nameSearchFilter = {
+        $or: [
+          // Search in English name with multiple patterns
+          ...searchPatterns.map(pattern => ({ 'name.en': { $regex: pattern, $options: 'i' } })),
+          // Search in Arabic name with multiple patterns
+          ...searchPatterns.map(pattern => ({ 'name.ar': { $regex: pattern, $options: 'i' } }))
+        ]
+      };
+      
+      // If we already have a status filter, combine it with name search
+      if (query.$or) {
+        query.$and = [
+          { $or: query.$or },
+          nameSearchFilter
+        ];
+        delete query.$or;
+      } else {
+        Object.assign(query, nameSearchFilter);
+      }
+    }
     
     const categories = await Category.find(query)
       .populate('createdBy', 'firstname lastname email role');

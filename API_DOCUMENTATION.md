@@ -948,11 +948,14 @@ Categories support bilingual content (Arabic and English). You can:
 - **GET** `/api/categories` (All categories - default)
 - **GET** `/api/categories?status=active` (Active categories only)
 - **GET** `/api/categories?status=inactive` (Inactive categories only)
+- **GET** `/api/categories?search=food` (Search categories by name)
+- **GET** `/api/categories?status=active&search=electronics` (Active categories with name search)
 - **GET** `/api/categories?status=active&lang=en` (Active categories in English)
 - **Description:** Get categories (public). By default shows all categories (active and inactive).
 - **Query Parameters:**
   - `lang` (string, optional, language preference: 'en', 'ar', 'both')
   - `status` (string, optional, filter by status: 'active', 'inactive' - searches both English and Arabic status fields)
+  - `search` (string, optional, search by category name in English or Arabic - supports partial matches and multiple search patterns)
 - **Response:**
   - `200 OK`: List of categories
 
@@ -1194,6 +1197,36 @@ GET /api/categories?status=inactive
 GET /api/categories?status=active&lang=en
 ```
 **Description:** Returns only active categories with English language formatting
+
+#### Example 13: Search Categories by Name
+```
+GET /api/categories?search=food
+```
+**Description:** Returns categories with "food" in their name (English or Arabic)
+
+#### Example 14: Search Categories by Arabic Name
+```
+GET /api/categories?search=طعام
+```
+**Description:** Returns categories with "طعام" in their Arabic name
+
+#### Example 15: Search Active Categories by Name
+```
+GET /api/categories?status=active&search=electronics
+```
+**Description:** Returns active categories with "electronics" in their name
+
+#### Example 16: Search Categories with Language Filter
+```
+GET /api/categories?search=electronics&lang=en
+```
+**Description:** Returns categories with "electronics" in their name, formatted in English
+
+#### Example 17: Search Categories with Multiple Patterns
+```
+GET /api/categories?search=elec
+```
+**Description:** Returns categories with "elec" in their name (will match "electronics", "electric", etc.)
 
 ---
 
@@ -2279,6 +2312,7 @@ GET /api/admin/orders?date=2025-08-27&status=pending&customerName=hussien&page=1
 - **✅ Improved Validation**: Better validation for bilingual category fields including status values
 - **✅ Updated API Responses**: Added detailed error responses for create and update operations
 - **✅ Status Filtering**: GET categories now filters by bilingual status (default: all categories)
+- **✅ Name Search**: Added search functionality by category name in both English and Arabic
 
 #### Admin Addresses API Improvements
 - **✅ Enhanced User Search**: Replaced `userId` parameter with `userName` for comprehensive user search
