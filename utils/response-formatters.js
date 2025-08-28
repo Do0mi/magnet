@@ -322,9 +322,11 @@ const formatCategory = (category, options = {}) => {
   if (language === 'both') {
     formatted.name = category.name;
     formatted.description = category.description;
+    formatted.status = category.status;
   } else {
     formatted.name = category.name ? category.name[language] || category.name.en : null;
     formatted.description = category.description ? category.description[language] || category.description.en : null;
+    formatted.status = category.status ? category.status[language] || category.status.en : null;
   }
 
   if (includeCreator && category.createdBy) {
