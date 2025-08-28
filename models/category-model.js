@@ -14,6 +14,10 @@ const categorySchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now }
 });
 
+// Create compound unique index for both English and Arabic names
+categorySchema.index({ 'name.en': 1 }, { unique: true });
+categorySchema.index({ 'name.ar': 1 }, { unique: true });
+
 // Method to get category data in specific language
 categorySchema.methods.getLocalizedData = function(language = 'en') {
   const category = this.toObject();

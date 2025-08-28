@@ -927,6 +927,11 @@ Categories support bilingual content (Arabic and English). You can:
 - **Get categories in user's preferred language**: The system uses the user's language preference
 - **Get full bilingual data**: Use `?lang=both` to get both languages
 
+### Unique Constraints
+- **Category names are unique**: No two categories can have the same name in English OR Arabic
+- **Case-insensitive**: Names are stored and compared in a case-insensitive manner
+- **Error handling**: Attempting to create/update a category with a duplicate name will return a specific error message indicating which language field is duplicated
+
 ### Category Object
 - `name` (object, required, bilingual: `{ en: "English Name", ar: "Arabic Name" }`)
 - `description` (object, optional, bilingual: `{ en: "English Description", ar: "Arabic Description" }`)
@@ -952,6 +957,11 @@ Categories support bilingual content (Arabic and English). You can:
   - `description` (object, optional, bilingual: `{ en: "English Description", ar: "Arabic Description" }`)
 - **Response:**
   - `201 Created`: Category info (bilingual message)
+  - `400 Bad Request`: Validation errors (bilingual message)
+    - `category_name_required_both_languages`: When name is missing or incomplete
+    - `category_description_required_both_languages`: When description is incomplete
+    - `category_name_en_already_exists`: When English name already exists
+    - `category_name_ar_already_exists`: When Arabic name already exists
 
 ### 3. Update Category
 - **PUT** `/api/categories/:id`
@@ -962,6 +972,13 @@ Categories support bilingual content (Arabic and English). You can:
   - `description` (object, optional, bilingual: `{ en: "English Description", ar: "Arabic Description" }`)
 - **Response:**
   - `200 OK`: Updated category info (bilingual message)
+  - `400 Bad Request`: Validation errors (bilingual message)
+    - `category_name_required_both_languages`: When name is incomplete
+    - `category_description_required_both_languages`: When description is incomplete
+    - `category_name_en_already_exists`: When English name already exists
+    - `category_name_ar_already_exists`: When Arabic name already exists
+  - `404 Not Found`: Category not found (bilingual message)
+  - `403 Forbidden`: Not authorized to update this category (bilingual message)
 
 ### 4. Delete Category
 - **DELETE** `/api/categories/:id`
@@ -969,6 +986,68 @@ Categories support bilingual content (Arabic and English). You can:
 - **Headers:** `Authorization: Bearer <token>`
 - **Response:**
   - `200 OK`: Category deleted (bilingual message)
+  - `404 Not Found`: Category not found (bilingual message)
+  - `403 Forbidden`: Not authorized to delete this category (bilingual message)
+
+### Category Unique Constraint Examples
+
+#### Example 1: Successful Category Creation
+```json
+POST /api/categories
+{
+  "name": {
+    "en": "Electronics",
+    "ar": "إلكترونيات"
+  },
+  "description": {
+    "en": "Electronic devices and gadgets",
+    "ar": "الأجهزة الإلكترونية والأدوات"
+  }
+}
+```
+**Response:** `201 Created`
+
+#### Example 2: Duplicate English Name Error
+```json
+POST /api/categories
+{
+  "name": {
+    "en": "Electronics",  // This already exists
+    "ar": "إلكترونيات جديدة"
+  }
+}
+```
+**Response:** `400 Bad Request`
+```json
+{
+  "status": "error",
+  "message": {
+    "en": "Category name in English already exists",
+    "ar": "اسم الفئة باللغة الإنجليزية موجود بالفعل"
+  }
+}
+```
+
+#### Example 3: Duplicate Arabic Name Error
+```json
+POST /api/categories
+{
+  "name": {
+    "en": "New Electronics",
+    "ar": "إلكترونيات"  // This already exists
+  }
+}
+```
+**Response:** `400 Bad Request`
+```json
+{
+  "status": "error",
+  "message": {
+    "en": "Category name in Arabic already exists",
+    "ar": "اسم الفئة باللغة العربية موجود بالفعل"
+  }
+}
+```
 
 ---
 
@@ -1906,6 +1985,44 @@ The admin verification management system provides comprehensive control over use
   - `200 OK`: List of orders with pagination info and calculated totals (bilingual message)
   - **Note:** Each order includes `total` and `itemTotal` fields automatically calculated from product prices and quantities
 
+### Admin Orders Date Filtering Examples
+
+#### Example 1: Get Orders for a Specific Date
+```
+GET /api/admin/orders?date=2025-08-27
+```
+**Description:** Returns all orders created on August 27, 2025 (from 00:00:00 to 23:59:59)
+
+#### Example 2: Get Orders for a Date with Status Filter
+```
+GET /api/admin/orders?date=2025-08-27&status=pending
+```
+**Description:** Returns all pending orders created on August 27, 2025
+
+#### Example 3: Get Orders for a Date with Customer Search
+```
+GET /api/admin/orders?date=2025-08-27&customerName=hussien
+```
+**Description:** Returns all orders for customer "hussien" created on August 27, 2025
+
+#### Example 4: Get Orders for a Date with Pagination
+```
+GET /api/admin/orders?date=2025-08-27&page=1&limit=5
+```
+**Description:** Returns first 5 orders created on August 27, 2025
+
+#### Example 5: Combined Filters
+```
+GET /api/admin/orders?date=2025-08-27&status=pending&customerName=hussien&page=1&limit=10
+```
+**Description:** Returns first 10 pending orders for customer "hussien" created on August 27, 2025
+
+#### Date Format Notes
+- **Supported format:** `YYYY-MM-DD` (ISO date format)
+- **Examples:** `2025-08-27`, `2025-8-27` (both work)
+- **Time range:** The filter covers the entire day from 00:00:00 to 23:59:59
+- **Timezone:** Uses UTC timezone for date comparisons
+
 ### 2. Get Order by ID
 - **GET** `/api/admin/orders/:id`
 - **Description:** Get detailed information about a specific order.
@@ -1955,3 +2072,31 @@ The admin verification management system provides comprehensive control over use
 - **Response:**
   - `200 OK`: Order deleted successfully (bilingual message)
   - `404 Not Found`: Order not found (bilingual message)
+
+---
+
+## Changelog
+
+### Latest Updates (2025-01-27)
+
+#### Category Management Enhancements
+- **✅ Added Unique Constraint**: Category names are now unique across both English and Arabic languages
+- **✅ Enhanced Error Handling**: Specific error messages for duplicate category names in each language
+- **✅ Improved Validation**: Better validation for bilingual category fields
+- **✅ Updated API Responses**: Added detailed error responses for create and update operations
+
+#### Admin Orders API Improvements
+- **✅ Simplified Date Filtering**: Replaced `startDate` and `endDate` parameters with single `date` parameter
+- **✅ Better Date Range**: Date filter now covers entire day (00:00:00 to 23:59:59)
+- **✅ Enhanced Examples**: Added comprehensive examples for date filtering with various combinations
+- **✅ Improved Documentation**: Updated query parameter descriptions and added usage examples
+
+#### Technical Improvements
+- **✅ Database Indexes**: Added unique indexes for category names in both languages
+- **✅ Error Code Handling**: Proper handling of MongoDB duplicate key errors (code 11000)
+- **✅ Bilingual Messages**: Added new error messages for duplicate category names
+- **✅ API Consistency**: Maintained consistent error response format across all endpoints
+
+#### Breaking Changes
+- **⚠️ Admin Orders API**: The `startDate` and `endDate` parameters have been replaced with a single `date` parameter
+- **⚠️ Category Names**: Category names are now enforced as unique across both languages

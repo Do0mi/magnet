@@ -637,6 +637,14 @@ const messages = {
     en: 'Category description is required in both English and Arabic',
     ar: 'وصف الفئة مطلوب باللغتين الإنجليزية والعربية'
   },
+  'category_name_en_already_exists': {
+    en: 'Category name in English already exists',
+    ar: 'اسم الفئة باللغة الإنجليزية موجود بالفعل'
+  },
+  'category_name_ar_already_exists': {
+    en: 'Category name in Arabic already exists',
+    ar: 'اسم الفئة باللغة العربية موجود بالفعل'
+  },
   
 
   

@@ -55,6 +55,21 @@ exports.createCategory = async (req, res) => {
       getBilingualMessage('category_created')
     ));
   } catch (err) {
+    // Handle duplicate key error (unique constraint violation)
+    if (err.code === 11000) {
+      const field = Object.keys(err.keyPattern)[0];
+      if (field === 'name.en') {
+        return res.status(400).json({ 
+          status: 'error', 
+          message: getBilingualMessage('category_name_en_already_exists') || 'Category name in English already exists'
+        });
+      } else if (field === 'name.ar') {
+        return res.status(400).json({ 
+          status: 'error', 
+          message: getBilingualMessage('category_name_ar_already_exists') || 'Category name in Arabic already exists'
+        });
+      }
+    }
     res.status(500).json({ status: 'error', message: getBilingualMessage('failed_create_category') });
   }
 };
@@ -98,6 +113,21 @@ exports.updateCategory = async (req, res) => {
       getBilingualMessage('category_updated')
     ));
   } catch (err) {
+    // Handle duplicate key error (unique constraint violation)
+    if (err.code === 11000) {
+      const field = Object.keys(err.keyPattern)[0];
+      if (field === 'name.en') {
+        return res.status(400).json({ 
+          status: 'error', 
+          message: getBilingualMessage('category_name_en_already_exists') || 'Category name in English already exists'
+        });
+      } else if (field === 'name.ar') {
+        return res.status(400).json({ 
+          status: 'error', 
+          message: getBilingualMessage('category_name_ar_already_exists') || 'Category name in Arabic already exists'
+        });
+      }
+    }
     res.status(500).json({ status: 'error', message: getBilingualMessage('failed_update_category') });
   }
 };
