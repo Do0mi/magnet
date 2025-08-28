@@ -1367,7 +1367,13 @@ exports.getAllReviews = async (req, res) => {
     res.status(200).json(createResponse('success', {
       reviews: reviews.map(review => ({
         id: review._id,
-        user: review.user,
+        user: {
+          id: review.user._id,
+          firstname: review.user.firstname,
+          lastname: review.user.lastname,
+          email: review.user.email,
+          role: review.user.role
+        },
         product: review.product,
         rating: review.rating,
         comment: review.comment,
@@ -1405,7 +1411,13 @@ exports.getReviewById = async (req, res) => {
     res.status(200).json(createResponse('success', {
       review: {
         id: review._id,
-        user: review.user,
+        user: {
+          id: review.user._id,
+          firstname: review.user.firstname,
+          lastname: review.user.lastname,
+          email: review.user.email,
+          role: review.user.role
+        },
         product: review.product,
         rating: review.rating,
         comment: review.comment,
@@ -1473,7 +1485,13 @@ exports.createReview = async (req, res) => {
     res.status(201).json(createResponse('success', {
       review: {
         id: populatedReview._id,
-        user: populatedReview.user,
+        user: {
+          id: populatedReview.user._id,
+          firstname: populatedReview.user.firstname,
+          lastname: populatedReview.user.lastname,
+          email: populatedReview.user.email,
+          role: populatedReview.user.role
+        },
         product: populatedReview.product,
         rating: populatedReview.rating,
         comment: populatedReview.comment,
@@ -1517,7 +1535,13 @@ exports.updateReview = async (req, res) => {
     res.status(200).json(createResponse('success', {
       review: {
         id: updatedReview._id,
-        user: updatedReview.user,
+        user: {
+          id: updatedReview.user._id,
+          firstname: updatedReview.user.firstname,
+          lastname: updatedReview.user.lastname,
+          email: updatedReview.user.email,
+          role: updatedReview.user.role
+        },
         product: updatedReview.product,
         rating: updatedReview.rating,
         comment: updatedReview.comment,

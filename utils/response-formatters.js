@@ -376,10 +376,14 @@ const formatReview = (review, options = {}) => {
 
   if (includeUser && review.user) {
     if (typeof review.user === 'object') {
-      formatted.user = formatUser(review.user, { 
-        includeBusinessInfo: false, 
-        includeVerification: false 
-      });
+      // For reviews, we only need basic user info without virtual fields
+      formatted.user = {
+        id: review.user._id,
+        firstname: review.user.firstname,
+        lastname: review.user.lastname,
+        email: review.user.email,
+        role: review.user.role
+      };
     } else {
       formatted.user = review.user;
     }
