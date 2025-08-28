@@ -9,6 +9,10 @@ const bilingualFieldSchema = {
 const categorySchema = new mongoose.Schema({
   name: bilingualFieldSchema,
   description: bilingualFieldSchema,
+  status: {
+    type: bilingualFieldSchema,
+    default: { en: 'inactive', ar: 'غير نشط' }
+  },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }

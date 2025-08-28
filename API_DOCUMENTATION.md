@@ -935,6 +935,7 @@ Categories support bilingual content (Arabic and English). You can:
 ### Category Object
 - `name` (object, required, bilingual: `{ en: "English Name", ar: "Arabic Name" }`)
 - `description` (object, optional, bilingual: `{ en: "English Description", ar: "Arabic Description" }`)
+- `status` (object, optional, bilingual: `{ en: "active/inactive", ar: "نشط/غير نشط" }`, default: `{ en: "inactive", ar: "غير نشط" }`)
 - `createdBy` (object, populated with creator details)
 - `createdAt` (date)
 - `updatedAt` (date)
@@ -944,7 +945,13 @@ Categories support bilingual content (Arabic and English). You can:
 - **GET** `/api/categories?lang=en` (English only)
 - **GET** `/api/categories?lang=ar` (Arabic only)
 - **GET** `/api/categories?lang=both` (Both languages)
-- **Description:** Get all categories (public).
+- **GET** `/api/categories?status=active` (Active categories only - default)
+- **GET** `/api/categories?status=inactive` (Inactive categories only)
+- **GET** `/api/categories?status=active&lang=en` (Active categories in English)
+- **Description:** Get categories (public). By default shows only active categories.
+- **Query Parameters:**
+  - `lang` (string, optional, language preference: 'en', 'ar', 'both')
+  - `status` (string, optional, filter by status: 'active', 'inactive' - searches both English and Arabic status fields)
 - **Response:**
   - `200 OK`: List of categories
 
@@ -955,13 +962,16 @@ Categories support bilingual content (Arabic and English). You can:
 - **Body:**
   - `name` (object, required, bilingual: `{ en: "English Name", ar: "Arabic Name" }`)
   - `description` (object, optional, bilingual: `{ en: "English Description", ar: "Arabic Description" }`)
+  - `status` (object, optional, bilingual: `{ en: "active/inactive", ar: "نشط/غير نشط" }`, default: `{ en: "inactive", ar: "غير نشط" }`)
 - **Response:**
   - `201 Created`: Category info (bilingual message)
   - `400 Bad Request`: Validation errors (bilingual message)
     - `category_name_required_both_languages`: When name is missing or incomplete
     - `category_description_required_both_languages`: When description is incomplete
+    - `category_status_required_both_languages`: When status is missing or incomplete
     - `category_name_en_already_exists`: When English name already exists
     - `category_name_ar_already_exists`: When Arabic name already exists
+    - `invalid_category_status`: When status values are not valid
 
 ### 3. Update Category
 - **PUT** `/api/categories/:id`
@@ -970,13 +980,16 @@ Categories support bilingual content (Arabic and English). You can:
 - **Body:**
   - `name` (object, optional, bilingual: `{ en: "English Name", ar: "Arabic Name" }`)
   - `description` (object, optional, bilingual: `{ en: "English Description", ar: "Arabic Description" }`)
+  - `status` (object, optional, bilingual: `{ en: "active/inactive", ar: "نشط/غير نشط" }`)
 - **Response:**
   - `200 OK`: Updated category info (bilingual message)
   - `400 Bad Request`: Validation errors (bilingual message)
     - `category_name_required_both_languages`: When name is incomplete
     - `category_description_required_both_languages`: When description is incomplete
+    - `category_status_required_both_languages`: When status is incomplete
     - `category_name_en_already_exists`: When English name already exists
     - `category_name_ar_already_exists`: When Arabic name already exists
+    - `invalid_category_status`: When status values are not valid
   - `404 Not Found`: Category not found (bilingual message)
   - `403 Forbidden`: Not authorized to update this category (bilingual message)
 
@@ -1045,6 +1058,112 @@ POST /api/categories
   "message": {
     "en": "Category name in Arabic already exists",
     "ar": "اسم الفئة باللغة العربية موجود بالفعل"
+  }
+}
+```
+
+#### Example 4: Create Category with Status
+```json
+POST /api/categories
+{
+  "name": {
+    "en": "Electronics",
+    "ar": "إلكترونيات"
+  },
+  "description": {
+    "en": "Electronic devices and gadgets",
+    "ar": "الأجهزة الإلكترونية والأدوات"
+  },
+  "status": {
+    "en": "active",
+    "ar": "نشط"
+  }
+}
+```
+**Response:** `201 Created`
+
+#### Example 5: Create Inactive Category
+```json
+POST /api/categories
+{
+  "name": {
+    "en": "Discontinued Products",
+    "ar": "المنتجات المتوقفة"
+  },
+  "description": {
+    "en": "Products that are no longer available",
+    "ar": "المنتجات التي لم تعد متوفرة"
+  },
+  "status": {
+    "en": "inactive",
+    "ar": "غير نشط"
+  }
+}
+```
+**Response:** `201 Created`
+
+#### Example 6: Create Category with Default Status (Inactive)
+```json
+POST /api/categories
+{
+  "name": {
+    "en": "Test Category",
+    "ar": "فئة اختبار"
+  },
+  "description": {
+    "en": "Test description",
+    "ar": "وصف اختبار"
+  }
+}
+```
+**Response:** `201 Created` (Status will default to `{ "en": "inactive", "ar": "غير نشط" }`)
+
+#### Example 7: Invalid Status Error
+```json
+POST /api/categories
+{
+  "name": {
+    "en": "Test Category",
+    "ar": "فئة اختبار"
+  },
+  "status": {
+    "en": "invalid_status",
+    "ar": "حالة غير صحيحة"
+  }
+}
+```
+**Response:** `400 Bad Request`
+```json
+{
+  "status": "error",
+  "message": {
+    "en": "Invalid category status. Must be \"active\" or \"inactive\"",
+    "ar": "حالة الفئة غير صحيحة. يجب أن تكون \"نشط\" أو \"غير نشط\""
+  }
+}
+```
+
+#### Example 8: Incomplete Status Error
+```json
+POST /api/categories
+{
+  "name": {
+    "en": "Test Category",
+    "ar": "فئة اختبار"
+  },
+  "status": {
+    "en": "active"
+    // Missing Arabic status
+  }
+}
+```
+**Response:** `400 Bad Request`
+```json
+{
+  "status": "error",
+  "message": {
+    "en": "Category status is required in both English and Arabic",
+    "ar": "حالة الفئة مطلوبة باللغتين الإنجليزية والعربية"
   }
 }
 ```
@@ -1904,9 +2023,18 @@ The admin verification management system provides comprehensive control over use
 - **Query Parameters:**
   - `page` (number, optional, default: 1)
   - `limit` (number, optional, default: 10)
-  - `userId` (string, optional, filter by user ID)
+  - `userName` (string, optional, search by user name, email, or phone - supports partial matches and multiple search patterns)
   - `city` (string, optional, search by city)
   - `country` (string, optional, search by country)
+- **Search Functionality:**
+  - The `userName` parameter performs a comprehensive search across:
+    - User first name (exact match, contains, starts with, ends with)
+    - User last name (exact match, contains, starts with, ends with)
+    - User email address
+    - User phone number
+    - Full name (concatenated firstname + lastname)
+  - Search is case-insensitive and supports partial matching
+  - Examples: `?userName=john` will find "John", "Johnny", "Johnson", etc.
 - **Response:**
   - `200 OK`: List of addresses with pagination info (bilingual message)
 
@@ -1956,6 +2084,44 @@ The admin verification management system provides comprehensive control over use
 - **Response:**
   - `200 OK`: Address deleted successfully (bilingual message)
   - `404 Not Found`: Address not found (bilingual message)
+
+### Admin Addresses Search Examples
+
+#### Example 1: Search by User Name
+```
+GET /api/admin/addresses?userName=hussien
+```
+**Description:** Returns all addresses for users with "hussien" in their first name, last name, or full name
+
+#### Example 2: Search by Email
+```
+GET /api/admin/addresses?userName=adham@gmail.com
+```
+**Description:** Returns all addresses for users with this email address
+
+#### Example 3: Search by Phone
+```
+GET /api/admin/addresses?userName=+966501234567
+```
+**Description:** Returns all addresses for users with this phone number
+
+#### Example 4: Search with City Filter
+```
+GET /api/admin/addresses?userName=hussien&city=aswan
+```
+**Description:** Returns addresses for users named "hussien" in the city of "aswan"
+
+#### Example 5: Search with Pagination
+```
+GET /api/admin/addresses?userName=john&page=1&limit=5
+```
+**Description:** Returns first 5 addresses for users with "john" in their name
+
+#### Example 6: Combined Filters
+```
+GET /api/admin/addresses?userName=hussien&city=aswan&country=egypt&page=1&limit=10
+```
+**Description:** Returns first 10 addresses for users named "hussien" in "aswan" city, "egypt" country
 
 ---
 
@@ -2080,10 +2246,18 @@ GET /api/admin/orders?date=2025-08-27&status=pending&customerName=hussien&page=1
 ### Latest Updates (2025-01-27)
 
 #### Category Management Enhancements
+- **✅ Enhanced Status Field**: Category status is now bilingual (`{ en: "active/inactive", ar: "نشط/غير نشط" }`) with default: `{ en: "inactive", ar: "غير نشط" }`
 - **✅ Added Unique Constraint**: Category names are now unique across both English and Arabic languages
-- **✅ Enhanced Error Handling**: Specific error messages for duplicate category names in each language
-- **✅ Improved Validation**: Better validation for bilingual category fields
+- **✅ Enhanced Error Handling**: Specific error messages for duplicate category names and incomplete status fields
+- **✅ Improved Validation**: Better validation for bilingual category fields including status values
 - **✅ Updated API Responses**: Added detailed error responses for create and update operations
+- **✅ Status Filtering**: GET categories now filters by bilingual status (default: active only)
+
+#### Admin Addresses API Improvements
+- **✅ Enhanced User Search**: Replaced `userId` parameter with `userName` for comprehensive user search
+- **✅ Multi-field Search**: Search now works across user first name, last name, email, and phone
+- **✅ Pattern Matching**: Supports exact match, contains, starts with, and ends with patterns
+- **✅ Case-insensitive**: All searches are case-insensitive for better user experience
 
 #### Admin Orders API Improvements
 - **✅ Simplified Date Filtering**: Replaced `startDate` and `endDate` parameters with single `date` parameter
@@ -2094,9 +2268,12 @@ GET /api/admin/orders?date=2025-08-27&status=pending&customerName=hussien&page=1
 #### Technical Improvements
 - **✅ Database Indexes**: Added unique indexes for category names in both languages
 - **✅ Error Code Handling**: Proper handling of MongoDB duplicate key errors (code 11000)
-- **✅ Bilingual Messages**: Added new error messages for duplicate category names
+- **✅ Bilingual Messages**: Added new error messages for duplicate category names and invalid status
 - **✅ API Consistency**: Maintained consistent error response format across all endpoints
+- **✅ Search Optimization**: Improved search functionality with multiple pattern matching
 
 #### Breaking Changes
 - **⚠️ Admin Orders API**: The `startDate` and `endDate` parameters have been replaced with a single `date` parameter
+- **⚠️ Admin Addresses API**: The `userId` parameter has been replaced with `userName` for enhanced search functionality
 - **⚠️ Category Names**: Category names are now enforced as unique across both languages
+- **⚠️ Category Status**: Category status is now bilingual and defaults to `{ en: "inactive", ar: "غير نشط" }`

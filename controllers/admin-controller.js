@@ -1589,16 +1589,47 @@ exports.rejectReview = async (req, res) => {
 
 exports.getAllAddresses = async (req, res) => {
   try {
-    const { page = 1, limit = 10, userId, city, country } = req.query;
+    const { page = 1, limit = 10, userName, city, country } = req.query;
     const query = {};
     
-    if (userId) query.user = userId;
+    // Handle user search by name, email, or phone
+    if (userName && userName.trim()) {
+      const searchTerm = userName.trim();
+      // Create search patterns for better matching
+      const searchPatterns = [
+        searchTerm, // Exact match
+        `.*${searchTerm}.*`, // Contains anywhere
+        `^${searchTerm}.*`, // Starts with
+        `.*${searchTerm}$` // Ends with
+      ];
+      
+      const userFilter = {
+        $or: [
+          // Search in firstname with multiple patterns
+          ...searchPatterns.map(pattern => ({ firstname: { $regex: pattern, $options: 'i' } })),
+          // Search in lastname with multiple patterns
+          ...searchPatterns.map(pattern => ({ lastname: { $regex: pattern, $options: 'i' } })),
+          // Search in email
+          { email: { $regex: searchTerm, $options: 'i' } },
+          // Search in phone
+          { phone: { $regex: searchTerm, $options: 'i' } },
+          // Search in full name (concatenated)
+          { $expr: { $regexMatch: { input: { $concat: ['$firstname', ' ', '$lastname'] }, regex: searchTerm, options: 'i' } } }
+        ]
+      };
+      
+      // Find users first, then find their addresses
+      const users = await User.find(userFilter).select('_id');
+      const userIds = users.map(user => user._id);
+      query.user = { $in: userIds };
+    }
+    
     if (city) query.city = { $regex: city, $options: 'i' };
     if (country) query.country = { $regex: country, $options: 'i' };
     
     const skip = (page - 1) * limit;
     const addresses = await Address.find(query)
-      .populate('user', 'firstname lastname email role')
+      .populate('user', 'firstname lastname email role phone')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));

@@ -11,7 +11,27 @@ const legacyFormatCategory = (category, language = 'en') => {
 exports.getCategories = async (req, res) => {
   try {
     const language = req.query.lang || 'en';
-    const categories = await Category.find()
+    const { status } = req.query;
+    
+    // Build query - by default show only active categories
+    const query = {};
+    if (status) {
+      if (['active', 'inactive'].includes(status)) {
+        // Handle bilingual status field - search in both English and Arabic
+        query.$or = [
+          { 'status.en': status },
+          { 'status.ar': status === 'active' ? 'نشط' : 'غير نشط' }
+        ];
+      }
+    } else {
+      // Default to active categories only
+      query.$or = [
+        { 'status.en': 'active' },
+        { 'status.ar': 'نشط' }
+      ];
+    }
+    
+    const categories = await Category.find(query)
       .populate('createdBy', 'firstname lastname email role');
     
     const formattedCategories = categories.map(category => formatCategory(category, { language }));
@@ -25,7 +45,7 @@ exports.getCategories = async (req, res) => {
 // POST /categories
 exports.createCategory = async (req, res) => {
   try {
-    const { name, description } = req.body;
+    const { name, description, status } = req.body;
     
     // Validate bilingual fields
     if (!name || !name.en || !name.ar) {
@@ -36,9 +56,20 @@ exports.createCategory = async (req, res) => {
       return res.status(400).json({ status: 'error', message: getBilingualMessage('category_description_required_both_languages') });
     }
     
+    // Validate status if provided
+    if (status) {
+      if (!status.en || !status.ar) {
+        return res.status(400).json({ status: 'error', message: getBilingualMessage('category_status_required_both_languages') });
+      }
+      if (!['active', 'inactive'].includes(status.en) || !['نشط', 'غير نشط'].includes(status.ar)) {
+        return res.status(400).json({ status: 'error', message: getBilingualMessage('invalid_category_status') });
+      }
+    }
+    
     const category = new Category({
       name,
       description,
+      status: status || { en: 'inactive', ar: 'غير نشط' },
       createdBy: req.user.id
     });
     await category.save();
@@ -85,7 +116,7 @@ exports.updateCategory = async (req, res) => {
       return res.status(403).json({ status: 'error', message: getBilingualMessage('not_authorized_update_category') });
     }
     
-    const { name, description } = req.body;
+    const { name, description, status } = req.body;
     
     // Validate bilingual fields if provided
     if (name && (!name.en || !name.ar)) {
@@ -96,8 +127,19 @@ exports.updateCategory = async (req, res) => {
       return res.status(400).json({ status: 'error', message: getBilingualMessage('category_description_required_both_languages') });
     }
     
+    // Validate status if provided
+    if (status) {
+      if (!status.en || !status.ar) {
+        return res.status(400).json({ status: 'error', message: getBilingualMessage('category_status_required_both_languages') });
+      }
+      if (!['active', 'inactive'].includes(status.en) || !['نشط', 'غير نشط'].includes(status.ar)) {
+        return res.status(400).json({ status: 'error', message: getBilingualMessage('invalid_category_status') });
+      }
+    }
+    
     if (name) category.name = name;
     if (description) category.description = description;
+    if (status) category.status = status;
     category.updatedAt = new Date();
     await category.save();
     

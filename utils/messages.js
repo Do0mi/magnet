@@ -645,6 +645,14 @@ const messages = {
     en: 'Category name in Arabic already exists',
     ar: 'اسم الفئة باللغة العربية موجود بالفعل'
   },
+  'invalid_category_status': {
+    en: 'Invalid category status. Must be "active" or "inactive"',
+    ar: 'حالة الفئة غير صحيحة. يجب أن تكون "نشط" أو "غير نشط"'
+  },
+  'category_status_required_both_languages': {
+    en: 'Category status is required in both English and Arabic',
+    ar: 'حالة الفئة مطلوبة باللغتين الإنجليزية والعربية'
+  },
   
 
   
