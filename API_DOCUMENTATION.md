@@ -1970,18 +1970,28 @@ The admin verification management system provides comprehensive control over use
 - **Query Parameters:**
   - `page` (number, optional, default: 1)
   - `limit` (number, optional, default: 10)
-  - `userId` (string, optional, filter by user ID)
-  - `productId` (string, optional, filter by product ID)
+  - `userName` (string, optional, search by user name, email, or full name)
+  - `productName` (string, optional, search by product name in English or Arabic)
   - `rating` (number, optional, filter by rating)
 - **Response:**
   - `200 OK`: List of reviews with pagination info (bilingual message)
+  - **Product Data**: Returns complete product information including all fields (name, description, price, images, category, etc.)
+
+#### Search Examples:
+- **GET** `/api/admin/reviews?userName=john` (Search reviews by user name)
+- **GET** `/api/admin/reviews?userName=john@example.com` (Search reviews by user email)
+- **GET** `/api/admin/reviews?productName=electronics` (Search reviews by product name in English)
+- **GET** `/api/admin/reviews?productName=إلكترونيات` (Search reviews by product name in Arabic)
+- **GET** `/api/admin/reviews?userName=john&productName=electronics` (Search by both user and product)
+- **GET** `/api/admin/reviews?rating=5` (Filter by rating)
+- **GET** `/api/admin/reviews?userName=john&rating=5` (Search by user name and rating)
 
 ### 2. Get Review by ID
 - **GET** `/api/admin/reviews/:id`
 - **Description:** Get detailed information about a specific review.
 - **Headers:** `Authorization: Bearer <token>`
 - **Response:**
-  - `200 OK`: Review details (bilingual message)
+  - `200 OK`: Review details with complete product information (bilingual message)
   - `404 Not Found`: Review not found (bilingual message)
 
 ### 3. Create Review
@@ -1994,7 +2004,7 @@ The admin verification management system provides comprehensive control over use
   - `rating` (number, required, min: 1, max: 5) - Rating
   - `comment` (string, optional) - Review comment
 - **Response:**
-  - `201 Created`: Review created successfully (bilingual message)
+  - `201 Created`: Review created successfully with complete product information (bilingual message)
   - `400 Bad Request`: Validation errors (bilingual message)
 
 ### 4. Update Review
@@ -2005,7 +2015,7 @@ The admin verification management system provides comprehensive control over use
   - `rating` (number, optional, min: 1, max: 5) - New rating
   - `comment` (string, optional) - New comment
 - **Response:**
-  - `200 OK`: Review updated successfully (bilingual message)
+  - `200 OK`: Review updated successfully with complete product information (bilingual message)
   - `404 Not Found`: Review not found (bilingual message)
 
 ### 5. Delete Review
@@ -2313,6 +2323,8 @@ GET /api/admin/orders?date=2025-08-27&status=pending&customerName=hussien&page=1
 - **✅ Updated API Responses**: Added detailed error responses for create and update operations
 - **✅ Status Filtering**: GET categories now filters by bilingual status (default: all categories)
 - **✅ Name Search**: Added search functionality by category name in both English and Arabic
+- **✅ Admin Reviews Search**: Changed from userId/productId to userName/productName search in admin reviews API
+- **✅ Complete Product Data**: Admin reviews API now returns all product fields instead of limited fields
 
 #### Admin Addresses API Improvements
 - **✅ Enhanced User Search**: Replaced `userId` parameter with `userName` for comprehensive user search

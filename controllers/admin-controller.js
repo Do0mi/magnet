@@ -1295,17 +1295,69 @@ exports.deleteWishlist = async (req, res) => {
 
 exports.getAllReviews = async (req, res) => {
   try {
-    const { page = 1, limit = 10, userId, productId, rating } = req.query;
+    const { page = 1, limit = 10, userName, productName, rating } = req.query;
     const query = {};
     
-    if (userId) query.user = userId;
-    if (productId) query.product = productId;
+    // Handle username search
+    if (userName && userName.trim()) {
+      const searchTerm = userName.trim();
+      // Create search patterns for better matching
+      const searchPatterns = [
+        searchTerm, // Exact match
+        `.*${searchTerm}.*`, // Contains anywhere
+        `^${searchTerm}.*`, // Starts with
+        `.*${searchTerm}$` // Ends with
+      ];
+      
+      const userFilter = {
+        $or: [
+          // Search in firstname with multiple patterns
+          ...searchPatterns.map(pattern => ({ firstname: { $regex: pattern, $options: 'i' } })),
+          // Search in lastname with multiple patterns
+          ...searchPatterns.map(pattern => ({ lastname: { $regex: pattern, $options: 'i' } })),
+          // Search in email
+          { email: { $regex: searchTerm, $options: 'i' } },
+          // Search in full name (concatenated)
+          { $expr: { $regexMatch: { input: { $concat: ['$firstname', ' ', '$lastname'] }, regex: searchTerm, options: 'i' } } }
+        ]
+      };
+      
+      const users = await User.find(userFilter).select('_id');
+      const userIds = users.map(user => user._id);
+      query.user = { $in: userIds };
+    }
+    
+    // Handle product name search
+    if (productName && productName.trim()) {
+      const searchTerm = productName.trim();
+      // Create search patterns for better matching
+      const searchPatterns = [
+        searchTerm, // Exact match
+        `.*${searchTerm}.*`, // Contains anywhere
+        `^${searchTerm}.*`, // Starts with
+        `.*${searchTerm}$` // Ends with
+      ];
+      
+      const productFilter = {
+        $or: [
+          // Search in English name with multiple patterns
+          ...searchPatterns.map(pattern => ({ 'name.en': { $regex: pattern, $options: 'i' } })),
+          // Search in Arabic name with multiple patterns
+          ...searchPatterns.map(pattern => ({ 'name.ar': { $regex: pattern, $options: 'i' } }))
+        ]
+      };
+      
+      const products = await Product.find(productFilter).select('_id');
+      const productIds = products.map(product => product._id);
+      query.product = { $in: productIds };
+    }
+    
     if (rating) query.rating = parseInt(rating);
     
     const skip = (page - 1) * limit;
     const reviews = await Review.find(query)
       .populate('user', 'firstname lastname email role')
-      .populate('product', 'name code status')
+      .populate('product')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
@@ -1344,7 +1396,7 @@ exports.getReviewById = async (req, res) => {
     const { id } = req.params;
     const review = await Review.findById(id)
       .populate('user', 'firstname lastname email role')
-      .populate('product', 'name code status category');
+      .populate('product');
     
     if (!review) {
       return res.status(404).json({ status: 'error', message: getBilingualMessage('review_not_found') });
@@ -1416,7 +1468,7 @@ exports.createReview = async (req, res) => {
     
     const populatedReview = await Review.findById(review._id)
       .populate('user', 'firstname lastname email role')
-      .populate('product', 'name code status');
+      .populate('product');
     
     res.status(201).json(createResponse('success', {
       review: {
@@ -1460,7 +1512,7 @@ exports.updateReview = async (req, res) => {
     
     const updatedReview = await Review.findById(id)
       .populate('user', 'firstname lastname email role')
-      .populate('product', 'name code status');
+      .populate('product');
     
     res.status(200).json(createResponse('success', {
       review: {
