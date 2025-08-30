@@ -40,40 +40,40 @@
 |             | POST /api/user/business-approval | No | Yes           | admin, magnet_employee         |
 |             | GET /api/user/business/:businessId | No | Yes         | admin, magnet_employee         |
 |             | GET /api/user/business-profile | No | Yes           | business, admin, magnet_employee |
-| Admin       | POST /api/admin/users       | No     | Yes           | admin                         |
-|             | GET /api/admin/users        | No     | Yes           | admin                         |
-|             | GET /api/admin/users/stats  | No     | Yes           | admin                         |
-|             | GET /api/admin/users/:id    | No     | Yes           | admin                         |
-|             | PUT /api/admin/users/:id    | No     | Yes           | admin                         |
-|             | DELETE /api/admin/users/:id | No     | Yes           | admin                         |
-|             | PUT /api/admin/users/:id/disallow | No | Yes       | admin                         |
-|             | PUT /api/admin/users/:id/allow | No | Yes         | admin                         |
+| Admin       | POST /api/admin/users       | No     | Yes           | admin, magnet_employee         |
+|             | GET /api/admin/users        | No     | Yes           | admin, magnet_employee         |
+|             | GET /api/admin/users/stats  | No     | Yes           | admin, magnet_employee         |
+|             | GET /api/admin/users/:id    | No     | Yes           | admin, magnet_employee         |
+|             | PUT /api/admin/users/:id    | No     | Yes           | admin, magnet_employee         |
+|             | DELETE /api/admin/users/:id | No     | Yes           | admin, magnet_employee         |
+|             | PUT /api/admin/users/:id/disallow | No | Yes       | admin, magnet_employee         |
+|             | PUT /api/admin/users/:id/allow | No | Yes         | admin, magnet_employee         |
 |             | PUT /api/admin/users/:id/verify-email | No | Yes    | admin, magnet_employee         |
 |             | PUT /api/admin/users/:id/unverify-email | No | Yes  | admin, magnet_employee         |
 |             | PUT /api/admin/users/:id/verify-phone | No | Yes    | admin, magnet_employee         |
 |             | PUT /api/admin/users/:id/unverify-phone | No | Yes  | admin, magnet_employee         |
-|             | GET /api/admin/wishlists    | No     | Yes           | admin                         |
-|             | GET /api/admin/wishlists/:id | No    | Yes           | admin                         |
-|             | POST /api/admin/wishlists   | No     | Yes           | admin                         |
-|             | PUT /api/admin/wishlists/:id | No    | Yes           | admin                         |
-|             | DELETE /api/admin/wishlists/:id | No | Yes        | admin                         |
-|             | GET /api/admin/reviews      | No     | Yes           | admin                         |
-|             | GET /api/admin/reviews/:id  | No     | Yes           | admin                         |
-|             | POST /api/admin/reviews     | No     | Yes           | admin                         |
-|             | PUT /api/admin/reviews/:id  | No     | Yes           | admin                         |
-|             | PUT /api/admin/reviews/:id/reject | No     | Yes           | admin                         |
+|             | GET /api/admin/wishlists    | No     | Yes           | admin, magnet_employee         |
+|             | GET /api/admin/wishlists/:id | No    | Yes           | admin, magnet_employee         |
+|             | POST /api/admin/wishlists   | No     | Yes           | admin, magnet_employee         |
+|             | PUT /api/admin/wishlists/:id | No    | Yes           | admin, magnet_employee         |
+|             | DELETE /api/admin/wishlists/:id | No | Yes        | admin, magnet_employee         |
+|             | GET /api/admin/reviews      | No     | Yes           | admin, magnet_employee         |
+|             | GET /api/admin/reviews/:id  | No     | Yes           | admin, magnet_employee         |
+|             | POST /api/admin/reviews     | No     | Yes           | admin, magnet_employee         |
+|             | PUT /api/admin/reviews/:id  | No     | Yes           | admin, magnet_employee         |
+|             | PUT /api/admin/reviews/:id/reject | No     | Yes           | admin, magnet_employee         |
 
-|             | DELETE /api/admin/reviews/:id | No | Yes          | admin                         |
-|             | GET /api/admin/addresses    | No     | Yes           | admin                         |
-|             | GET /api/admin/addresses/:id | No    | Yes           | admin                         |
-|             | POST /api/admin/addresses   | No     | Yes           | admin                         |
-|             | PUT /api/admin/addresses/:id | No    | Yes           | admin                         |
-|             | DELETE /api/admin/addresses/:id | No | Yes        | admin                         |
-|             | GET /api/admin/orders       | No     | Yes           | admin                         |
-|             | GET /api/admin/orders/:id   | No     | Yes           | admin                         |
-|             | POST /api/admin/orders      | No     | Yes           | admin                         |
-|             | PUT /api/admin/orders/:id   | No     | Yes           | admin                         |
-|             | DELETE /api/admin/orders/:id | No | Yes           | admin                         |
+|             | DELETE /api/admin/reviews/:id | No | Yes          | admin, magnet_employee         |
+|             | GET /api/admin/addresses    | No     | Yes           | admin, magnet_employee         |
+|             | GET /api/admin/addresses/:id | No    | Yes           | admin, magnet_employee         |
+|             | POST /api/admin/addresses   | No     | Yes           | admin, magnet_employee         |
+|             | PUT /api/admin/addresses/:id | No    | Yes           | admin, magnet_employee         |
+|             | DELETE /api/admin/addresses/:id | No | Yes        | admin, magnet_employee         |
+|             | GET /api/admin/orders       | No     | Yes           | admin, magnet_employee         |
+|             | GET /api/admin/orders/:id   | No     | Yes           | admin, magnet_employee         |
+|             | POST /api/admin/orders      | No     | Yes           | admin, magnet_employee         |
+|             | PUT /api/admin/orders/:id   | No     | Yes           | admin, magnet_employee         |
+|             | DELETE /api/admin/orders/:id | No | Yes           | admin, magnet_employee         |
 | Auth        | Registration/Login/OTP      | Yes    | No            | None                          |
 |             | Forgot Password             | No     | Yes           | Any authenticated user         |
 
@@ -2314,6 +2314,24 @@ GET /api/admin/orders?date=2025-08-27&status=pending&customerName=hussien&page=1
 ## Changelog
 
 ### Latest Updates (2025-01-27)
+
+#### 🔐 Enhanced Admin Route Access (Latest)
+- **✅ All admin routes now accessible by both `admin` and `magnet_employee` roles**
+- **✅ Updated Routes**:
+  - User Management: All user CRUD operations, stats, disallow/allow actions
+  - Wishlist Management: All wishlist CRUD operations
+  - Review Management: All review CRUD operations, reject actions
+  - Address Management: All address CRUD operations
+  - Order Management: All order CRUD operations
+- **✅ Updated Controller Functions**:
+  - All admin controller functions now use `validateAdminOrEmployeePermissions`
+  - Added permission validation to functions that were missing it
+  - Consistent permission checking across all admin operations
+- **✅ Benefits**:
+  - Magnet employees can now perform administrative tasks
+  - Improved workflow efficiency for support teams
+  - Consistent access control across all admin endpoints
+- **✅ Security**: All routes still require authentication and proper role verification
 
 #### Category Management Enhancements
 - **✅ Enhanced Status Field**: Category status is now bilingual (`{ en: "active/inactive", ar: "نشط/غير نشط" }`) with default: `{ en: "inactive", ar: "غير نشط" }`

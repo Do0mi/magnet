@@ -44,8 +44,8 @@ const checkExistingUser = async (email, phone) => {
 // POST /admin/users - Create any type of user
 exports.createUser = async (req, res) => {
   try {
-    // Validate admin permissions
-    const permissionError = validateAdminPermissions(req, res);
+    // Validate admin or magnet employee permissions
+    const permissionError = validateAdminOrEmployeePermissions(req, res);
     if (permissionError) return;
 
     const { 
@@ -174,8 +174,8 @@ exports.createUser = async (req, res) => {
 // GET /admin/users - Get all users with pagination and filters
 exports.getAllUsers = async (req, res) => {
   try {
-    // Validate admin permissions
-    const permissionError = validateAdminPermissions(req, res);
+    // Validate admin or magnet employee permissions
+    const permissionError = validateAdminOrEmployeePermissions(req, res);
     if (permissionError) return;
 
     const { 
@@ -286,8 +286,8 @@ exports.getAllUsers = async (req, res) => {
 // GET /admin/users/:id - Get specific user
 exports.getUserById = async (req, res) => {
   try {
-    // Validate admin permissions
-    const permissionError = validateAdminPermissions(req, res);
+    // Validate admin or magnet employee permissions
+    const permissionError = validateAdminOrEmployeePermissions(req, res);
     if (permissionError) return;
 
     const { id } = req.params;
@@ -577,8 +577,8 @@ exports.getUserById = async (req, res) => {
 // PUT /admin/users/:id - Update user
 exports.updateUser = async (req, res) => {
   try {
-    // Validate admin permissions
-    const permissionError = validateAdminPermissions(req, res);
+    // Validate admin or magnet employee permissions
+    const permissionError = validateAdminOrEmployeePermissions(req, res);
     if (permissionError) return;
 
     const { id } = req.params;
@@ -687,8 +687,8 @@ exports.updateUser = async (req, res) => {
 // DELETE /admin/users/:id - Delete user
 exports.deleteUser = async (req, res) => {
   try {
-    // Validate admin permissions
-    const permissionError = validateAdminPermissions(req, res);
+    // Validate admin or magnet employee permissions
+    const permissionError = validateAdminOrEmployeePermissions(req, res);
     if (permissionError) return;
 
     const { id } = req.params;
@@ -725,8 +725,8 @@ exports.deleteUser = async (req, res) => {
 // PUT /admin/users/:id/disallow - Disallow user
 exports.disallowUser = async (req, res) => {
   try {
-    // Validate admin permissions
-    const permissionError = validateAdminPermissions(req, res);
+    // Validate admin or magnet employee permissions
+    const permissionError = validateAdminOrEmployeePermissions(req, res);
     if (permissionError) return;
 
     const { id } = req.params;
@@ -776,8 +776,8 @@ exports.disallowUser = async (req, res) => {
 // PUT /admin/users/:id/allow - Allow user
 exports.allowUser = async (req, res) => {
   try {
-    // Validate admin permissions
-    const permissionError = validateAdminPermissions(req, res);
+    // Validate admin or magnet employee permissions
+    const permissionError = validateAdminOrEmployeePermissions(req, res);
     if (permissionError) return;
 
     const { id } = req.params;
@@ -820,8 +820,8 @@ exports.allowUser = async (req, res) => {
 // GET /admin/users/stats - Get user statistics
 exports.getUserStats = async (req, res) => {
   try {
-    // Validate admin permissions
-    const permissionError = validateAdminPermissions(req, res);
+    // Validate admin or magnet employee permissions
+    const permissionError = validateAdminOrEmployeePermissions(req, res);
     if (permissionError) return;
 
     const totalUsers = await User.countDocuments();
@@ -1083,6 +1083,10 @@ exports.unverifyUserPhone = async (req, res) => {
 
 exports.getAllWishlists = async (req, res) => {
   try {
+    // Validate admin or magnet employee permissions
+    const permissionError = validateAdminOrEmployeePermissions(req, res);
+    if (permissionError) return;
+
     const { page = 1, limit = 10, userId, productId } = req.query;
     const query = {};
     
@@ -1125,6 +1129,10 @@ exports.getAllWishlists = async (req, res) => {
 
 exports.getWishlistById = async (req, res) => {
   try {
+    // Validate admin or magnet employee permissions
+    const permissionError = validateAdminOrEmployeePermissions(req, res);
+    if (permissionError) return;
+
     const { id } = req.params;
     const wishlist = await Wishlist.findById(id)
       .populate('user', 'firstname lastname email role')
@@ -1150,6 +1158,10 @@ exports.getWishlistById = async (req, res) => {
 
 exports.createWishlist = async (req, res) => {
   try {
+    // Validate admin or magnet employee permissions
+    const permissionError = validateAdminOrEmployeePermissions(req, res);
+    if (permissionError) return;
+
     const { userId, productId } = req.body;
     
     if (!userId || !productId) {
@@ -1212,6 +1224,10 @@ exports.createWishlist = async (req, res) => {
 
 exports.updateWishlist = async (req, res) => {
   try {
+    // Validate admin or magnet employee permissions
+    const permissionError = validateAdminOrEmployeePermissions(req, res);
+    if (permissionError) return;
+
     const { id } = req.params;
     const { userId, productId, action } = req.body; // action: 'add' or 'remove'
     
@@ -1273,6 +1289,10 @@ exports.updateWishlist = async (req, res) => {
 
 exports.deleteWishlist = async (req, res) => {
   try {
+    // Validate admin or magnet employee permissions
+    const permissionError = validateAdminOrEmployeePermissions(req, res);
+    if (permissionError) return;
+
     const { id } = req.params;
     const wishlist = await Wishlist.findById(id);
     
@@ -1295,6 +1315,10 @@ exports.deleteWishlist = async (req, res) => {
 
 exports.getAllReviews = async (req, res) => {
   try {
+    // Validate admin or magnet employee permissions
+    const permissionError = validateAdminOrEmployeePermissions(req, res);
+    if (permissionError) return;
+
     const { page = 1, limit = 10, userName, productName, rating } = req.query;
     const query = {};
     
@@ -1399,6 +1423,10 @@ exports.getAllReviews = async (req, res) => {
 
 exports.getReviewById = async (req, res) => {
   try {
+    // Validate admin or magnet employee permissions
+    const permissionError = validateAdminOrEmployeePermissions(req, res);
+    if (permissionError) return;
+
     const { id } = req.params;
     const review = await Review.findById(id)
       .populate('user', 'firstname lastname email role')
@@ -1436,6 +1464,10 @@ exports.getReviewById = async (req, res) => {
 
 exports.createReview = async (req, res) => {
   try {
+    // Validate admin or magnet employee permissions
+    const permissionError = validateAdminOrEmployeePermissions(req, res);
+    if (permissionError) return;
+
     const { userId, productId, rating, comment } = req.body;
     
     if (!userId || !productId || !rating) {
@@ -1507,6 +1539,10 @@ exports.createReview = async (req, res) => {
 
 exports.updateReview = async (req, res) => {
   try {
+    // Validate admin or magnet employee permissions
+    const permissionError = validateAdminOrEmployeePermissions(req, res);
+    if (permissionError) return;
+
     const { id } = req.params;
     const { rating, comment } = req.body;
     
@@ -1560,6 +1596,10 @@ exports.updateReview = async (req, res) => {
 
 exports.deleteReview = async (req, res) => {
   try {
+    // Validate admin or magnet employee permissions
+    const permissionError = validateAdminOrEmployeePermissions(req, res);
+    if (permissionError) return;
+
     const { id } = req.params;
     const review = await Review.findById(id);
     
@@ -1581,8 +1621,8 @@ exports.rejectReview = async (req, res) => {
     const { id } = req.params;
     const { reason } = req.body;
     
-    // Validate admin permissions
-    const permissionError = validateAdminPermissions(req, res);
+    // Validate admin or magnet employee permissions
+    const permissionError = validateAdminOrEmployeePermissions(req, res);
     if (permissionError) return;
     
     // Validate rejection reason
@@ -1665,6 +1705,10 @@ exports.rejectReview = async (req, res) => {
 
 exports.getAllAddresses = async (req, res) => {
   try {
+    // Validate admin or magnet employee permissions
+    const permissionError = validateAdminOrEmployeePermissions(req, res);
+    if (permissionError) return;
+
     const { page = 1, limit = 10, userName, city, country } = req.query;
     const query = {};
     
@@ -1741,6 +1785,10 @@ exports.getAllAddresses = async (req, res) => {
 
 exports.getAddressById = async (req, res) => {
   try {
+    // Validate admin or magnet employee permissions
+    const permissionError = validateAdminOrEmployeePermissions(req, res);
+    if (permissionError) return;
+
     const { id } = req.params;
     const address = await Address.findById(id)
       .populate('user', 'firstname lastname email role');
@@ -1771,6 +1819,10 @@ exports.getAddressById = async (req, res) => {
 
 exports.createAddress = async (req, res) => {
   try {
+    // Validate admin or magnet employee permissions
+    const permissionError = validateAdminOrEmployeePermissions(req, res);
+    if (permissionError) return;
+
     const { userId, addressLine1, addressLine2, city, state, postalCode, country } = req.body;
     
     if (!userId || !addressLine1 || !city || !state || !postalCode || !country) {
@@ -1820,6 +1872,10 @@ exports.createAddress = async (req, res) => {
 
 exports.updateAddress = async (req, res) => {
   try {
+    // Validate admin or magnet employee permissions
+    const permissionError = validateAdminOrEmployeePermissions(req, res);
+    if (permissionError) return;
+
     const { id } = req.params;
     const { addressLine1, addressLine2, city, state, postalCode, country } = req.body;
     
@@ -1863,6 +1919,10 @@ exports.updateAddress = async (req, res) => {
 
 exports.deleteAddress = async (req, res) => {
   try {
+    // Validate admin or magnet employee permissions
+    const permissionError = validateAdminOrEmployeePermissions(req, res);
+    if (permissionError) return;
+
     const { id } = req.params;
     const address = await Address.findById(id);
     
@@ -1885,6 +1945,10 @@ exports.deleteAddress = async (req, res) => {
 
 exports.getAllOrders = async (req, res) => {
   try {
+    // Validate admin or magnet employee permissions
+    const permissionError = validateAdminOrEmployeePermissions(req, res);
+    if (permissionError) return;
+
     const { page = 1, limit = 10, customerName, status, date } = req.query;
     const query = {};
     
@@ -1999,6 +2063,10 @@ exports.getAllOrders = async (req, res) => {
 
 exports.getOrderById = async (req, res) => {
   try {
+    // Validate admin or magnet employee permissions
+    const permissionError = validateAdminOrEmployeePermissions(req, res);
+    if (permissionError) return;
+
     const { id } = req.params;
     const order = await Order.findById(id)
       .populate('customer', 'firstname lastname email role phone')
@@ -2033,6 +2101,10 @@ exports.getOrderById = async (req, res) => {
 
 exports.createOrder = async (req, res) => {
   try {
+    // Validate admin or magnet employee permissions
+    const permissionError = validateAdminOrEmployeePermissions(req, res);
+    if (permissionError) return;
+
     const { customerId, items, shippingAddressId } = req.body;
     
     if (!customerId || !items || !shippingAddressId) {
@@ -2127,6 +2199,10 @@ exports.createOrder = async (req, res) => {
 
 exports.updateOrder = async (req, res) => {
   try {
+    // Validate admin or magnet employee permissions
+    const permissionError = validateAdminOrEmployeePermissions(req, res);
+    if (permissionError) return;
+
     const { id } = req.params;
     const { items, shippingAddressId, status } = req.body;
     
@@ -2237,6 +2313,10 @@ exports.updateOrder = async (req, res) => {
 
 exports.deleteOrder = async (req, res) => {
   try {
+    // Validate admin or magnet employee permissions
+    const permissionError = validateAdminOrEmployeePermissions(req, res);
+    if (permissionError) return;
+
     const { id } = req.params;
     const order = await Order.findById(id);
     
