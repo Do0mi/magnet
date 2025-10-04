@@ -178,50 +178,11 @@ exports.getAllUsers = async (req, res) => {
     const permissionError = validateAdminOrEmployeePermissions(req, res);
     if (permissionError) return;
 
-    const { 
-      page = 1, 
-      limit = 10, 
-      role, 
-      status, 
-      search,
-      sortBy = 'createdAt',
-      sortOrder = 'desc'
-    } = req.query;
-
-    // Build query
-    let query = {};
-    
-    if (role) {
-      query.role = role;
-    }
-    
-    if (status === 'disallowed') {
-      query.isDisallowed = true;
-    } else if (status === 'allowed') {
-      query.isDisallowed = false;
-    }
-    
-    if (search) {
-      query.$or = [
-        { firstname: { $regex: search, $options: 'i' } },
-        { lastname: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } },
-        { phone: { $regex: search, $options: 'i' } },
-        { 'businessInfo.companyName': { $regex: search, $options: 'i' } }
-      ];
-    }
-
-    // Build sort object
-    const sort = {};
-    sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
-
-    const skip = (page - 1) * limit;
-    const users = await User.find(query)
+    // Get all users without filtering or pagination
+    const users = await User.find({})
       .populate('businessInfo.approvedBy', 'firstname lastname email role')
       .select('-password -emailOTP -phoneOTP -passwordResetToken')
-      .sort(sort)
-      .skip(skip)
-      .limit(parseInt(limit));
+      .sort({ createdAt: -1 });
 
     // Auto-fix approvedBy field for business users that are approved but have null approvedBy
     const businessUsersToFix = users.filter(user => 
@@ -256,8 +217,6 @@ exports.getAllUsers = async (req, res) => {
       }
     }
 
-    const total = await User.countDocuments(query);
-
     const formattedUsers = users.map(user => formatUser(user, { 
       includeBusinessInfo: true,
       includeVerification: true 
@@ -265,13 +224,6 @@ exports.getAllUsers = async (req, res) => {
 
     res.status(200).json(createResponse('success', {
       users: formattedUsers
-    }, null, {
-      pagination: {
-        currentPage: parseInt(page),
-        totalPages: Math.ceil(total / limit),
-        totalItems: total,
-        itemsPerPage: parseInt(limit)
-      }
     }));
 
   } catch (err) {
@@ -876,205 +828,6 @@ exports.getUserStats = async (req, res) => {
   }
 };
 
-// ========================================
-// ADMIN VERIFICATION MANAGEMENT
-// ========================================
-
-// PUT /admin/users/:id/verify-email - Verify user email
-exports.verifyUserEmail = async (req, res) => {
-  try {
-    // Validate admin or magnet employee permissions
-    const permissionError = validateAdminOrEmployeePermissions(req, res);
-    if (permissionError) return;
-
-    const { id } = req.params;
-
-    const user = await User.findById(id)
-      .populate('businessInfo.approvedBy', 'firstname lastname email role');
-    
-    if (!user) {
-      return res.status(404).json({ 
-        status: 'error', 
-        message: getBilingualMessage('user_not_found') 
-      });
-    }
-
-    if (user.isEmailVerified) {
-      return res.status(400).json({ 
-        status: 'error', 
-        message: getBilingualMessage('email_already_verified') 
-      });
-    }
-
-    user.isEmailVerified = true;
-    user.updatedAt = new Date();
-
-    await user.save();
-
-    res.status(200).json(createResponse('success', {
-      user: formatUser(user, { 
-        includeBusinessInfo: true,
-        includeVerification: true 
-      })
-    }, getBilingualMessage('email_verified_successfully')));
-
-  } catch (err) {
-    console.error('Verify email error:', err);
-    res.status(500).json({ 
-      status: 'error', 
-      message: getBilingualMessage('failed_verify_email') 
-    });
-  }
-};
-
-// PUT /admin/users/:id/unverify-email - Unverify user email
-exports.unverifyUserEmail = async (req, res) => {
-  try {
-    // Validate admin or magnet employee permissions
-    const permissionError = validateAdminOrEmployeePermissions(req, res);
-    if (permissionError) return;
-
-    const { id } = req.params;
-
-    const user = await User.findById(id)
-      .populate('businessInfo.approvedBy', 'firstname lastname email role');
-    
-    if (!user) {
-      return res.status(404).json({ 
-        status: 'error', 
-        message: getBilingualMessage('user_not_found') 
-      });
-    }
-
-    if (!user.isEmailVerified) {
-      return res.status(400).json({ 
-        status: 'error', 
-        message: getBilingualMessage('email_not_verified') 
-      });
-    }
-
-    user.isEmailVerified = false;
-    user.updatedAt = new Date();
-
-    await user.save();
-
-    res.status(200).json(createResponse('success', {
-      user: formatUser(user, { 
-        includeBusinessInfo: true,
-        includeVerification: true 
-      })
-    }, getBilingualMessage('email_unverified_successfully')));
-
-  } catch (err) {
-    console.error('Unverify email error:', err);
-    res.status(500).json({ 
-      status: 'error', 
-      message: getBilingualMessage('failed_unverify_email') 
-    });
-  }
-};
-
-// PUT /admin/users/:id/verify-phone - Verify user phone
-exports.verifyUserPhone = async (req, res) => {
-  try {
-    // Validate admin or magnet employee permissions
-    const permissionError = validateAdminOrEmployeePermissions(req, res);
-    if (permissionError) return;
-
-    const { id } = req.params;
-
-    const user = await User.findById(id)
-      .populate('businessInfo.approvedBy', 'firstname lastname email role');
-    
-    if (!user) {
-      return res.status(404).json({ 
-        status: 'error', 
-        message: getBilingualMessage('user_not_found') 
-      });
-    }
-
-    if (!user.phone) {
-      return res.status(400).json({ 
-        status: 'error', 
-        message: getBilingualMessage('user_has_no_phone') 
-      });
-    }
-
-    if (user.isPhoneVerified) {
-      return res.status(400).json({ 
-        status: 'error', 
-        message: getBilingualMessage('phone_already_verified') 
-      });
-    }
-
-    user.isPhoneVerified = true;
-    user.updatedAt = new Date();
-
-    await user.save();
-
-    res.status(200).json(createResponse('success', {
-      user: formatUser(user, { 
-        includeBusinessInfo: true,
-        includeVerification: true 
-      })
-    }, getBilingualMessage('phone_verified_successfully')));
-
-  } catch (err) {
-    console.error('Verify phone error:', err);
-    res.status(500).json({ 
-      status: 'error', 
-      message: getBilingualMessage('failed_verify_phone') 
-    });
-  }
-};
-
-// PUT /admin/users/:id/unverify-phone - Unverify user phone
-exports.unverifyUserPhone = async (req, res) => {
-  try {
-    // Validate admin or magnet employee permissions
-    const permissionError = validateAdminOrEmployeePermissions(req, res);
-    if (permissionError) return;
-
-    const { id } = req.params;
-
-    const user = await User.findById(id)
-      .populate('businessInfo.approvedBy', 'firstname lastname email role');
-    
-    if (!user) {
-      return res.status(404).json({ 
-        status: 'error', 
-        message: getBilingualMessage('user_not_found') 
-      });
-    }
-
-    if (!user.isPhoneVerified) {
-      return res.status(400).json({ 
-        status: 'error', 
-        message: getBilingualMessage('phone_not_verified') 
-      });
-    }
-
-    user.isPhoneVerified = false;
-    user.updatedAt = new Date();
-
-    await user.save();
-
-    res.status(200).json(createResponse('success', {
-      user: formatUser(user, { 
-        includeBusinessInfo: true,
-        includeVerification: true 
-      })
-    }, getBilingualMessage('phone_unverified_successfully')));
-
-  } catch (err) {
-    console.error('Unverify phone error:', err);
-    res.status(500).json({ 
-      status: 'error', 
-      message: getBilingualMessage('failed_unverify_phone') 
-    });
-  }
-};
-
 
 
 // ========================================
@@ -1087,24 +840,11 @@ exports.getAllWishlists = async (req, res) => {
     const permissionError = validateAdminOrEmployeePermissions(req, res);
     if (permissionError) return;
 
-    const { page = 1, limit = 10, userId, productId } = req.query;
-    const query = {};
-    
-    if (userId) query.user = userId;
-    if (productId) {
-      // For product filtering, we need to check if the product exists in the products array
-      query.products = productId;
-    }
-    
-    const skip = (page - 1) * limit;
-    const wishlists = await Wishlist.find(query)
+    // Get all wishlists without filtering or pagination
+    const wishlists = await Wishlist.find({})
       .populate('user', 'firstname lastname email role')
       .populate('products', 'name code status')
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(parseInt(limit));
-    
-    const total = await Wishlist.countDocuments(query);
+      .sort({ createdAt: -1 });
     
     res.status(200).json(createResponse('success', {
       wishlists: wishlists.map(wishlist => ({
@@ -1113,13 +853,6 @@ exports.getAllWishlists = async (req, res) => {
         products: wishlist.products,
         createdAt: wishlist.createdAt
       }))
-    }, null, {
-      pagination: {
-        currentPage: parseInt(page),
-        totalPages: Math.ceil(total / limit),
-        totalItems: total,
-        itemsPerPage: parseInt(limit)
-      }
     }));
   } catch (err) {
     console.error('Get all wishlists error:', err);
@@ -1319,74 +1052,11 @@ exports.getAllReviews = async (req, res) => {
     const permissionError = validateAdminOrEmployeePermissions(req, res);
     if (permissionError) return;
 
-    const { page = 1, limit = 10, userName, productName, rating } = req.query;
-    const query = {};
-    
-    // Handle username search
-    if (userName && userName.trim()) {
-      const searchTerm = userName.trim();
-      // Create search patterns for better matching
-      const searchPatterns = [
-        searchTerm, // Exact match
-        `.*${searchTerm}.*`, // Contains anywhere
-        `^${searchTerm}.*`, // Starts with
-        `.*${searchTerm}$` // Ends with
-      ];
-      
-      const userFilter = {
-        $or: [
-          // Search in firstname with multiple patterns
-          ...searchPatterns.map(pattern => ({ firstname: { $regex: pattern, $options: 'i' } })),
-          // Search in lastname with multiple patterns
-          ...searchPatterns.map(pattern => ({ lastname: { $regex: pattern, $options: 'i' } })),
-          // Search in email
-          { email: { $regex: searchTerm, $options: 'i' } },
-          // Search in full name (concatenated)
-          { $expr: { $regexMatch: { input: { $concat: ['$firstname', ' ', '$lastname'] }, regex: searchTerm, options: 'i' } } }
-        ]
-      };
-      
-      const users = await User.find(userFilter).select('_id');
-      const userIds = users.map(user => user._id);
-      query.user = { $in: userIds };
-    }
-    
-    // Handle product name search
-    if (productName && productName.trim()) {
-      const searchTerm = productName.trim();
-      // Create search patterns for better matching
-      const searchPatterns = [
-        searchTerm, // Exact match
-        `.*${searchTerm}.*`, // Contains anywhere
-        `^${searchTerm}.*`, // Starts with
-        `.*${searchTerm}$` // Ends with
-      ];
-      
-      const productFilter = {
-        $or: [
-          // Search in English name with multiple patterns
-          ...searchPatterns.map(pattern => ({ 'name.en': { $regex: pattern, $options: 'i' } })),
-          // Search in Arabic name with multiple patterns
-          ...searchPatterns.map(pattern => ({ 'name.ar': { $regex: pattern, $options: 'i' } }))
-        ]
-      };
-      
-      const products = await Product.find(productFilter).select('_id');
-      const productIds = products.map(product => product._id);
-      query.product = { $in: productIds };
-    }
-    
-    if (rating) query.rating = parseInt(rating);
-    
-    const skip = (page - 1) * limit;
-    const reviews = await Review.find(query)
+    // Get all reviews without filtering or pagination
+    const reviews = await Review.find({})
       .populate('user', 'firstname lastname email role')
       .populate('product')
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(parseInt(limit));
-    
-    const total = await Review.countDocuments(query);
+      .sort({ createdAt: -1 });
     
     res.status(200).json(createResponse('success', {
       reviews: reviews.map(review => ({
@@ -1407,13 +1077,6 @@ exports.getAllReviews = async (req, res) => {
         rejectionReason: review.rejectionReason,
         createdAt: review.createdAt
       }))
-    }, null, {
-      pagination: {
-        currentPage: parseInt(page),
-        totalPages: Math.ceil(total / limit),
-        totalItems: total,
-        itemsPerPage: parseInt(limit)
-      }
     }));
   } catch (err) {
     console.error('Get all reviews error:', err);
@@ -1709,52 +1372,10 @@ exports.getAllAddresses = async (req, res) => {
     const permissionError = validateAdminOrEmployeePermissions(req, res);
     if (permissionError) return;
 
-    const { page = 1, limit = 10, userName, city, country } = req.query;
-    const query = {};
-    
-    // Handle user search by name, email, or phone
-    if (userName && userName.trim()) {
-      const searchTerm = userName.trim();
-      // Create search patterns for better matching
-      const searchPatterns = [
-        searchTerm, // Exact match
-        `.*${searchTerm}.*`, // Contains anywhere
-        `^${searchTerm}.*`, // Starts with
-        `.*${searchTerm}$` // Ends with
-      ];
-      
-      const userFilter = {
-        $or: [
-          // Search in firstname with multiple patterns
-          ...searchPatterns.map(pattern => ({ firstname: { $regex: pattern, $options: 'i' } })),
-          // Search in lastname with multiple patterns
-          ...searchPatterns.map(pattern => ({ lastname: { $regex: pattern, $options: 'i' } })),
-          // Search in email
-          { email: { $regex: searchTerm, $options: 'i' } },
-          // Search in phone
-          { phone: { $regex: searchTerm, $options: 'i' } },
-          // Search in full name (concatenated)
-          { $expr: { $regexMatch: { input: { $concat: ['$firstname', ' ', '$lastname'] }, regex: searchTerm, options: 'i' } } }
-        ]
-      };
-      
-      // Find users first, then find their addresses
-      const users = await User.find(userFilter).select('_id');
-      const userIds = users.map(user => user._id);
-      query.user = { $in: userIds };
-    }
-    
-    if (city) query.city = { $regex: city, $options: 'i' };
-    if (country) query.country = { $regex: country, $options: 'i' };
-    
-    const skip = (page - 1) * limit;
-    const addresses = await Address.find(query)
+    // Get all addresses without filtering or pagination
+    const addresses = await Address.find({})
       .populate('user', 'firstname lastname email role phone')
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(parseInt(limit));
-    
-    const total = await Address.countDocuments(query);
+      .sort({ createdAt: -1 });
     
     res.status(200).json(createResponse('success', {
       addresses: addresses.map(address => ({
@@ -1769,13 +1390,6 @@ exports.getAllAddresses = async (req, res) => {
         createdAt: address.createdAt,
         updatedAt: address.updatedAt
       }))
-    }, null, {
-      pagination: {
-        currentPage: parseInt(page),
-        totalPages: Math.ceil(total / limit),
-        totalItems: total,
-        itemsPerPage: parseInt(limit)
-      }
     }));
   } catch (err) {
     console.error('Get all addresses error:', err);
@@ -1949,111 +1563,27 @@ exports.getAllOrders = async (req, res) => {
     const permissionError = validateAdminOrEmployeePermissions(req, res);
     if (permissionError) return;
 
-    const { page = 1, limit = 10, customerName, status, date } = req.query;
-    const query = {};
+    // Get all orders without filtering or pagination
+    const orders = await Order.find({})
+      .populate('customer', 'firstname lastname email role')
+      .populate('shippingAddress')
+      .populate({
+        path: 'items.product',
+        select: 'name code status category pricePerUnit'
+      })
+      .sort({ createdAt: -1 });
     
-    if (status) {
-      // Handle bilingual status field - search in both English and Arabic
-      query.$or = [
-        { 'status.en': status },
-        { 'status.ar': status }
-      ];
-    }
-    if (date) {
-      // Filter orders created on a specific date
-      const startOfDay = new Date(date);
-      startOfDay.setHours(0, 0, 0, 0);
-      
-      const endOfDay = new Date(date);
-      endOfDay.setHours(23, 59, 59, 999);
-      
-      query.createdAt = {
-        $gte: startOfDay,
-        $lte: endOfDay
-      };
-    }
-    
-    const skip = (page - 1) * limit;
-    
-    // If customerName is provided, search for customers with matching names
-    let customerFilter = {};
-    if (customerName && customerName.trim()) {
-      const searchTerm = customerName.trim();
-      // Create search patterns for better matching
-      const searchPatterns = [
-        searchTerm, // Exact match
-        `.*${searchTerm}.*`, // Contains anywhere
-        `^${searchTerm}.*`, // Starts with
-        `.*${searchTerm}$` // Ends with
-      ];
-      
-      customerFilter = {
-        $or: [
-          // Search in firstname with multiple patterns
-          ...searchPatterns.map(pattern => ({ firstname: { $regex: pattern, $options: 'i' } })),
-          // Search in lastname with multiple patterns
-          ...searchPatterns.map(pattern => ({ lastname: { $regex: pattern, $options: 'i' } })),
-          // Search in email
-          { email: { $regex: searchTerm, $options: 'i' } },
-          // Search in phone
-          { phone: { $regex: searchTerm, $options: 'i' } },
-          // Search in full name (concatenated)
-          { $expr: { $regexMatch: { input: { $concat: ['$firstname', ' ', '$lastname'] }, regex: searchTerm, options: 'i' } } }
-        ]
-      };
-    }
-    
-    let orders;
-    if (customerName) {
-      // Find customers first, then find their orders
-      const customers = await User.find(customerFilter).select('_id');
-      const customerIds = customers.map(customer => customer._id);
-      query.customer = { $in: customerIds };
-      
-      orders = await Order.find(query)
-        .populate('customer', 'firstname lastname email role')
-        .populate('shippingAddress')
-        .populate({
-          path: 'items.product',
-          select: 'name code status category pricePerUnit'
-        })
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(parseInt(limit));
-    } else {
-      orders = await Order.find(query)
-        .populate('customer', 'firstname lastname email role')
-        .populate('shippingAddress')
-        .populate({
-          path: 'items.product',
-          select: 'name code status category pricePerUnit'
-        })
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(parseInt(limit));
-    }
-    
-    const total = await Order.countDocuments(query);
-    
-    const language = req.query.lang || 'en';
     const { formatOrder } = require('../utils/response-formatters');
     
     res.status(200).json(createResponse('success', {
       orders: orders.map(order => formatOrder(order, { 
-        language,
+        language: 'both',
         includeItems: true,
         includeCustomer: true,
         includeAddress: true,
         includeStatusLog: false,
         includeTotal: true
       }))
-    }, null, {
-      pagination: {
-        currentPage: parseInt(page),
-        totalPages: Math.ceil(total / limit),
-        totalItems: total,
-        itemsPerPage: parseInt(limit)
-      }
     }));
   } catch (err) {
     console.error('Get all orders error:', err);
@@ -2080,12 +1610,11 @@ exports.getOrderById = async (req, res) => {
       return res.status(404).json({ status: 'error', message: getBilingualMessage('order_not_found') });
     }
     
-    const language = req.query.lang || 'en';
     const { formatOrder } = require('../utils/response-formatters');
     
     res.status(200).json(createResponse('success', {
       order: formatOrder(order, { 
-        language,
+        language: 'both',
         includeItems: true,
         includeCustomer: true,
         includeAddress: true,
@@ -2178,12 +1707,11 @@ exports.createOrder = async (req, res) => {
         select: 'name code status category'
       });
     
-    const language = req.query.lang || 'en';
     const { formatOrder } = require('../utils/response-formatters');
     
     res.status(201).json(createResponse('success', {
       order: formatOrder(populatedOrder, { 
-        language,
+        language: 'both',
         includeItems: true,
         includeCustomer: true,
         includeAddress: true,
@@ -2292,12 +1820,11 @@ exports.updateOrder = async (req, res) => {
         select: 'name code status category'
       });
     
-    const language = req.query.lang || 'en';
     const { formatOrder } = require('../utils/response-formatters');
     
     res.status(200).json(createResponse('success', {
       order: formatOrder(updatedOrder, { 
-        language,
+        language: 'both',
         includeItems: true,
         includeCustomer: true,
         includeAddress: true,

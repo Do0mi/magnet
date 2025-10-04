@@ -10,59 +10,12 @@ const legacyFormatCategory = (category, language = 'en') => {
 // GET /categories
 exports.getCategories = async (req, res) => {
   try {
-    const language = req.query.lang || 'en';
-    const { status, search } = req.query;
-    
-    // Build query - by default show all categories (active and inactive)
-    const query = {};
-    
-    // Handle status filtering
-    if (status) {
-      if (['active', 'inactive'].includes(status)) {
-        // Handle bilingual status field - search in both English and Arabic
-        query.$or = [
-          { 'status.en': status },
-          { 'status.ar': status === 'active' ? 'نشط' : 'غير نشط' }
-        ];
-      }
-    }
-    
-    // Handle name search
-    if (search && search.trim()) {
-      const searchTerm = search.trim();
-      // Create search patterns for better matching
-      const searchPatterns = [
-        searchTerm, // Exact match
-        `.*${searchTerm}.*`, // Contains anywhere
-        `^${searchTerm}.*`, // Starts with
-        `.*${searchTerm}$` // Ends with
-      ];
-      
-      const nameSearchFilter = {
-        $or: [
-          // Search in English name with multiple patterns
-          ...searchPatterns.map(pattern => ({ 'name.en': { $regex: pattern, $options: 'i' } })),
-          // Search in Arabic name with multiple patterns
-          ...searchPatterns.map(pattern => ({ 'name.ar': { $regex: pattern, $options: 'i' } }))
-        ]
-      };
-      
-      // If we already have a status filter, combine it with name search
-      if (query.$or) {
-        query.$and = [
-          { $or: query.$or },
-          nameSearchFilter
-        ];
-        delete query.$or;
-      } else {
-        Object.assign(query, nameSearchFilter);
-      }
-    }
-    
-    const categories = await Category.find(query)
+    // Get all categories without filtering
+    const categories = await Category.find({})
       .populate('createdBy', 'firstname lastname email role');
     
-    const formattedCategories = categories.map(category => formatCategory(category, { language }));
+    // Return all categories in bilingual format
+    const formattedCategories = categories.map(category => formatCategory(category, { language: 'both' }));
     
     res.status(200).json(createResponse('success', { categories: formattedCategories }));
   } catch (err) {
@@ -106,8 +59,7 @@ exports.createCategory = async (req, res) => {
     const populatedCategory = await Category.findById(category._id)
       .populate('createdBy', 'firstname lastname email role');
     
-    const language = req.query.lang || 'en';
-    const formattedCategory = formatCategory(populatedCategory, { language });
+    const formattedCategory = formatCategory(populatedCategory, { language: 'both' });
     
     res.status(201).json(createResponse('success', 
       { category: formattedCategory },
@@ -175,8 +127,7 @@ exports.updateCategory = async (req, res) => {
     const updatedCategory = await Category.findById(req.params.id)
       .populate('createdBy', 'firstname lastname email role');
     
-    const language = req.query.lang || 'en';
-    const formattedCategory = formatCategory(updatedCategory, { language });
+    const formattedCategory = formatCategory(updatedCategory, { language: 'both' });
     
     res.status(200).json(createResponse('success', 
       { category: formattedCategory },

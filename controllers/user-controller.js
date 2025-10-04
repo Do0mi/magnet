@@ -50,25 +50,13 @@ exports.updateProfile = async (req, res) => {
 
 exports.getBusinessRequests = async (req, res) => {
   try {
-    const { status = 'pending', page = 1, limit = 10 } = req.query;
-    const query = { role: 'business', 'businessInfo.approvalStatus': status };
-    const skip = (page - 1) * limit;
-    const businesses = await User.find(query)
+    // Get all business users without filtering or pagination
+    const businesses = await User.find({ role: 'business' })
       .select('-password -emailOTP -phoneOTP -passwordResetToken')
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(parseInt(limit));
-    const total = await User.countDocuments(query);
+      .sort({ createdAt: -1 });
     const formattedBusinesses = businesses.map(business => formatUser(business, { includeBusinessInfo: true }));
     res.status(200).json(createResponse('success', {
       businesses: formattedBusinesses
-    }, null, {
-      pagination: {
-        currentPage: parseInt(page),
-        totalPages: Math.ceil(total / limit),
-        totalItems: total,
-        itemsPerPage: parseInt(limit)
-      }
     }));
   } catch (err) {
     console.error('Get business requests error:', err);

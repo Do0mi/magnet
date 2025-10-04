@@ -72,8 +72,7 @@ exports.createOrder = async (req, res) => {
     await order.populate('items.product', 'name code status category pricePerUnit images');
     await order.populate('shippingAddress');
     
-    const language = req.query.lang || 'en';
-    const formattedOrder = formatOrder(order, { language });
+    const formattedOrder = formatOrder(order, { language: 'both' });
     
     res.status(201).json(createResponse('success', 
       { order: formattedOrder },
@@ -88,13 +87,12 @@ exports.createOrder = async (req, res) => {
 // GET /orders/my
 exports.getMyOrders = async (req, res) => {
   try {
-    const language = req.query.lang || 'en';
     const orders = await Order.find({ customer: req.user.id })
       .populate('customer', 'firstname lastname email role')
       .populate('items.product', 'name code status category pricePerUnit images')
       .populate('shippingAddress');
     
-    const formattedOrders = orders.map(order => formatOrder(order, { language }));
+    const formattedOrders = orders.map(order => formatOrder(order, { language: 'both' }));
     
     res.status(200).json(createResponse('success', { orders: formattedOrders }));
   } catch (err) {
@@ -105,7 +103,6 @@ exports.getMyOrders = async (req, res) => {
 // GET /orders/:id
 exports.getOrderById = async (req, res) => {
   try {
-    const language = req.query.lang || 'en';
     const order = await Order.findById(req.params.id)
       .populate('customer', 'firstname lastname email role')
       .populate('items.product', 'name code status category pricePerUnit images')
@@ -116,7 +113,7 @@ exports.getOrderById = async (req, res) => {
       return res.status(403).json({ status: 'error', message: getBilingualMessage('not_authorized_view_order') });
     }
     
-    const formattedOrder = formatOrder(order, { language });
+    const formattedOrder = formatOrder(order, { language: 'both' });
     
     res.status(200).json(createResponse('success', { order: formattedOrder }));
   } catch (err) {
@@ -127,13 +124,12 @@ exports.getOrderById = async (req, res) => {
 // GET /orders
 exports.getAllOrders = async (req, res) => {
   try {
-    const language = req.query.lang || 'en';
     const orders = await Order.find()
       .populate('customer', 'firstname lastname email role')
       .populate('items.product', 'name code status category pricePerUnit images')
       .populate('shippingAddress');
     
-    const formattedOrders = orders.map(order => formatOrder(order, { language }));
+    const formattedOrders = orders.map(order => formatOrder(order, { language: 'both' }));
     
     res.status(200).json(createResponse('success', { orders: formattedOrders }));
   } catch (err) {
@@ -180,8 +176,7 @@ exports.updateOrderStatus = async (req, res) => {
       updatedAt: order.updatedAt
     });
     
-    const language = req.query.lang || 'en';
-    const formattedOrder = formatOrder(order, { language }); // This will localize the status for the response
+    const formattedOrder = formatOrder(order, { language: 'both' }); // Return bilingual format
     
     res.status(200).json(createResponse('success', 
       { order: formattedOrder },
@@ -195,19 +190,11 @@ exports.updateOrderStatus = async (req, res) => {
 // GET /orders/status-options
 exports.getStatusOptions = async (req, res) => {
   try {
-    const language = req.query.lang || 'en';
     const statusMapping = Order.getStatusMapping();
     const statusEnums = Order.getStatusEnums();
     
-    let statusOptions;
-    if (language === 'both') {
-      statusOptions = statusMapping;
-    } else {
-      statusOptions = Object.keys(statusMapping).reduce((acc, key) => {
-        acc[key] = statusMapping[key][language] || statusMapping[key].en;
-        return acc;
-      }, {});
-    }
+    // Always return bilingual status options
+    const statusOptions = statusMapping;
     
     res.status(200).json(createResponse('success', { 
       statusOptions,
@@ -222,8 +209,6 @@ exports.getStatusOptions = async (req, res) => {
 // GET /orders/business-products
 exports.getBusinessProductOrders = async (req, res) => {
   try {
-    const language = req.query.lang || 'en';
-    
     // First get all products owned by this business user
     const Product = require('../models/product-model');
     const businessProducts = await Product.find({ owner: req.user.id }).select('_id');
@@ -245,7 +230,7 @@ exports.getBusinessProductOrders = async (req, res) => {
       .populate('customer', 'firstname lastname email phone role')
       .populate('shippingAddress');
     
-    const formattedOrders = orders.map(order => formatOrder(order, { language }));
+    const formattedOrders = orders.map(order => formatOrder(order, { language: 'both' }));
     
     res.status(200).json(createResponse('success', 
       { orders: formattedOrders },

@@ -33,22 +33,6 @@ router.put('/users/:id/disallow', requireAdminOrEmployee, AdminController.disall
 router.put('/users/:id/allow', requireAdminOrEmployee, AdminController.allowUser);
 
 // ========================================
-// ADMIN VERIFICATION MANAGEMENT ROUTES (Admin or Magnet Employee)
-// ========================================
-
-// PUT /admin/users/:id/verify-email - Verify user email
-router.put('/users/:id/verify-email', requireAdminOrEmployee, AdminController.verifyUserEmail);
-
-// PUT /admin/users/:id/unverify-email - Unverify user email
-router.put('/users/:id/unverify-email', requireAdminOrEmployee, AdminController.unverifyUserEmail);
-
-// PUT /admin/users/:id/verify-phone - Verify user phone
-router.put('/users/:id/verify-phone', requireAdminOrEmployee, AdminController.verifyUserPhone);
-
-// PUT /admin/users/:id/unverify-phone - Unverify user phone
-router.put('/users/:id/unverify-phone', requireAdminOrEmployee, AdminController.unverifyUserPhone);
-
-// ========================================
 // ADMIN WISHLIST MANAGEMENT ROUTES (Admin or Magnet Employee)
 // ========================================
 

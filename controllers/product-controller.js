@@ -12,66 +12,22 @@ function legacyFormatProduct(product, language = 'en') {
 // GET /products
 exports.getProducts = async (req, res) => {
   try {
-    const language = req.query.lang || req.user?.language || 'en';
-    
-    // Extract query parameters
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const category = req.query.category;
-    const search = req.query.search;
-    const status = req.query.status;
-    
-    // Calculate skip value for pagination
-    const skip = (page - 1) * limit;
-    
-    // Build query object
+    // Build query object - only show approved products to non-admin/business/employee users
     let query = {};
-    
-    // Status filter - only show approved products to non-admin/business/employee users
     if (!req.user || (req.user.role !== 'admin' && req.user.role !== 'business' && req.user.role !== 'magnet_employee')) {
       query.status = 'approved';
-    } else if (status) {
-      // If user has admin privileges and status filter is provided
-      if (['pending', 'approved', 'declined'].includes(status)) {
-        query.status = status;
-      }
     }
     
-    // Category filter
-    if (category) {
-      query['category.en'] = { $regex: category, $options: 'i' };
-    }
-    
-    // Search filter
-    if (search) {
-      query.$or = [
-        { 'name.en': { $regex: search, $options: 'i' } },
-        { 'name.ar': { $regex: search, $options: 'i' } },
-        { code: { $regex: search, $options: 'i' } }
-      ];
-    }
-    
-    // Get total count for pagination
-    const total = await Product.countDocuments(query);
-    
-    // Execute query with pagination
+    // Get all products without pagination or filtering
     const products = await Product.find(query)
       .populate('owner', 'email businessInfo.companyName')
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
+      .sort({ createdAt: -1 });
     
-    const formattedProducts = products.map(product => formatProduct(product, { language }));
+    // Return all products in bilingual format
+    const formattedProducts = products.map(product => formatProduct(product, { language: 'both' }));
     
     res.status(200).json(createResponse('success', { 
       products: formattedProducts 
-    }, null, {
-      pagination: {
-        currentPage: page,
-        totalPages: Math.ceil(total / limit),
-        totalItems: total,
-        itemsPerPage: limit
-      }
     }));
   } catch (err) {
     console.error('Get products error:', err);
@@ -83,7 +39,6 @@ exports.getProducts = async (req, res) => {
 exports.getProductById = async (req, res) => {
   try {
     const { id } = req.params;
-    const language = req.query.lang || req.user?.language || 'en';
     
     const product = await Product.findById(id).populate('owner', 'email businessInfo.companyName');
     
@@ -100,7 +55,8 @@ exports.getProductById = async (req, res) => {
       return res.status(403).json({ status: 'error', message: getBilingualMessage('product_access_denied') });
     }
     
-    const formattedProduct = formatProduct(product, { language });
+    // Return product in bilingual format
+    const formattedProduct = formatProduct(product, { language: 'both' });
     res.status(200).json(createResponse('success', { product: formattedProduct }));
   } catch (err) {
     res.status(500).json({ status: 'error', message: getBilingualMessage('failed_get_product') });
@@ -173,7 +129,7 @@ exports.addProductsByBusiness = async (req, res) => {
     
     await product.save();
     res.status(201).json(createResponse('success', 
-      { product: formatProduct(product, { language: req.user.language || 'en' }) },
+      { product: formatProduct(product, { language: 'both' }) },
       getBilingualMessage('product_added_pending_approval')
     ));
   } catch (err) {
@@ -243,7 +199,7 @@ exports.addProductsByMagnetEmployee = async (req, res) => {
     
     await product.save();
     res.status(201).json(createResponse('success', 
-      { product: formatProduct(product, { language: req.user.language || 'en' }) },
+      { product: formatProduct(product, { language: 'both' }) },
       getBilingualMessage('product_added_and_approved')
     ));
   } catch (err) {
@@ -291,7 +247,7 @@ exports.updateProduct = async (req, res) => {
     product.updatedAt = new Date();
     await product.save();
     res.status(200).json(createResponse('success', 
-      { product: formatProduct(product) },
+      { product: formatProduct(product, { language: 'both' }) },
       getBilingualMessage('product_updated')
     ));
   } catch (err) {
@@ -335,7 +291,7 @@ exports.approveProduct = async (req, res) => {
     const updatedProduct = await Product.findById(req.params.id).populate('owner', 'firstname lastname email businessInfo.companyName').populate('approvedBy', 'firstname lastname email role');
     
     res.status(200).json(createResponse('success', 
-      { product: formatProduct(updatedProduct) },
+      { product: formatProduct(updatedProduct, { language: 'both' }) },
       getBilingualMessage('product_approved')
     ));
   } catch (err) {
@@ -360,7 +316,7 @@ exports.declineProduct = async (req, res) => {
     const updatedProduct = await Product.findById(req.params.id).populate('owner', 'firstname lastname email businessInfo.companyName').populate('approvedBy', 'firstname lastname email role');
     
     res.status(200).json(createResponse('success', 
-      { product: formatProduct(updatedProduct) },
+      { product: formatProduct(updatedProduct, { language: 'both' }) },
       getBilingualMessage('product_declined')
     ));
   } catch (err) {
