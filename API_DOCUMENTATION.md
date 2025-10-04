@@ -605,32 +605,26 @@ This applies to both customer and business registration.
 ## Product Routes
 
 ### Language Support
-**IMPORTANT CHANGE**: All API endpoints now return data in bilingual format (Arabic and English) by default. ALL query parameters have been completely removed to simplify the API and provide complete data sets.
-
-**Key Changes:**
-- ✅ **No query parameters**: All endpoints return complete data without filtering, pagination, or language selection
-- ✅ **Bilingual data**: All responses include both Arabic and English content automatically
-- ✅ **Simplified API**: Clean URLs without complex parameter handling
-- ✅ **Frontend responsibility**: Filtering, searching, and pagination now handled client-side
-
-**Benefits:**
-- **Simpler API**: No complex query parameter logic
-- **Complete data**: Always get full datasets
-- **Better performance**: No server-side filtering overhead
-- **Easier integration**: Consistent response format
-
-**Important Notes for Frontend Developers:**
-- **Client-side filtering**: Implement search, filter, and pagination in your frontend application
-- **Data handling**: All endpoints now return complete datasets - handle large responses appropriately
-- **Language display**: Use the bilingual data structure to display content in the user's preferred language
-- **Performance considerations**: Consider implementing virtual scrolling or lazy loading for large datasets
+Products support bilingual content (Arabic and English). You can:
+- **Get products in specific language**: Add `?lang=en` or `?lang=ar` to the URL
+- **Get products in user's preferred language**: The system uses the user's language preference
+- **Get full bilingual data**: Use `?lang=both` to get both languages
 
 ### 1. Get Products
 - **GET** `/api/products`
-- **Description:** Get all approved products (requires authentication). Admin/magnet_employee can see all products. Returns all products in bilingual format (Arabic and English).
+- **GET** `/api/products?lang=en` (English only)
+- **GET** `/api/products?lang=ar` (Arabic only)
+- **GET** `/api/products?lang=both` (Both languages)
+- **Description:** Get all approved products with pagination and filtering (requires authentication). Admin/magnet_employee can see all products.
 - **Headers:** `Authorization: Bearer <token>`
+- **Query Parameters:**
+  - `page` (number, optional, default: 1) - Page number for pagination
+  - `limit` (number, optional, default: 10) - Number of items per page
+  - `category` (string, optional) - Filter by category (searches in English category name)
+  - `search` (string, optional) - Search by product name (English/Arabic), code, or owner company name
+  - `status` (string, optional) - Filter by status: 'pending', 'approved', 'declined' (admin/business/magnet_employee only)
 - **Response:**
-  - `200 OK`: List of all products in bilingual format (no pagination)
+  - `200 OK`: List of products with pagination info
 - **Product Object:**
   - `code` (string, auto-generated if not provided, e.g. "A001")
   - `category` (object, required, bilingual: `{ en: "English Category", ar: "Arabic Category" }`)
@@ -666,6 +660,12 @@ This applies to both customer and business registration.
           }
         }
       ]
+    },
+    "pagination": {
+      "currentPage": 1,
+      "totalPages": 5,
+      "totalItems": 50,
+      "itemsPerPage": 10
     }
   }
   ```
@@ -964,7 +964,20 @@ Categories support bilingual content (Arabic and English). You can:
 
 ### 1. Get Categories
 - **GET** `/api/categories`
-- **Description:** Get all categories (public). Returns all categories in bilingual format (Arabic and English).
+- **GET** `/api/categories?lang=en` (English only)
+- **GET** `/api/categories?lang=ar` (Arabic only)
+- **GET** `/api/categories?lang=both` (Both languages)
+- **GET** `/api/categories` (All categories - default)
+- **GET** `/api/categories?status=active` (Active categories only)
+- **GET** `/api/categories?status=inactive` (Inactive categories only)
+- **GET** `/api/categories?search=food` (Search categories by name)
+- **GET** `/api/categories?status=active&search=electronics` (Active categories with name search)
+- **GET** `/api/categories?status=active&lang=en` (Active categories in English)
+- **Description:** Get categories (public). By default shows all categories (active and inactive).
+- **Query Parameters:**
+  - `lang` (string, optional, language preference: 'en', 'ar', 'both')
+  - `status` (string, optional, filter by status: 'active', 'inactive' - searches both English and Arabic status fields)
+  - `search` (string, optional, search by category name in English or Arabic - supports partial matches and multiple search patterns)
 - **Response:**
   - `200 OK`: List of categories
 
@@ -1258,7 +1271,7 @@ Orders support bilingual content (Arabic and English). You can:
 - `createdAt` (date)
 - `updatedAt` (date)
 
-**Note**: Order status is stored as bilingual objects and returned in bilingual format:
+**Note**: Order status is stored as bilingual objects but returned as localized strings based on the `lang` parameter:
 - `pending` → `{ en: "pending", ar: "قيد الانتظار" }`
 - `confirmed` → `{ en: "confirmed", ar: "مؤكد" }`
 - `shipped` → `{ en: "shipped", ar: "تم الشحن" }`
@@ -1595,10 +1608,16 @@ Admin routes provide comprehensive user management functionality for system admi
 
 ### 2. Get All Users
 - **GET** `/api/admin/users`
-- **Description:** Get all users. Returns all users in bilingual format.
+- **Description:** Get all users with pagination, filtering, and search capabilities. Automatically fixes missing `approvedBy` field for approved business users.
 - **Headers:** `Authorization: Bearer <token>`
+- **Query Parameters:**
+  - `page` (number, optional, default: 1)
+  - `limit` (number, optional, default: 10)
+  - `role` (string, optional, filter by role)
+  - `search` (string, optional, search by name, email, or phone)
+  - `status` (string, optional, filter by disallow status: 'allowed', 'disallowed')
 - **Response:**
-  - `200 OK`: List of all users in bilingual format (no pagination)
+  - `200 OK`: List of users with pagination info (bilingual message)
 
 ### 3. Get User Statistics
 - **GET** `/api/admin/users/stats`
@@ -1750,10 +1769,15 @@ Admin routes provide comprehensive user management functionality for system admi
 
 ### 1. Get All Wishlists
 - **GET** `/api/admin/wishlists`
-- **Description:** Get all wishlists. Returns all wishlists in bilingual format.
+- **Description:** Get all wishlists with pagination and filtering capabilities.
 - **Headers:** `Authorization: Bearer <token>`
+- **Query Parameters:**
+  - `page` (number, optional, default: 1)
+  - `limit` (number, optional, default: 10)
+  - `userId` (string, optional, filter by user ID)
+  - `productId` (string, optional, filter by product ID)
 - **Response:**
-  - `200 OK`: List of all wishlists in bilingual format (no pagination)
+  - `200 OK`: List of wishlists with pagination info (bilingual message)
   - **Example Response:**
     ```json
     {
@@ -1780,6 +1804,12 @@ Admin routes provide comprehensive user management functionality for system admi
             "createdAt": "2024-01-01T00:00:00.000Z"
           }
         ]
+      },
+      "pagination": {
+        "currentPage": 1,
+        "totalPages": 1,
+        "totalItems": 1,
+        "itemsPerPage": 10
       }
     }
     ```
@@ -1829,12 +1859,26 @@ Admin routes provide comprehensive user management functionality for system admi
 
 ### 1. Get All Reviews
 - **GET** `/api/admin/reviews`
-- **Description:** Get all reviews. Returns all reviews in bilingual format.
+- **Description:** Get all reviews with pagination and filtering capabilities.
 - **Headers:** `Authorization: Bearer <token>`
+- **Query Parameters:**
+  - `page` (number, optional, default: 1)
+  - `limit` (number, optional, default: 10)
+  - `userName` (string, optional, search by user name, email, or full name)
+  - `productName` (string, optional, search by product name in English or Arabic)
+  - `rating` (number, optional, filter by rating)
 - **Response:**
-  - `200 OK`: List of all reviews in bilingual format (no pagination)
+  - `200 OK`: List of reviews with pagination info (bilingual message)
   - **Product Data**: Returns complete product information including all fields (name, description, price, images, category, etc.)
 
+#### Search Examples:
+- **GET** `/api/admin/reviews?userName=john` (Search reviews by user name)
+- **GET** `/api/admin/reviews?userName=john@example.com` (Search reviews by user email)
+- **GET** `/api/admin/reviews?productName=electronics` (Search reviews by product name in English)
+- **GET** `/api/admin/reviews?productName=إلكترونيات` (Search reviews by product name in Arabic)
+- **GET** `/api/admin/reviews?userName=john&productName=electronics` (Search by both user and product)
+- **GET** `/api/admin/reviews?rating=5` (Filter by rating)
+- **GET** `/api/admin/reviews?userName=john&rating=5` (Search by user name and rating)
 
 ### 2. Get Review by ID
 - **GET** `/api/admin/reviews/:id`
@@ -1938,8 +1982,14 @@ Admin routes provide comprehensive user management functionality for system admi
 
 ### 1. Get All Addresses
 - **GET** `/api/admin/addresses`
-- **Description:** Get all addresses. Returns all addresses in bilingual format.
+- **Description:** Get all addresses with pagination and filtering capabilities.
 - **Headers:** `Authorization: Bearer <token>`
+- **Query Parameters:**
+  - `page` (number, optional, default: 1)
+  - `limit` (number, optional, default: 10)
+  - `userName` (string, optional, search by user name, email, or phone - supports partial matches and multiple search patterns)
+  - `city` (string, optional, search by city)
+  - `country` (string, optional, search by country)
 - **Search Functionality:**
   - The `userName` parameter performs a comprehensive search across:
     - User first name (exact match, contains, starts with, ends with)
@@ -2043,10 +2093,26 @@ GET /api/admin/addresses?userName=hussien&city=aswan&country=egypt&page=1&limit=
 
 ### 1. Get All Orders
 - **GET** `/api/admin/orders`
-- **Description:** Get all orders. Returns all orders in bilingual format.
+- **Description:** Get all orders with pagination and filtering capabilities.
 - **Headers:** `Authorization: Bearer <token>`
+- **Query Parameters:**
+  - `page` (number, optional, default: 1)
+  - `limit` (number, optional, default: 10)
+  - `customerName` (string, optional, search by customer name, email, or phone - supports partial matches and multiple search patterns)
+  - `status` (string, optional, filter by order status)
+  - `date` (string, optional, filter orders created on specific date - format: YYYY-MM-DD)
+  - `lang` (string, optional, language preference: 'en', 'ar', 'both')
+- **Search Functionality:**
+  - The `customerName` parameter performs a comprehensive search across:
+    - Customer first name (exact match, contains, starts with, ends with)
+    - Customer last name (exact match, contains, starts with, ends with)
+    - Customer email address
+    - Customer phone number
+    - Full name (concatenated firstname + lastname)
+  - Search is case-insensitive and supports partial matching
+  - Examples: `?customerName=john` will find "John", "Johnny", "Johnson", etc.
 - **Response:**
-  - `200 OK`: List of all orders in bilingual format (no pagination)
+  - `200 OK`: List of orders with pagination info and calculated totals (bilingual message)
   - **Note:** Each order includes `total` and `itemTotal` fields automatically calculated from product prices and quantities
 
 ### Admin Orders Date Filtering Examples
@@ -2089,8 +2155,10 @@ GET /api/admin/orders?date=2025-08-27&status=pending&customerName=hussien&page=1
 
 ### 2. Get Order by ID
 - **GET** `/api/admin/orders/:id`
-- **Description:** Get detailed information about a specific order. Returns order in bilingual format.
+- **Description:** Get detailed information about a specific order.
 - **Headers:** `Authorization: Bearer <token>`
+- **Query Parameters:**
+  - `lang` (string, optional, language preference: 'en', 'ar', 'both')
 - **Response:**
   - `200 OK`: Order details with calculated total (bilingual message)
   - `404 Not Found`: Order not found (bilingual message)
@@ -2105,6 +2173,8 @@ GET /api/admin/orders?date=2025-08-27&status=pending&customerName=hussien&page=1
   - `items` (array, required) - Array of order items
     - Each item: `{ product: string, quantity: number }`
   - `shippingAddressId` (string, required) - Shipping address ID
+- **Query Parameters:**
+  - `lang` (string, optional, language preference: 'en', 'ar', 'both')
 - **Response:**
   - `201 Created`: Order created successfully with calculated total (bilingual message)
   - `400 Bad Request`: Validation errors (bilingual message)
@@ -2118,6 +2188,8 @@ GET /api/admin/orders?date=2025-08-27&status=pending&customerName=hussien&page=1
   - `items` (array, optional) - New order items
   - `shippingAddressId` (string, optional) - New shipping address ID
   - `status` (string, optional) - New order status
+- **Query Parameters:**
+  - `lang` (string, optional, language preference: 'en', 'ar', 'both')
 - **Response:**
   - `200 OK`: Order updated successfully with calculated total (bilingual message)
   - `404 Not Found`: Order not found (bilingual message)
@@ -2137,20 +2209,7 @@ GET /api/admin/orders?date=2025-08-27&status=pending&customerName=hussien&page=1
 
 ### Latest Updates (2025-01-27)
 
-#### 🌍 MAJOR API SIMPLIFICATION - Complete Query Parameter Removal (Latest)
-- **✅ Removed ALL query parameters**: No more `?lang=`, `?page=`, `?limit=`, `?search=`, `?filter=`, `?status=`, `?category=`, `?rating=`, `?userName=`, `?productName=`, `?customerName=`, `?date=`, `?city=`, `?country=` parameters
-- **✅ All endpoints now return bilingual data**: Arabic and English content in all responses
-- **✅ Simplified API surface**: Clean URLs without any parameters and consistent data format
-- **✅ Updated Controllers**:
-  - **Product Controller**: Returns all products in bilingual format (removed pagination, search, category, status filters)
-  - **Category Controller**: Returns all categories in bilingual format (removed status, search filters)
-  - **Order Controller**: Returns all orders in bilingual format (removed language parameters)
-  - **Admin Controller**: Returns all admin data in bilingual format (removed ALL filtering and pagination from users, wishlists, reviews, addresses, orders)
-  - **User Controller**: Returns all business requests in bilingual format (removed status, pagination filters)
-- **✅ Updated Documentation**: Removed all query parameter references, pagination info, and filtering examples
-- **✅ Frontend Impact**: All filtering, searching, and pagination now handled client-side
-
-#### 🔐 Enhanced Admin Route Access
+#### 🔐 Enhanced Admin Route Access (Latest)
 - **✅ All admin routes now accessible by both `admin` and `magnet_employee` roles**
 - **✅ Updated Routes**:
   - User Management: All user CRUD operations, stats, disallow/allow actions
