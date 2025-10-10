@@ -202,6 +202,9 @@ exports.getAllUsers = async (req, res) => {
     }
     
     if (search) {
+      // Split search term to support firstname + lastname search
+      const searchTerms = search.trim().split(/\s+/);
+      
       query.$or = [
         { firstname: { $regex: search, $options: 'i' } },
         { lastname: { $regex: search, $options: 'i' } },
@@ -209,6 +212,19 @@ exports.getAllUsers = async (req, res) => {
         { phone: { $regex: search, $options: 'i' } },
         { 'businessInfo.companyName': { $regex: search, $options: 'i' } }
       ];
+      
+      // If search contains multiple words, also search for firstname + lastname combination
+      if (searchTerms.length >= 2) {
+        query.$or.push({
+          $expr: {
+            $regexMatch: {
+              input: { $concat: ['$firstname', ' ', '$lastname'] },
+              regex: search,
+              options: 'i'
+            }
+          }
+        });
+      }
     }
 
     // Build sort object
