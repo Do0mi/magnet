@@ -60,8 +60,22 @@ exports.getBusinessRequests = async (req, res) => {
       .limit(parseInt(limit));
     const total = await User.countDocuments(query);
     const formattedBusinesses = businesses.map(business => formatUser(business, { includeBusinessInfo: true }));
+    
+    // Calculate business stats for current query
+    const businessStats = {
+      totalBusinesses: total,
+      byApprovalStatus: {
+        pending: await User.countDocuments({ role: 'business', 'businessInfo.approvalStatus': 'pending' }),
+        approved: await User.countDocuments({ role: 'business', 'businessInfo.approvalStatus': 'approved' }),
+        rejected: await User.countDocuments({ role: 'business', 'businessInfo.approvalStatus': 'rejected' })
+      },
+      activeBusinesses: await User.countDocuments({ role: 'business', isDisallowed: false, 'businessInfo.approvalStatus': 'approved' }),
+      disallowedBusinesses: await User.countDocuments({ role: 'business', isDisallowed: true })
+    };
+    
     res.status(200).json(createResponse('success', {
-      businesses: formattedBusinesses
+      businesses: formattedBusinesses,
+      stats: businessStats
     }, null, {
       pagination: {
         currentPage: parseInt(page),

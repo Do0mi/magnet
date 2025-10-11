@@ -63,8 +63,26 @@ exports.getProducts = async (req, res) => {
     
     const formattedProducts = products.map(product => formatProduct(product, { language }));
     
+    // Calculate product stats
+    const avgRatingResult = await Product.aggregate([
+      { $match: query },
+      { $group: { _id: null, avgRating: { $avg: '$rating' } } }
+    ]);
+    
+    const productStats = {
+      totalProducts: total,
+      byStatus: {
+        pending: await Product.countDocuments({ ...query, status: 'pending' }),
+        approved: await Product.countDocuments({ ...query, status: 'approved' }),
+        declined: await Product.countDocuments({ ...query, status: 'declined' })
+      },
+      withRatings: await Product.countDocuments({ ...query, rating: { $gt: 0 } }),
+      averageRating: avgRatingResult.length > 0 ? Math.round(avgRatingResult[0].avgRating * 100) / 100 : 0
+    };
+    
     res.status(200).json(createResponse('success', { 
-      products: formattedProducts 
+      products: formattedProducts,
+      stats: productStats
     }, null, {
       pagination: {
         currentPage: page,

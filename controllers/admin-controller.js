@@ -279,8 +279,29 @@ exports.getAllUsers = async (req, res) => {
       includeVerification: true 
     }));
 
+    // Calculate stats for the current query
+    const queryStats = {
+      totalInQuery: total,
+      byRole: {
+        customers: await User.countDocuments({ ...query, role: 'customer' }),
+        businesses: await User.countDocuments({ ...query, role: 'business' }),
+        employees: await User.countDocuments({ ...query, role: 'magnet_employee' }),
+        admins: await User.countDocuments({ ...query, role: 'admin' })
+      },
+      byStatus: {
+        active: await User.countDocuments({ ...query, isDisallowed: false }),
+        disallowed: await User.countDocuments({ ...query, isDisallowed: true })
+      },
+      verification: {
+        emailVerified: await User.countDocuments({ ...query, isEmailVerified: true }),
+        emailUnverified: await User.countDocuments({ ...query, isEmailVerified: false }),
+        phoneVerified: await User.countDocuments({ ...query, isPhoneVerified: true })
+      }
+    };
+
     res.status(200).json(createResponse('success', {
-      users: formattedUsers
+      users: formattedUsers,
+      stats: queryStats
     }, null, {
       pagination: {
         currentPage: parseInt(page),
@@ -840,6 +861,7 @@ exports.getUserStats = async (req, res) => {
     const permissionError = validateAdminOrEmployeePermissions(req, res);
     if (permissionError) return;
 
+    // USER STATS
     const totalUsers = await User.countDocuments();
     const totalCustomers = await User.countDocuments({ role: 'customer' });
     const totalBusinesses = await User.countDocuments({ role: 'business' });
@@ -847,6 +869,9 @@ exports.getUserStats = async (req, res) => {
     const totalAdmins = await User.countDocuments({ role: 'admin' });
     const disallowedUsers = await User.countDocuments({ isDisallowed: true });
     const activeUsers = await User.countDocuments({ isDisallowed: false });
+    const verifiedEmails = await User.countDocuments({ isEmailVerified: true });
+    const unverifiedEmails = await User.countDocuments({ isEmailVerified: false });
+    const verifiedPhones = await User.countDocuments({ isPhoneVerified: true });
 
     // Business approval stats
     const pendingBusinesses = await User.countDocuments({ 
@@ -862,23 +887,179 @@ exports.getUserStats = async (req, res) => {
       'businessInfo.approvalStatus': 'rejected' 
     });
 
+    // PRODUCT STATS
+    const totalProducts = await Product.countDocuments();
+    const pendingProducts = await Product.countDocuments({ status: 'pending' });
+    const approvedProducts = await Product.countDocuments({ status: 'approved' });
+    const declinedProducts = await Product.countDocuments({ status: 'declined' });
+    const productsWithRating = await Product.countDocuments({ rating: { $gt: 0 } });
+    const productsByBusiness = await Product.countDocuments({ 
+      owner: { $exists: true },
+      status: 'approved'
+    });
+
+    // Get average product rating
+    const avgRatingResult = await Product.aggregate([
+      { $group: { _id: null, avgRating: { $avg: '$rating' } } }
+    ]);
+    const avgProductRating = avgRatingResult.length > 0 ? avgRatingResult[0].avgRating : 0;
+
+    // ORDER STATS
+    const totalOrders = await Order.countDocuments();
+    const pendingOrders = await Order.countDocuments({ 'status.en': 'pending' });
+    const confirmedOrders = await Order.countDocuments({ 'status.en': 'confirmed' });
+    const shippedOrders = await Order.countDocuments({ 'status.en': 'shipped' });
+    const deliveredOrders = await Order.countDocuments({ 'status.en': 'delivered' });
+    const cancelledOrders = await Order.countDocuments({ 'status.en': 'cancelled' });
+
+    // Get total revenue
+    const revenueResult = await Order.aggregate([
+      { $match: { 'status.en': { $in: ['delivered', 'confirmed', 'shipped'] } } },
+      { $group: { _id: null, totalRevenue: { $sum: '$total' } } }
+    ]);
+    const totalRevenue = revenueResult.length > 0 ? revenueResult[0].totalRevenue : 0;
+
+    // Get average order value
+    const avgOrderResult = await Order.aggregate([
+      { $group: { _id: null, avgOrder: { $avg: '$total' } } }
+    ]);
+    const avgOrderValue = avgOrderResult.length > 0 ? avgOrderResult[0].avgOrder : 0;
+
+    // REVIEW STATS
+    const totalReviews = await Review.countDocuments();
+    const acceptedReviews = await Review.countDocuments({ status: 'accept' });
+    const rejectedReviews = await Review.countDocuments({ status: 'reject' });
+
+    // Get average review rating
+    const avgReviewResult = await Review.aggregate([
+      { $match: { status: 'accept' } },
+      { $group: { _id: null, avgRating: { $avg: '$rating' } } }
+    ]);
+    const avgReviewRating = avgReviewResult.length > 0 ? avgReviewResult[0].avgRating : 0;
+
+    // Reviews by rating distribution
+    const rating5 = await Review.countDocuments({ status: 'accept', rating: 5 });
+    const rating4 = await Review.countDocuments({ status: 'accept', rating: 4 });
+    const rating3 = await Review.countDocuments({ status: 'accept', rating: 3 });
+    const rating2 = await Review.countDocuments({ status: 'accept', rating: 2 });
+    const rating1 = await Review.countDocuments({ status: 'accept', rating: 1 });
+
+    // WISHLIST STATS
+    const totalWishlists = await Wishlist.countDocuments();
+    const totalWishlistItems = await Wishlist.aggregate([
+      { $project: { count: { $size: '$products' } } },
+      { $group: { _id: null, total: { $sum: '$count' } } }
+    ]);
+    const wishlistItemsCount = totalWishlistItems.length > 0 ? totalWishlistItems[0].total : 0;
+
+    // Most wishlisted products
+    const mostWishlistedResult = await Wishlist.aggregate([
+      { $unwind: '$products' },
+      { $group: { _id: '$products', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 5 },
+      { $lookup: { from: 'products', localField: '_id', foreignField: '_id', as: 'productInfo' } },
+      { $unwind: '$productInfo' },
+      { $project: { 
+        productId: '$_id',
+        count: 1,
+        productName: '$productInfo.name',
+        productCode: '$productInfo.code'
+      }}
+    ]);
+
+    // ADDRESS STATS
+    const totalAddresses = await Address.countDocuments();
+    const addressesByCountry = await Address.aggregate([
+      { $group: { _id: '$country', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 10 }
+    ]);
+
+    // CATEGORY STATS (if categories exist)
+    const Category = require('../models/category-model');
+    const totalCategories = await Category.countDocuments();
+    const activeCategories = await Category.countDocuments({ 'status.en': 'active' });
+    const inactiveCategories = await Category.countDocuments({ 'status.en': 'inactive' });
+
     res.status(200).json(createResponse('success', {
       stats: {
-        total: totalUsers,
-        byRole: {
-          customers: totalCustomers,
-          businesses: totalBusinesses,
-          employees: totalEmployees,
-          admins: totalAdmins
+        users: {
+          total: totalUsers,
+          byRole: {
+            customers: totalCustomers,
+            businesses: totalBusinesses,
+            employees: totalEmployees,
+            admins: totalAdmins
+          },
+          byStatus: {
+            active: activeUsers,
+            disallowed: disallowedUsers
+          },
+          verification: {
+            emailVerified: verifiedEmails,
+            emailUnverified: unverifiedEmails,
+            phoneVerified: verifiedPhones
+          },
+          businessApproval: {
+            pending: pendingBusinesses,
+            approved: approvedBusinesses,
+            rejected: rejectedBusinesses
+          }
         },
-        byStatus: {
-          active: activeUsers,
-          disallowed: disallowedUsers
+        products: {
+          total: totalProducts,
+          byStatus: {
+            pending: pendingProducts,
+            approved: approvedProducts,
+            declined: declinedProducts
+          },
+          businessProducts: productsByBusiness,
+          withRatings: productsWithRating,
+          averageRating: Math.round(avgProductRating * 100) / 100
         },
-        businessApproval: {
-          pending: pendingBusinesses,
-          approved: approvedBusinesses,
-          rejected: rejectedBusinesses
+        orders: {
+          total: totalOrders,
+          byStatus: {
+            pending: pendingOrders,
+            confirmed: confirmedOrders,
+            shipped: shippedOrders,
+            delivered: deliveredOrders,
+            cancelled: cancelledOrders
+          },
+          financials: {
+            totalRevenue: Math.round(totalRevenue * 100) / 100,
+            averageOrderValue: Math.round(avgOrderValue * 100) / 100
+          }
+        },
+        reviews: {
+          total: totalReviews,
+          byStatus: {
+            accepted: acceptedReviews,
+            rejected: rejectedReviews
+          },
+          averageRating: Math.round(avgReviewRating * 100) / 100,
+          ratingDistribution: {
+            rating5,
+            rating4,
+            rating3,
+            rating2,
+            rating1
+          }
+        },
+        wishlists: {
+          total: totalWishlists,
+          totalItems: wishlistItemsCount,
+          mostWishlisted: mostWishlistedResult
+        },
+        addresses: {
+          total: totalAddresses,
+          byCountry: addressesByCountry
+        },
+        categories: {
+          total: totalCategories,
+          active: activeCategories,
+          inactive: inactiveCategories
         }
       }
     }));
@@ -923,13 +1104,28 @@ exports.getAllWishlists = async (req, res) => {
     
     const total = await Wishlist.countDocuments(query);
     
+    // Calculate stats for wishlists
+    const totalWishlistItems = await Wishlist.aggregate([
+      { $match: query },
+      { $project: { count: { $size: '$products' } } },
+      { $group: { _id: null, total: { $sum: '$count' }, avg: { $avg: '$count' } } }
+    ]);
+    
+    const wishlistStats = {
+      totalWishlists: total,
+      totalItems: totalWishlistItems.length > 0 ? totalWishlistItems[0].total : 0,
+      averageItemsPerWishlist: totalWishlistItems.length > 0 ? Math.round(totalWishlistItems[0].avg * 100) / 100 : 0,
+      emptyWishlists: await Wishlist.countDocuments({ ...query, products: { $size: 0 } })
+    };
+    
     res.status(200).json(createResponse('success', {
       wishlists: wishlists.map(wishlist => ({
         id: wishlist._id,
         user: wishlist.user,
         products: wishlist.products,
         createdAt: wishlist.createdAt
-      }))
+      })),
+      stats: wishlistStats
     }, null, {
       pagination: {
         currentPage: parseInt(page),
@@ -1205,6 +1401,28 @@ exports.getAllReviews = async (req, res) => {
     
     const total = await Review.countDocuments(query);
     
+    // Calculate review stats
+    const avgRatingResult = await Review.aggregate([
+      { $match: { ...query, status: 'accept' } },
+      { $group: { _id: null, avgRating: { $avg: '$rating' } } }
+    ]);
+    
+    const reviewStats = {
+      totalReviews: total,
+      byStatus: {
+        accepted: await Review.countDocuments({ ...query, status: 'accept' }),
+        rejected: await Review.countDocuments({ ...query, status: 'reject' })
+      },
+      averageRating: avgRatingResult.length > 0 ? Math.round(avgRatingResult[0].avgRating * 100) / 100 : 0,
+      ratingDistribution: {
+        rating5: await Review.countDocuments({ ...query, rating: 5 }),
+        rating4: await Review.countDocuments({ ...query, rating: 4 }),
+        rating3: await Review.countDocuments({ ...query, rating: 3 }),
+        rating2: await Review.countDocuments({ ...query, rating: 2 }),
+        rating1: await Review.countDocuments({ ...query, rating: 1 })
+      }
+    };
+    
     res.status(200).json(createResponse('success', {
       reviews: reviews.map(review => ({
         id: review._id,
@@ -1223,7 +1441,8 @@ exports.getAllReviews = async (req, res) => {
         rejectedAt: review.rejectedAt,
         rejectionReason: review.rejectionReason,
         createdAt: review.createdAt
-      }))
+      })),
+      stats: reviewStats
     }, null, {
       pagination: {
         currentPage: parseInt(page),
@@ -1573,6 +1792,28 @@ exports.getAllAddresses = async (req, res) => {
     
     const total = await Address.countDocuments(query);
     
+    // Calculate address stats
+    const addressesByCountry = await Address.aggregate([
+      { $match: query },
+      { $group: { _id: '$country', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 10 }
+    ]);
+    
+    const addressesByCity = await Address.aggregate([
+      { $match: query },
+      { $group: { _id: { country: '$country', city: '$city' }, count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 10 },
+      { $project: { country: '$_id.country', city: '$_id.city', count: 1, _id: 0 } }
+    ]);
+    
+    const addressStats = {
+      totalAddresses: total,
+      byCountry: addressesByCountry.map(item => ({ country: item._id, count: item.count })),
+      topCities: addressesByCity
+    };
+    
     res.status(200).json(createResponse('success', {
       addresses: addresses.map(address => ({
         id: address._id,
@@ -1585,7 +1826,8 @@ exports.getAllAddresses = async (req, res) => {
         country: address.country,
         createdAt: address.createdAt,
         updatedAt: address.updatedAt
-      }))
+      })),
+      stats: addressStats
     }, null, {
       pagination: {
         currentPage: parseInt(page),
@@ -1852,6 +2094,32 @@ exports.getAllOrders = async (req, res) => {
     
     const total = await Order.countDocuments(query);
     
+    // Calculate order stats
+    const revenueResult = await Order.aggregate([
+      { $match: { ...query, 'status.en': { $in: ['delivered', 'confirmed', 'shipped'] } } },
+      { $group: { _id: null, totalRevenue: { $sum: '$total' } } }
+    ]);
+    
+    const avgOrderResult = await Order.aggregate([
+      { $match: query },
+      { $group: { _id: null, avgOrder: { $avg: '$total' } } }
+    ]);
+    
+    const orderStats = {
+      totalOrders: total,
+      byStatus: {
+        pending: await Order.countDocuments({ ...query, 'status.en': 'pending' }),
+        confirmed: await Order.countDocuments({ ...query, 'status.en': 'confirmed' }),
+        shipped: await Order.countDocuments({ ...query, 'status.en': 'shipped' }),
+        delivered: await Order.countDocuments({ ...query, 'status.en': 'delivered' }),
+        cancelled: await Order.countDocuments({ ...query, 'status.en': 'cancelled' })
+      },
+      financials: {
+        totalRevenue: revenueResult.length > 0 ? Math.round(revenueResult[0].totalRevenue * 100) / 100 : 0,
+        averageOrderValue: avgOrderResult.length > 0 ? Math.round(avgOrderResult[0].avgOrder * 100) / 100 : 0
+      }
+    };
+    
     const language = req.query.lang || 'en';
     const { formatOrder } = require('../utils/response-formatters');
     
@@ -1863,7 +2131,8 @@ exports.getAllOrders = async (req, res) => {
         includeAddress: true,
         includeStatusLog: false,
         includeTotal: true
-      }))
+      })),
+      stats: orderStats
     }, null, {
       pagination: {
         currentPage: parseInt(page),
