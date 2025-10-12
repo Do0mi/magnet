@@ -1332,8 +1332,13 @@ exports.getAllReviews = async (req, res) => {
     const permissionError = validateAdminOrEmployeePermissions(req, res);
     if (permissionError) return;
 
-    const { page = 1, limit = 10, userName, productName, rating } = req.query;
+    const { page = 1, limit = 10, userName, productName, rating, status } = req.query;
     const query = {};
+    
+    // Handle status filter
+    if (status && ['accept', 'reject'].includes(status)) {
+      query.status = status;
+    }
     
     // Handle username search
     if (userName && userName.trim()) {
