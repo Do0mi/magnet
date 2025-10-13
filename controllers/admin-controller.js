@@ -1085,13 +1085,47 @@ exports.getAllWishlists = async (req, res) => {
     const permissionError = validateAdminOrEmployeePermissions(req, res);
     if (permissionError) return;
 
-    const { page = 1, limit = 10, userId, productId } = req.query;
+    const { page = 1, limit = 10, userName, productName } = req.query;
     const query = {};
     
-    if (userId) query.user = userId;
-    if (productId) {
-      // For product filtering, we need to check if the product exists in the products array
-      query.products = productId;
+    // Filter by user name (first + last name)
+    if (userName) {
+      const nameRegex = new RegExp(userName.trim(), 'i');
+      const users = await User.find({
+        $or: [
+          { firstname: nameRegex },
+          { lastname: nameRegex },
+          { $expr: { 
+            $regexMatch: { 
+              input: { $concat: ['$firstname', ' ', '$lastname'] }, 
+              regex: userName.trim(),
+              options: 'i'
+            }
+          }}
+        ]
+      }).select('_id');
+      
+      const userIds = users.map(user => user._id);
+      if (userIds.length > 0) {
+        query.user = { $in: userIds };
+      } else {
+        // No users found, return empty result
+        query.user = null;
+      }
+    }
+    
+    // Filter by product name
+    if (productName) {
+      const productNameRegex = new RegExp(productName.trim(), 'i');
+      const products = await Product.find({ name: productNameRegex }).select('_id');
+      const productIds = products.map(product => product._id);
+      
+      if (productIds.length > 0) {
+        query.products = { $in: productIds };
+      } else {
+        // No products found, return empty result
+        query.products = null;
+      }
     }
     
     const skip = (page - 1) * limit;
