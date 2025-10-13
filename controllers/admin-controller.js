@@ -1221,9 +1221,10 @@ exports.createWishlist = async (req, res) => {
     const permissionError = validateAdminOrEmployeePermissions(req, res);
     if (permissionError) return;
 
-    const { userId, productId } = req.body;
+    const { userId, productIds } = req.body;
     
-    if (!userId || !productId) {
+    // Validate input - productIds should be an array (can have one or multiple products)
+    if (!userId || !productIds || !Array.isArray(productIds) || productIds.length === 0) {
       return res.status(400).json({ status: 'error', message: getBilingualMessage('missing_required_fields') });
     }
     
@@ -1233,32 +1234,45 @@ exports.createWishlist = async (req, res) => {
       return res.status(404).json({ status: 'error', message: getBilingualMessage('user_not_found') });
     }
     
-    // Check if product exists and is approved
-    const product = await Product.findById(productId).populate('owner', 'firstname lastname email businessInfo.companyName').populate('approvedBy', 'firstname lastname email role');
-    if (!product) {
+    // Validate all products exist and are approved
+    const products = await Product.find({ _id: { $in: productIds } })
+      .populate('owner', 'firstname lastname email businessInfo.companyName')
+      .populate('approvedBy', 'firstname lastname email role');
+    
+    if (products.length !== productIds.length) {
       return res.status(404).json({ status: 'error', message: getBilingualMessage('product_not_found') });
     }
     
-    if (product.status !== 'approved') {
-      return res.status(400).json({ status: 'error', message: getBilingualMessage('product_not_approved') });
+    // Check if all products are approved
+    const unapprovedProducts = products.filter(p => p.status !== 'approved');
+    if (unapprovedProducts.length > 0) {
+      return res.status(400).json({ 
+        status: 'error', 
+        message: getBilingualMessage('product_not_approved'),
+        data: { unapprovedProducts: unapprovedProducts.map(p => ({ id: p._id, name: p.name, status: p.status })) }
+      });
     }
     
     // Find or create wishlist for user
     let wishlist = await Wishlist.findOne({ user: userId });
     
     if (!wishlist) {
-      // Create new wishlist for user
+      // Create new wishlist for user with all products
       wishlist = new Wishlist({
         user: userId,
-        products: [productId]
+        products: productIds
       });
     } else {
-      // Check if product already exists in wishlist
-      if (wishlist.products.includes(productId)) {
+      // Filter out products that already exist in wishlist
+      const existingProductIds = wishlist.products.map(p => p.toString());
+      const newProducts = productIds.filter(pid => !existingProductIds.includes(pid));
+      
+      if (newProducts.length === 0) {
         return res.status(400).json({ status: 'error', message: getBilingualMessage('product_already_in_wishlist') });
       }
-      // Add product to existing wishlist
-      wishlist.products.push(productId);
+      
+      // Add only new products to existing wishlist
+      wishlist.products.push(...newProducts);
     }
     
     await wishlist.save();
