@@ -1155,7 +1155,13 @@ exports.getAllWishlists = async (req, res) => {
     res.status(200).json(createResponse('success', {
       wishlists: wishlists.map(wishlist => ({
         id: wishlist._id,
-        user: wishlist.user,
+        user: wishlist.user ? {
+          id: wishlist.user._id,
+          firstname: wishlist.user.firstname,
+          lastname: wishlist.user.lastname,
+          email: wishlist.user.email,
+          role: wishlist.user.role
+        } : null,
         products: wishlist.products,
         createdAt: wishlist.createdAt
       })),
@@ -1192,7 +1198,13 @@ exports.getWishlistById = async (req, res) => {
     res.status(200).json(createResponse('success', {
       wishlist: {
         id: wishlist._id,
-        user: wishlist.user,
+        user: wishlist.user ? {
+          id: wishlist.user._id,
+          firstname: wishlist.user.firstname,
+          lastname: wishlist.user.lastname,
+          email: wishlist.user.email,
+          role: wishlist.user.role
+        } : null,
         products: wishlist.products,
         createdAt: wishlist.createdAt
       }
@@ -1258,7 +1270,13 @@ exports.createWishlist = async (req, res) => {
     res.status(201).json(createResponse('success', {
       wishlist: {
         id: populatedWishlist._id,
-        user: populatedWishlist.user,
+        user: populatedWishlist.user ? {
+          id: populatedWishlist.user._id,
+          firstname: populatedWishlist.user.firstname,
+          lastname: populatedWishlist.user.lastname,
+          email: populatedWishlist.user.email,
+          role: populatedWishlist.user.role
+        } : null,
         products: populatedWishlist.products,
         createdAt: populatedWishlist.createdAt
       }
@@ -1323,7 +1341,13 @@ exports.updateWishlist = async (req, res) => {
     res.status(200).json(createResponse('success', {
       wishlist: {
         id: updatedWishlist._id,
-        user: updatedWishlist.user,
+        user: updatedWishlist.user ? {
+          id: updatedWishlist.user._id,
+          firstname: updatedWishlist.user.firstname,
+          lastname: updatedWishlist.user.lastname,
+          email: updatedWishlist.user.email,
+          role: updatedWishlist.user.role
+        } : null,
         products: updatedWishlist.products,
         createdAt: updatedWishlist.createdAt
       }
