@@ -5,11 +5,17 @@ const verifyToken = require('../middleware/auth-middleware');
 const { requireAdminOrEmployee, requireAdminEmployeeOrBusiness, requireCustomer } = require('../middleware/role-middleware');
 const { validateUpdateProfile, validateBusinessApproval } = require('../middleware/validation-middleware');
 
-// Get current user profile
+// Get current user profile (Customer)
 router.get('/profile', verifyToken, requireCustomer, UserController.getProfile);
 
-// Update user profile
+// Update user profile (Customer)
 router.put('/profile', verifyToken, requireCustomer, validateUpdateProfile, UserController.updateProfile);
+
+// Get admin/employee profile
+router.get('/admin-profile', verifyToken, requireAdminOrEmployee, UserController.getProfile);
+
+// Update admin/employee profile
+router.put('/admin-profile', verifyToken, requireAdminOrEmployee, validateUpdateProfile, UserController.updateProfile);
 
 // Get all business registration requests (Admin/Magnet Employee only)
 router.get('/business-requests', verifyToken, requireAdminOrEmployee, UserController.getBusinessRequests);
