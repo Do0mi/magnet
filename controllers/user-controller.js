@@ -23,10 +23,11 @@ exports.getProfile = async (req, res) => {
 
 exports.updateProfile = async (req, res) => {
   try {
-    const { firstname, lastname, country, language, imageUrl } = req.body;
+    const { firstname, lastname, phone, country, language, imageUrl } = req.body;
     let updateFields = { updatedAt: Date.now() };
     if (firstname) updateFields.firstname = firstname;
     if (lastname) updateFields.lastname = lastname;
+    if (phone !== undefined) updateFields.phone = phone;
     if (country) updateFields.country = country;
     if (language) updateFields.language = language;
     if (imageUrl !== undefined) updateFields.imageUrl = imageUrl;

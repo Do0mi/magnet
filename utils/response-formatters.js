@@ -26,11 +26,11 @@ const formatUser = (user, options = {}) => {
     firstname: user.firstname,
     lastname: user.lastname,
     email: user.email,
-    phone: user.phone,
+    phone: user.phone || null,
     role: user.role,
     country: user.country,
     language: user.language,
-    imageUrl: user.imageUrl,
+    imageUrl: user.imageUrl || null,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt
   };
