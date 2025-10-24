@@ -15,6 +15,7 @@ const Product = require('./models/product-model');
 const authRoutes = require('./routes/auth-routes');
 const userRoutes = require('./routes/user-routes');
 const productRoutes = require('./routes/product-routes');
+const publicProductRoutes = require('./routes/public-product-routes');
 const categoryRoutes = require('./routes/category-routes');
 const orderRoutes = require('./routes/order-routes');
 const reviewRoutes = require('./routes/review-routes');
@@ -134,6 +135,7 @@ app.set('io', io);
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/products', productRoutes);
+app.use('/api/public/products', publicProductRoutes); // Public routes for unauthorized users
 app.use('/api/categories', categoryRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/reviews', reviewRoutes);

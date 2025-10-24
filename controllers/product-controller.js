@@ -384,4 +384,218 @@ exports.declineProduct = async (req, res) => {
   } catch (err) {
     res.status(500).json({ status: 'error', message: getBilingualMessage('failed_decline_product') });
   }
+};
+
+// ===== PUBLIC PRODUCT CONTROLLERS FOR UNAUTHORIZED USERS =====
+
+// GET /public/products - Get all approved products (public access)
+exports.getPublicProducts = async (req, res) => {
+  try {
+    const language = req.query.lang || req.user?.language || 'en';
+    
+    // Extract query parameters
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const category = req.query.category;
+    const search = req.query.search;
+    const minPrice = req.query.minPrice;
+    const maxPrice = req.query.maxPrice;
+    
+    // Calculate skip value for pagination
+    const skip = (page - 1) * limit;
+    
+    // Build query object - ONLY approved products for public access
+    let query = {
+      status: 'approved' // Always filter for approved products only
+    };
+    
+    // Category filter
+    if (category) {
+      query['category.en'] = { $regex: category, $options: 'i' };
+    }
+    
+    // Search filter
+    if (search) {
+      query.$or = [
+        { 'name.en': { $regex: search, $options: 'i' } },
+        { 'name.ar': { $regex: search, $options: 'i' } },
+        { code: { $regex: search, $options: 'i' } }
+      ];
+    }
+    
+    // Price filter
+    if (minPrice || maxPrice) {
+      query.pricePerUnit = {};
+      if (minPrice) {
+        query.pricePerUnit.$gte = parseFloat(minPrice);
+      }
+      if (maxPrice) {
+        query.pricePerUnit.$lte = parseFloat(maxPrice);
+      }
+    }
+    
+    // Get total count for pagination
+    const total = await Product.countDocuments(query);
+    
+    // Execute query with pagination
+    const products = await Product.find(query)
+      .populate('owner', 'businessInfo.companyName') // Only show company name, not email
+      .select('-owner.email -owner.firstname -owner.lastname -owner.phone') // Hide sensitive user data
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+    
+    const formattedProducts = products.map(product => formatProduct(product, { language }));
+    
+    // Calculate basic stats (only for approved products)
+    const productStats = {
+      totalProducts: total,
+      averageRating: await Product.aggregate([
+        { $match: { status: 'approved', rating: { $gt: 0 } } },
+        { $group: { _id: null, avgRating: { $avg: '$rating' } } }
+      ]).then(result => result.length > 0 ? Math.round(result[0].avgRating * 100) / 100 : 0)
+    };
+    
+    res.status(200).json(createResponse('success', { 
+      products: formattedProducts,
+      stats: productStats
+    }, null, {
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(total / limit),
+        totalItems: total,
+        itemsPerPage: limit
+      }
+    }));
+  } catch (err) {
+    console.error('Get public products error:', err);
+    res.status(500).json({ status: 'error', message: getBilingualMessage('failed_get_products') });
+  }
+};
+
+// GET /public/products/:id - Get single approved product (public access)
+exports.getPublicProductById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const language = req.query.lang || req.user?.language || 'en';
+    
+    const product = await Product.findById(id)
+      .populate('owner', 'businessInfo.companyName') // Only show company name
+      .select('-owner.email -owner.firstname -owner.lastname -owner.phone'); // Hide sensitive user data
+    
+    if (!product) {
+      return res.status(404).json({ status: 'error', message: getBilingualMessage('product_not_found') });
+    }
+    
+    // Only allow access to approved products for public users
+    if (product.status !== 'approved') {
+      return res.status(404).json({ status: 'error', message: getBilingualMessage('product_not_found') });
+    }
+    
+    const formattedProduct = formatProduct(product, { language });
+    res.status(200).json(createResponse('success', { product: formattedProduct }));
+  } catch (err) {
+    res.status(500).json({ status: 'error', message: getBilingualMessage('failed_get_product') });
+  }
+};
+
+// GET /public/products/category/:category - Get products by category (public access)
+exports.getProductsByCategory = async (req, res) => {
+  try {
+    const { category } = req.params;
+    const language = req.query.lang || req.user?.language || 'en';
+    
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+    
+    // Build query for approved products in specific category
+    const query = {
+      status: 'approved',
+      $or: [
+        { 'category.en': { $regex: category, $options: 'i' } },
+        { 'category.ar': { $regex: category, $options: 'i' } }
+      ]
+    };
+    
+    const total = await Product.countDocuments(query);
+    
+    const products = await Product.find(query)
+      .populate('owner', 'businessInfo.companyName')
+      .select('-owner.email -owner.firstname -owner.lastname -owner.phone')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+    
+    const formattedProducts = products.map(product => formatProduct(product, { language }));
+    
+    res.status(200).json(createResponse('success', { 
+      products: formattedProducts,
+      category: category
+    }, null, {
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(total / limit),
+        totalItems: total,
+        itemsPerPage: limit
+      }
+    }));
+  } catch (err) {
+    console.error('Get products by category error:', err);
+    res.status(500).json({ status: 'error', message: getBilingualMessage('failed_get_products') });
+  }
+};
+
+// GET /public/products/search - Search products (public access)
+exports.searchProducts = async (req, res) => {
+  try {
+    const { q: searchTerm } = req.query;
+    const language = req.query.lang || req.user?.language || 'en';
+    
+    if (!searchTerm) {
+      return res.status(400).json({ status: 'error', message: 'Search term is required' });
+    }
+    
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+    
+    // Build search query for approved products only
+    const query = {
+      status: 'approved',
+      $or: [
+        { 'name.en': { $regex: searchTerm, $options: 'i' } },
+        { 'name.ar': { $regex: searchTerm, $options: 'i' } },
+        { code: { $regex: searchTerm, $options: 'i' } },
+        { 'category.en': { $regex: searchTerm, $options: 'i' } },
+        { 'category.ar': { $regex: searchTerm, $options: 'i' } }
+      ]
+    };
+    
+    const total = await Product.countDocuments(query);
+    
+    const products = await Product.find(query)
+      .populate('owner', 'businessInfo.companyName')
+      .select('-owner.email -owner.firstname -owner.lastname -owner.phone')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+    
+    const formattedProducts = products.map(product => formatProduct(product, { language }));
+    
+    res.status(200).json(createResponse('success', { 
+      products: formattedProducts,
+      searchTerm: searchTerm
+    }, null, {
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(total / limit),
+        totalItems: total,
+        itemsPerPage: limit
+      }
+    }));
+  } catch (err) {
+    console.error('Search products error:', err);
+    res.status(500).json({ status: 'error', message: getBilingualMessage('failed_get_products') });
+  }
 }; 
