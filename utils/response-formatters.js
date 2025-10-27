@@ -31,6 +31,7 @@ const formatUser = (user, options = {}) => {
     country: user.country,
     language: user.language,
     imageUrl: user.imageUrl || null,
+    isAllowed: user.isAllowed,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt
   };
@@ -38,15 +39,25 @@ const formatUser = (user, options = {}) => {
   if (includeVerification) {
     formatted.isEmailVerified = user.isEmailVerified;
     formatted.isPhoneVerified = user.isPhoneVerified;
-    formatted.isDisallowed = user.isDisallowed;
-    if (user.isDisallowed) {
-      formatted.disallowReason = user.disallowReason;
-      formatted.disallowedBy = user.disallowedBy;
-      formatted.disallowedAt = user.disallowedAt;
-    }
     if (user.allowedBy) {
       formatted.allowedBy = user.allowedBy;
       formatted.allowedAt = user.allowedAt;
+    }
+    if (user.disallowedBy) {
+      formatted.disallowReason = user.disallowReason;
+      formatted.disallowedBy = user.disallowedBy;
+      formatted.disallowedAt = user.disallowedAt;
+      
+      // If disallowedBy is populated, format it properly
+      if (typeof user.disallowedBy === 'object') {
+        formatted.disallowedBy = {
+          id: user.disallowedBy._id,
+          firstname: user.disallowedBy.firstname,
+          lastname: user.disallowedBy.lastname,
+          email: user.disallowedBy.email,
+          role: user.disallowedBy.role
+        };
+      }
     }
   }
 
@@ -56,15 +67,29 @@ const formatUser = (user, options = {}) => {
       vatNumber: user.businessInfo.vatNumber,
       companyName: user.businessInfo.companyName,
       companyType: user.businessInfo.companyType,
-      city: user.businessInfo.city,
-      district: user.businessInfo.district,
-      streetName: user.businessInfo.streetName,
-      isApproved: user.businessInfo.isApproved,
       approvalStatus: user.businessInfo.approvalStatus,
       approvedBy: user.businessInfo.approvedBy,
       approvedAt: user.businessInfo.approvedAt,
+      rejectedBy: user.businessInfo.rejectedBy,
+      rejectedAt: user.businessInfo.rejectedAt,
       rejectionReason: user.businessInfo.rejectionReason
     };
+
+    // Handle address fields - check if they exist directly or nested under address
+    if (user.businessInfo.address) {
+      formatted.businessInfo.address = {
+        city: user.businessInfo.address.city,
+        district: user.businessInfo.address.district,
+        streetName: user.businessInfo.address.streetName
+      };
+    } else {
+      // Fallback for old data structure where address fields were directly on businessInfo
+      formatted.businessInfo.address = {
+        city: user.businessInfo.city || null,
+        district: user.businessInfo.district || null,
+        streetName: user.businessInfo.streetName || null
+      };
+    }
     
     // If approvedBy is populated, format it properly
     if (user.businessInfo.approvedBy && typeof user.businessInfo.approvedBy === 'object') {
@@ -76,6 +101,17 @@ const formatUser = (user, options = {}) => {
         role: user.businessInfo.approvedBy.role
       };
     }
+    
+    // If rejectedBy is populated, format it properly
+    if (user.businessInfo.rejectedBy && typeof user.businessInfo.rejectedBy === 'object') {
+      formatted.businessInfo.rejectedBy = {
+        id: user.businessInfo.rejectedBy._id,
+        firstname: user.businessInfo.rejectedBy.firstname,
+        lastname: user.businessInfo.rejectedBy.lastname,
+        email: user.businessInfo.rejectedBy.email,
+        role: user.businessInfo.rejectedBy.role
+      };
+    }
   }
 
   if (includePassword) {
@@ -85,6 +121,21 @@ const formatUser = (user, options = {}) => {
   if (includeOTP) {
     formatted.emailOTP = user.emailOTP;
     formatted.phoneOTP = user.phoneOTP;
+  }
+
+  // Add accessPages for admin and employee roles
+  if (user.role === 'admin' || user.role === 'magnet_employee') {
+    formatted.accessPages = user.accessPages || {
+      dashboard: false,
+      analytics: false,
+      users: false,
+      products: false,
+      orders: false,
+      reviews: false,
+      wishlists: false,
+      categories: false,
+      addresses: false
+    };
   }
 
   return formatted;

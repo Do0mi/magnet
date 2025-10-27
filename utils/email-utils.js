@@ -188,10 +188,90 @@ const sendReviewRejectionNotification = async (to, userName, productName, reject
 
 
 
+// Function to send user disallow notification
+const sendUserDisallowNotification = async (to, userName, disallowReason) => {
+  try {
+    const transporter = createTransporter();
+    
+    const mailOptions = {
+      from: process.env.EMAIL_USER || '"Magnet" <noreply@magnetproject.com>',
+      to: to,
+      subject: 'Account Access Restricted',
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #dc3545;">Account Access Restricted</h2>
+          <p>Dear ${userName},</p>
+          <p>We regret to inform you that your account access has been restricted on our platform.</p>
+          <p><strong>Reason:</strong> ${disallowReason}</p>
+          <p>If you believe this action was taken in error or if you have any questions, please contact our support team for assistance.</p>
+          <p>We appreciate your understanding.</p>
+          <p>Thanks,<br>The Magnet Team</p>
+        </div>
+      `
+    };
+    
+    const info = await transporter.sendMail(mailOptions);
+    console.log('User disallow notification sent:', info.messageId);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error('User disallow notification failed:', {
+      error: error.message,
+      to,
+      time: new Date().toISOString()
+    });
+    return { 
+      success: false, 
+      error: 'Failed to send user disallow notification',
+      details: error.response || error.message 
+    };
+  }
+};
+
+// Function to send user allow notification
+const sendUserAllowNotification = async (to, userName) => {
+  try {
+    const transporter = createTransporter();
+    
+    const mailOptions = {
+      from: process.env.EMAIL_USER || '"Magnet" <noreply@magnetproject.com>',
+      to: to,
+      subject: 'Account Access Restored',
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #28a745;">Account Access Restored</h2>
+          <p>Dear ${userName},</p>
+          <p>Great news! Your account access has been restored and you can now use our platform normally.</p>
+          <p>We apologize for any inconvenience caused and thank you for your patience.</p>
+          <p>Welcome back!</p>
+          <p>Thanks,<br>The Magnet Team</p>
+        </div>
+      `
+    };
+    
+    const info = await transporter.sendMail(mailOptions);
+    console.log('User allow notification sent:', info.messageId);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error('User allow notification failed:', {
+      error: error.message,
+      to,
+      time: new Date().toISOString()
+    });
+    return { 
+      success: false, 
+      error: 'Failed to send user allow notification',
+      details: error.response || error.message 
+    };
+  }
+};
+
+
 module.exports = {
   generateOTP,
   sendOTPEmail,
   sendBusinessApprovalNotification,
   sendBusinessUnderReviewNotification,
-  sendReviewRejectionNotification
+  sendReviewRejectionNotification,
+  sendUserDisallowNotification,
+  sendUserAllowNotification
 };

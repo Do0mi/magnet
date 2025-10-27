@@ -85,7 +85,7 @@ const messages = {
     en: 'Account is not active. Please contact support.',
     ar: 'الحساب غير نشط. يرجى الاتصال بالدعم.'
   },
-  'login_successful': {
+  'login_success': {
     en: 'Login successful',
     ar: 'تم تسجيل الدخول بنجاح'
   },
@@ -703,7 +703,7 @@ const messages = {
     en: 'Your account has been disallowed. Please contact support.',
     ar: 'تم منع حسابك. يرجى الاتصال بالدعم.'
   },
-  'user_created_successfully': {
+  'user_created_success': {
     en: 'User created successfully',
     ar: 'تم إنشاء المستخدم بنجاح'
   },
@@ -727,7 +727,7 @@ const messages = {
     en: 'Failed to get user statistics',
     ar: 'فشل في الحصول على إحصائيات المستخدمين'
   },
-  'user_updated_successfully': {
+  'user_updated_success': {
     en: 'User updated successfully',
     ar: 'تم تحديث المستخدم بنجاح'
   },
@@ -735,7 +735,7 @@ const messages = {
     en: 'Failed to update user',
     ar: 'فشل في تحديث المستخدم'
   },
-  'user_deleted_successfully': {
+  'user_deleted_success': {
     en: 'User deleted successfully',
     ar: 'تم حذف المستخدم بنجاح'
   },
@@ -743,7 +743,7 @@ const messages = {
     en: 'Failed to delete user',
     ar: 'فشل في حذف المستخدم'
   },
-  'user_disallowed_successfully': {
+  'user_disallowed_success': {
     en: 'User disallowed successfully',
     ar: 'تم منع المستخدم بنجاح'
   },
@@ -751,13 +751,21 @@ const messages = {
     en: 'Failed to disallow user',
     ar: 'فشل في منع المستخدم'
   },
-  'user_allowed_successfully': {
+  'user_allowed_success': {
     en: 'User allowed successfully',
     ar: 'تم السماح للمستخدم بنجاح'
   },
   'user_allow_failed': {
     en: 'Failed to allow user',
     ar: 'فشل في السماح للمستخدم'
+  },
+  'user_toggled_success': {
+    en: 'User status toggled successfully',
+    ar: 'تم تبديل حالة المستخدم بنجاح'
+  },
+  'failed_toggle_user': {
+    en: 'Failed to toggle user status',
+    ar: 'فشل في تبديل حالة المستخدم'
   },
   'disallow_reason_required': {
     en: 'Disallow reason is required',

@@ -462,17 +462,36 @@ Authorization: Bearer <your-jwt-token>
     "password": "string",
     "role": "string",
     "country": "string",
-    "language": "string"
+    "language": "string",
+    "crNumber": "string (required if role is business)",
+    "vatNumber": "string (required if role is business)",
+    "companyName": "string (required if role is business)",
+    "companyType": "string (required if role is business)",
+    "city": "string (required if role is business)",
+    "district": "string (required if role is business)",
+    "streetName": "string (required if role is business)",
+    "accessPages": {
+      "dashboard": "boolean (for admin/employee)",
+      "analytics": "boolean (for admin/employee)",
+      "users": "boolean (for admin/employee)",
+      "products": "boolean (for admin/employee)",
+      "orders": "boolean (for admin/employee)",
+      "reviews": "boolean (for admin/employee)",
+      "wishlists": "boolean (for admin/employee)",
+      "categories": "boolean (for admin/employee)",
+      "addresses": "boolean (for admin/employee)"
+    }
   }
   ```
 
 #### Update User
 - **PUT** `/api/v1/dashboard/users/user/:id`
-- **Description**: Update existing user
+- **Description**: Update existing user (supports all fields based on user role)
 - **Authentication**: Required (Admin/Employee)
 - **Body**:
   ```json
   {
+    // Basic user fields
     "firstname": "string",
     "lastname": "string",
     "email": "string",
@@ -480,7 +499,37 @@ Authorization: Bearer <your-jwt-token>
     "role": "string",
     "country": "string",
     "language": "string",
-    "isAllowed": "boolean"
+    "imageUrl": "string",
+    "isAllowed": "boolean",
+    "isEmailVerified": "boolean",
+    "isPhoneVerified": "boolean",
+    
+    // Business specific fields (for business users)
+    "crNumber": "string",
+    "vatNumber": "string",
+    "companyName": "string",
+    "companyType": "string",
+    "city": "string",
+    "district": "string",
+    "streetName": "string",
+    "approvalStatus": "string (pending/approved/rejected)",
+    "rejectionReason": "string",
+    
+    // Access pages (for admin/employee users)
+    "accessPages": {
+      "dashboard": "boolean",
+      "analytics": "boolean",
+      "users": "boolean",
+      "products": "boolean",
+      "orders": "boolean",
+      "reviews": "boolean",
+      "wishlists": "boolean",
+      "categories": "boolean",
+      "addresses": "boolean"
+    },
+    
+    // Disallow fields (for customer users)
+    "disallowReason": "string"
   }
   ```
 
@@ -488,6 +537,16 @@ Authorization: Bearer <your-jwt-token>
 - **PUT** `/api/v1/dashboard/users/user/:id/toggle`
 - **Description**: Toggle user allow/disallow status
 - **Authentication**: Required (Admin/Employee)
+- **Body** (when disallowing user):
+  ```json
+  {
+    "disallowReason": "string (required when disallowing user)"
+  }
+  ```
+- **Body** (when allowing user):
+  ```json
+  {}
+  ```
 
 #### Delete User
 - **DELETE** `/api/v1/dashboard/users/user/:id`
@@ -995,6 +1054,101 @@ All API responses follow a consistent format:
     "totalPages": 10,
     "totalItems": 100,
     "limit": 10
+  }
+}
+```
+
+### User Response Format
+
+User objects in responses include the following fields:
+
+#### All Users
+```json
+{
+  "id": "string",
+  "firstname": "string",
+  "lastname": "string",
+  "email": "string",
+  "phone": "string",
+  "role": "string",
+  "country": "string",
+  "language": "string",
+  "imageUrl": "string",
+  "isAllowed": "boolean",
+  "createdAt": "string",
+  "updatedAt": "string",
+  "isEmailVerified": "boolean",
+  "isPhoneVerified": "boolean",
+  "allowedBy": {
+    "id": "string",
+    "firstname": "string",
+    "lastname": "string",
+    "email": "string",
+    "role": "string"
+  },
+  "allowedAt": "string",
+  "disallowReason": "string",
+  "disallowedBy": {
+    "id": "string",
+    "firstname": "string",
+    "lastname": "string",
+    "email": "string",
+    "role": "string"
+  },
+  "disallowedAt": "string"
+}
+```
+
+#### Business Users (Additional Fields)
+```json
+{
+  // ... all user fields above
+  "businessInfo": {
+    "crNumber": "string",
+    "vatNumber": "string",
+    "companyName": "string",
+    "companyType": "string",
+    "address": {
+      "city": "string",
+      "district": "string",
+      "streetName": "string"
+    },
+    "approvalStatus": "string",
+    "approvedBy": {
+      "id": "string",
+      "firstname": "string",
+      "lastname": "string",
+      "email": "string",
+      "role": "string"
+    },
+    "approvedAt": "string",
+    "rejectedBy": {
+      "id": "string",
+      "firstname": "string",
+      "lastname": "string",
+      "email": "string",
+      "role": "string"
+    },
+    "rejectedAt": "string",
+    "rejectionReason": "string"
+  }
+}
+```
+
+#### Admin/Employee Users (Additional Fields)
+```json
+{
+  // ... all user fields above
+  "accessPages": {
+    "dashboard": "boolean",
+    "analytics": "boolean",
+    "users": "boolean",
+    "products": "boolean",
+    "orders": "boolean",
+    "reviews": "boolean",
+    "wishlists": "boolean",
+    "categories": "boolean",
+    "addresses": "boolean"
   }
 }
 ```

@@ -4,6 +4,9 @@ const UserController = require('../../../controllers/dashboard/users/users-contr
 const verifyToken = require('../../../middleware/auth-middleware');
 const { requireAdminOrEmployee } = require('../../../middleware/role-middleware');
 
+// Parse JSON bodies for all routes
+router.use(express.json());
+
 // All dashboard user routes require authentication
 router.use(verifyToken);
 

@@ -39,6 +39,8 @@ const businessInfoSchema = {
   },
   approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   approvedAt: { type: Date },
+  rejectedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  rejectedAt: { type: Date },
   rejectionReason: { type: String }
 };
 
@@ -111,6 +113,11 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  
+  // Disallow information (for customer users)
+  disallowReason: { type: String },
+  disallowedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  disallowedAt: { type: Date },
   
   // Business information (only for business users)
   businessInfo: businessInfoSchema,

@@ -30,7 +30,26 @@ exports.createUser = async (req, res) => {
     const permissionError = validateAdminOrEmployeePermissions(req, res);
     if (permissionError) return;
 
-    const { firstname, lastname, email, phone, password, role, country, language = 'en' } = req.body;
+    const { 
+      firstname, 
+      lastname, 
+      email, 
+      phone, 
+      password, 
+      role, 
+      country, 
+      language = 'en',
+      // Business specific fields
+      crNumber,
+      vatNumber,
+      companyName,
+      companyType,
+      city,
+      district,
+      streetName,
+      // Access pages for admin/employee
+      accessPages
+    } = req.body;
 
     // Validate required fields
     if (!firstname || !lastname || !email || !password || !role) {
@@ -38,6 +57,25 @@ exports.createUser = async (req, res) => {
         status: 'error',
         message: getBilingualMessage('missing_required_fields')
       });
+    }
+
+    // Validate role
+    const validRoles = ['admin', 'magnet_employee', 'business', 'customer'];
+    if (!validRoles.includes(role)) {
+      return res.status(400).json({ 
+        status: 'error', 
+        message: getBilingualMessage('invalid_role') 
+      });
+    }
+
+    // Validate business fields if creating business user
+    if (role === 'business') {
+      if (!crNumber || !vatNumber || !companyName || !companyType || !city || !district || !streetName) {
+        return res.status(400).json({ 
+          status: 'error', 
+          message: getBilingualMessage('business_fields_required') 
+        });
+      }
     }
 
     // Check if email/phone already exists
@@ -59,8 +97,8 @@ exports.createUser = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Create user
-    const user = new User({
+    // Prepare user data
+    const userData = {
       firstname,
       lastname,
       email,
@@ -72,7 +110,45 @@ exports.createUser = async (req, res) => {
       isEmailVerified: true,
       isPhoneVerified: true,
       isAllowed: true
-    });
+    };
+
+    // Add business info if role is business
+    if (role === 'business') {
+      userData.businessInfo = {
+        crNumber,
+        vatNumber,
+        companyName,
+        companyType,
+        address: {
+          city,
+          district,
+          streetName
+        },
+        approvalStatus: 'approved', // Auto-approve when created by admin
+        approvedBy: req.user._id,
+        approvedAt: new Date()
+      };
+    }
+
+    // Add access pages if role is admin or employee
+    if (role === 'admin' || role === 'magnet_employee') {
+      if (accessPages && typeof accessPages === 'object') {
+        userData.accessPages = {
+          dashboard: accessPages.dashboard || false,
+          analytics: accessPages.analytics || false,
+          users: accessPages.users || false,
+          products: accessPages.products || false,
+          orders: accessPages.orders || false,
+          reviews: accessPages.reviews || false,
+          wishlists: accessPages.wishlists || false,
+          categories: accessPages.categories || false,
+          addresses: accessPages.addresses || false
+        };
+      }
+    }
+
+    // Create user
+    const user = new User(userData);
 
     await user.save();
 
@@ -107,7 +183,8 @@ exports.getUsers = async (req, res) => {
         { firstname: { $regex: search, $options: 'i' } },
         { lastname: { $regex: search, $options: 'i' } },
         { email: { $regex: search, $options: 'i' } },
-        { phone: { $regex: search, $options: 'i' } }
+        { phone: { $regex: search, $options: 'i' } },
+        { $expr: { $regexMatch: { input: { $concat: ['$firstname', ' ', '$lastname'] }, regex: search, options: 'i' } } }
       ];
     }
 
@@ -144,6 +221,7 @@ exports.toggleUser = async (req, res) => {
     const permissionError = validateAdminOrEmployeePermissions(req, res);
     if (permissionError) return;
 
+    const { disallowReason } = req.body || {};
     const user = await User.findById(req.params.id);
     if (!user) {
       return res.status(404).json({
@@ -152,11 +230,63 @@ exports.toggleUser = async (req, res) => {
       });
     }
 
+    // Check if user is being disallowed
+    const isBeingDisallowed = !user.isAllowed;
+    
+    // If user is being disallowed, disallowReason is required
+    if (isBeingDisallowed && !disallowReason) {
+      return res.status(400).json({
+        status: 'error',
+        message: getBilingualMessage('disallow_reason_required')
+      });
+    }
+
+    // Prepare update fields
+    const updateFields = { 
+      isAllowed: !user.isAllowed, 
+      updatedAt: Date.now() 
+    };
+
+    if (isBeingDisallowed) {
+      // User is being disallowed - set disallow fields
+      updateFields.disallowReason = disallowReason;
+      updateFields.disallowedBy = req.user._id;
+      updateFields.disallowedAt = new Date();
+    } else {
+      // User is being allowed - clear disallow fields
+      updateFields.disallowReason = null;
+      updateFields.disallowedBy = null;
+      updateFields.disallowedAt = null;
+    }
+
     const updatedUser = await User.findByIdAndUpdate(
       req.params.id,
-      { isAllowed: !user.isAllowed, updatedAt: Date.now() },
+      updateFields,
       { new: true }
     ).select('-password');
+
+    // Send appropriate email notification based on the NEW status
+    try {
+      if (updatedUser.isAllowed) {
+        // User is now allowed - send allow notification
+        const { sendUserAllowNotification } = require('../../../utils/email-utils');
+        await sendUserAllowNotification(
+          user.email,
+          `${user.firstname} ${user.lastname}`
+        );
+      } else {
+        // User is now disallowed - send disallow notification
+        const { sendUserDisallowNotification } = require('../../../utils/email-utils');
+        await sendUserDisallowNotification(
+          user.email,
+          `${user.firstname} ${user.lastname}`,
+          disallowReason
+        );
+      }
+    } catch (emailError) {
+      console.error('Email notification error:', emailError);
+      // Don't fail the request if email fails
+    }
 
     res.status(200).json(createResponse('success', {
       user: formatUser(updatedUser, { includeBusinessInfo: true })
@@ -204,9 +334,38 @@ exports.updateUser = async (req, res) => {
     const permissionError = validateAdminOrEmployeePermissions(req, res);
     if (permissionError) return;
 
-    const { firstname, lastname, email, phone, role, country, language, isAllowed } = req.body;
+    const { 
+      // Basic user fields
+      firstname, 
+      lastname, 
+      email, 
+      phone, 
+      role, 
+      country, 
+      language, 
+      imageUrl,
+      isAllowed,
+      isEmailVerified,
+      isPhoneVerified,
+      // Business specific fields
+      crNumber,
+      vatNumber,
+      companyName,
+      companyType,
+      city,
+      district,
+      streetName,
+      approvalStatus,
+      rejectionReason,
+      // Access pages for admin/employee
+      accessPages,
+      // Disallow fields for customers
+      disallowReason
+    } = req.body;
+
     const updateFields = { updatedAt: Date.now() };
 
+    // Update basic user fields
     if (firstname) updateFields.firstname = firstname;
     if (lastname) updateFields.lastname = lastname;
     if (email) updateFields.email = email;
@@ -214,7 +373,88 @@ exports.updateUser = async (req, res) => {
     if (role) updateFields.role = role;
     if (country) updateFields.country = country;
     if (language) updateFields.language = language;
+    if (imageUrl !== undefined) updateFields.imageUrl = imageUrl;
     if (isAllowed !== undefined) updateFields.isAllowed = isAllowed;
+    if (isEmailVerified !== undefined) updateFields.isEmailVerified = isEmailVerified;
+    if (isPhoneVerified !== undefined) updateFields.isPhoneVerified = isPhoneVerified;
+
+    // Get the current user to check their role
+    const currentUser = await User.findById(req.params.id);
+    if (!currentUser) {
+      return res.status(404).json({
+        status: 'error',
+        message: getBilingualMessage('user_not_found')
+      });
+    }
+
+    // Handle business info updates
+    if (currentUser.role === 'business' || role === 'business') {
+      const businessInfoUpdate = {};
+      
+      if (crNumber !== undefined) businessInfoUpdate.crNumber = crNumber;
+      if (vatNumber !== undefined) businessInfoUpdate.vatNumber = vatNumber;
+      if (companyName !== undefined) businessInfoUpdate.companyName = companyName;
+      if (companyType !== undefined) businessInfoUpdate.companyType = companyType;
+      if (approvalStatus !== undefined) businessInfoUpdate.approvalStatus = approvalStatus;
+      if (rejectionReason !== undefined) businessInfoUpdate.rejectionReason = rejectionReason;
+
+      // Handle address updates
+      if (city !== undefined || district !== undefined || streetName !== undefined) {
+        businessInfoUpdate.address = {
+          city: city !== undefined ? city : (currentUser.businessInfo?.address?.city || null),
+          district: district !== undefined ? district : (currentUser.businessInfo?.address?.district || null),
+          streetName: streetName !== undefined ? streetName : (currentUser.businessInfo?.address?.streetName || null)
+        };
+      }
+
+      // Handle approval/rejection tracking
+      if (approvalStatus === 'approved') {
+        businessInfoUpdate.approvedBy = req.user._id;
+        businessInfoUpdate.approvedAt = new Date();
+        businessInfoUpdate.rejectedBy = undefined;
+        businessInfoUpdate.rejectedAt = undefined;
+        businessInfoUpdate.rejectionReason = undefined;
+      } else if (approvalStatus === 'rejected') {
+        businessInfoUpdate.rejectedBy = req.user._id;
+        businessInfoUpdate.rejectedAt = new Date();
+        businessInfoUpdate.approvedBy = undefined;
+        businessInfoUpdate.approvedAt = undefined;
+      }
+
+      if (Object.keys(businessInfoUpdate).length > 0) {
+        updateFields.businessInfo = businessInfoUpdate;
+      }
+    }
+
+    // Handle access pages for admin/employee roles
+    if ((currentUser.role === 'admin' || currentUser.role === 'magnet_employee' || role === 'admin' || role === 'magnet_employee') && accessPages) {
+      if (typeof accessPages === 'object') {
+        updateFields.accessPages = {
+          dashboard: accessPages.dashboard !== undefined ? accessPages.dashboard : (currentUser.accessPages?.dashboard || false),
+          analytics: accessPages.analytics !== undefined ? accessPages.analytics : (currentUser.accessPages?.analytics || false),
+          users: accessPages.users !== undefined ? accessPages.users : (currentUser.accessPages?.users || false),
+          products: accessPages.products !== undefined ? accessPages.products : (currentUser.accessPages?.products || false),
+          orders: accessPages.orders !== undefined ? accessPages.orders : (currentUser.accessPages?.orders || false),
+          reviews: accessPages.reviews !== undefined ? accessPages.reviews : (currentUser.accessPages?.reviews || false),
+          wishlists: accessPages.wishlists !== undefined ? accessPages.wishlists : (currentUser.accessPages?.wishlists || false),
+          categories: accessPages.categories !== undefined ? accessPages.categories : (currentUser.accessPages?.categories || false),
+          addresses: accessPages.addresses !== undefined ? accessPages.addresses : (currentUser.accessPages?.addresses || false)
+        };
+      }
+    }
+
+    // Handle disallow fields for customer users
+    if ((currentUser.role === 'customer' || role === 'customer') && disallowReason !== undefined) {
+      if (disallowReason) {
+        updateFields.disallowReason = disallowReason;
+        updateFields.disallowedBy = req.user._id;
+        updateFields.disallowedAt = new Date();
+      } else {
+        updateFields.disallowReason = undefined;
+        updateFields.disallowedBy = undefined;
+        updateFields.disallowedAt = undefined;
+      }
+    }
 
     const user = await User.findByIdAndUpdate(
       req.params.id,
