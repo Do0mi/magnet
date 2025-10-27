@@ -876,6 +876,105 @@ Authorization: Bearer <your-jwt-token>
   }
   ```
 
+### Statistics (`/api/v1/dashboard/stats`)
+
+#### Get User Statistics
+- **GET** `/api/v1/dashboard/stats/users`
+- **Description**: Get comprehensive user statistics
+- **Authentication**: Required (Admin/Employee)
+- **Response**:
+  ```json
+  {
+    "totalUsers": "number",
+    "customers": "number",
+    "businesses": "number",
+    "admins": "number",
+    "employees": "number",
+    "allowedUsers": "number",
+    "disallowedUsers": "number",
+    "recentUsers": "number"
+  }
+  ```
+
+#### Get Order Statistics
+- **GET** `/api/v1/dashboard/stats/orders`
+- **Description**: Get comprehensive order statistics and revenue data
+- **Authentication**: Required (Admin/Employee)
+- **Response**:
+  ```json
+  {
+    "totalOrders": "number",
+    "pendingOrders": "number",
+    "confirmedOrders": "number",
+    "processingOrders": "number",
+    "shippedOrders": "number",
+    "deliveredOrders": "number",
+    "cancelledOrders": "number",
+    "refundedOrders": "number",
+    "totalRevenue": "number",
+    "recentOrders": "number"
+  }
+  ```
+
+#### Get Product Statistics
+- **GET** `/api/v1/dashboard/stats/products`
+- **Description**: Get comprehensive product statistics and category breakdown
+- **Authentication**: Required (Admin/Employee)
+- **Response**:
+  ```json
+  {
+    "totalProducts": "number",
+    "approvedProducts": "number",
+    "pendingProducts": "number",
+    "declinedProducts": "number",
+    "averagePrice": "number",
+    "productsByCategory": "array",
+    "recentProducts": "number"
+  }
+  ```
+
+#### Get Review Statistics
+- **GET** `/api/v1/dashboard/stats/reviews`
+- **Description**: Get comprehensive review statistics and rating breakdown
+- **Authentication**: Required (Admin/Employee)
+- **Response**:
+  ```json
+  {
+    "totalReviews": "number",
+    "approvedReviews": "number",
+    "pendingReviews": "number",
+    "rejectedReviews": "number",
+    "averageRating": "number",
+    "reviewsByRating": "array",
+    "recentReviews": "number"
+  }
+  ```
+
+#### Get General Statistics
+- **GET** `/api/v1/dashboard/stats/general`
+- **Description**: Get overall platform statistics and recent activity
+- **Authentication**: Required (Admin/Employee)
+- **Response**:
+  ```json
+  {
+    "overview": {
+      "totalUsers": "number",
+      "totalProducts": "number",
+      "totalOrders": "number",
+      "totalReviews": "number",
+      "totalWishlists": "number",
+      "totalAddresses": "number",
+      "totalRevenue": "number"
+    },
+    "recentActivity": {
+      "recentUsers": "number",
+      "recentProducts": "number",
+      "recentOrders": "number",
+      "recentReviews": "number"
+    }
+  }
+  ```
+
 ---
 
 ## Response Format
