@@ -3,13 +3,7 @@ const Product = require('../models/product-model');
 const { getBilingualMessage } = require('../utils/messages');
 const { formatOrder, createResponse } = require('../utils/response-formatters');
 
-// Legacy formatOrder function - now using the one from response-formatters
-const legacyFormatOrder = (order, language = 'en') => {
-  if (!order) return order;
-  
-  // Use the model's built-in localization method
-  return order.getLocalizedData(language);
-};
+
 
 // POST /orders
 exports.createOrder = async (req, res) => {
@@ -21,7 +15,6 @@ exports.createOrder = async (req, res) => {
     
     // Validate products and prepare items with prices for calculation
     const orderItems = [];
-    const productPrices = {};
     
     for (const item of items) {
       if (!item.product || !item.quantity || item.quantity <= 0) {
@@ -38,33 +31,26 @@ exports.createOrder = async (req, res) => {
         return res.status(400).json({ status: 'error', message: getBilingualMessage('product_not_approved') });
       }
       
-      const price = parseFloat(product.pricePerUnit) || 0;
-      productPrices[item.product] = price;
+      const unitPrice = parseFloat(product.pricePerUnit) || 0;
+      const itemTotal = unitPrice * item.quantity;
       
       orderItems.push({
         product: item.product,
         quantity: item.quantity,
-        itemTotal: price * item.quantity
+        unitPrice: unitPrice,
+        itemTotal: itemTotal
       });
     }
-    
-    // Convert English status to bilingual format using model's static method
-    const bilingualStatus = Order.convertStatusToBilingual('pending');
     
     const order = new Order({
       customer: req.user.id,
       items: orderItems,
       shippingAddress,
-      status: bilingualStatus,
-      statusLog: [{ 
-        status: bilingualStatus, 
-        timestamp: new Date(),
-        updatedBy: req.user.id
-      }]
+      status: Order.getOrderStatus().PENDING
     });
     
-    // Calculate total using the product prices we fetched
-    order.calculateTotal(productPrices);
+    // Add initial status log
+    order.addStatusLog(Order.getOrderStatus().PENDING, req.user.id, 'Order created');
     await order.save();
     
     // Populate the order for response
@@ -144,11 +130,11 @@ exports.getAllOrders = async (req, res) => {
 // PUT /orders/:id/status
 exports.updateOrderStatus = async (req, res) => {
   try {
-    const { status } = req.body;
+    const { status, note } = req.body;
     
-    // Use model's validation method instead of hardcoded array
-    if (!Order.isValidStatus(status)) {
-      const validStatuses = Order.getValidEnglishStatuses().join(', ');
+    // Validate status using model constants
+    const validStatuses = Object.values(Order.getOrderStatus());
+    if (!validStatuses.includes(status)) {
       return res.status(400).json({ 
         status: 'error', 
         message: getBilingualMessage('invalid_order_status'),
@@ -159,16 +145,8 @@ exports.updateOrderStatus = async (req, res) => {
     const order = await Order.findById(req.params.id);
     if (!order) return res.status(404).json({ status: 'error', message: getBilingualMessage('order_not_found') });
     
-    // Convert English status to bilingual format using model's static method
-    const bilingualStatus = Order.convertStatusToBilingual(status);
-    
-    order.status = bilingualStatus;
-    order.statusLog.push({ 
-      status: bilingualStatus, 
-      timestamp: new Date(),
-      updatedBy: req.user.id
-    });
-    order.updatedAt = new Date();
+    // Update status using model method
+    order.updateStatus(status, req.user.id, note || '');
     await order.save();
     
     // Emit real-time update via Socket.IO
@@ -197,7 +175,7 @@ exports.getStatusOptions = async (req, res) => {
   try {
     const language = req.query.lang || 'en';
     const statusMapping = Order.getStatusMapping();
-    const statusEnums = Order.getStatusEnums();
+    const orderStatus = Order.getOrderStatus();
     
     let statusOptions;
     if (language === 'both') {
@@ -211,8 +189,8 @@ exports.getStatusOptions = async (req, res) => {
     
     res.status(200).json(createResponse('success', { 
       statusOptions,
-      statusEnums, // Include the enums for reference
-      validEnglishStatuses: Order.getValidEnglishStatuses()
+      orderStatus, // Include the status constants for reference
+      validStatuses: Object.values(orderStatus)
     }, getBilingualMessage('status_options_retrieved')));
   } catch (err) {
     res.status(500).json({ status: 'error', message: getBilingualMessage('failed_get_status_options') });

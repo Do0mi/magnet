@@ -101,7 +101,7 @@ exports.businessRegister = async (req, res) => {
       email,
       phone,
       password: hashedPassword,
-      role: 'business',
+      role: User.getUserRoles().BUSINESS,
       country,
       isEmailVerified,
       isPhoneVerified,
@@ -110,11 +110,12 @@ exports.businessRegister = async (req, res) => {
         vatNumber,
         companyName,
         companyType,
-        city,
-        district,
-        streetName,
-        isApproved: false,
-        approvalStatus: 'pending'
+        address: {
+          city,
+          district,
+          streetName
+        },
+        approvalStatus: User.getBusinessStatus().PENDING
       }
     });
     await newBusiness.save();

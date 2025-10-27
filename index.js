@@ -11,9 +11,14 @@ const jwt = require('jsonwebtoken');
 const Order = require('./models/order-model');
 const Product = require('./models/product-model');
 
-// Routes
+// New API v1 Routes
+const dashboardRoutes = require('./routes/dashboard');
+const businessRoutes = require('./routes/business');
+const userRoutes = require('./routes/user');
+
+// Legacy Routes (keeping for backward compatibility)
 const authRoutes = require('./routes/auth-routes');
-const userRoutes = require('./routes/user-routes');
+const userRoutesLegacy = require('./routes/user-routes');
 const productRoutes = require('./routes/product-routes');
 const publicProductRoutes = require('./routes/public-product-routes');
 const categoryRoutes = require('./routes/category-routes');
@@ -131,9 +136,14 @@ io.on('connection', (socket) => {
 });
 app.set('io', io);
 
-// Routes
+// API v1 Routes
+app.use('/api/v1/dashboard', dashboardRoutes);
+app.use('/api/v1/business', businessRoutes);
+app.use('/api/v1/user', userRoutes);
+
+// Legacy Routes (keeping for backward compatibility)
 app.use('/api/auth', authRoutes);
-app.use('/api/user', userRoutes);
+app.use('/api/user-legacy', userRoutesLegacy);
 app.use('/api/products', productRoutes);
 app.use('/api/public/products', publicProductRoutes); // Public routes for unauthorized users
 app.use('/api/categories', categoryRoutes);

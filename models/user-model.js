@@ -1,41 +1,88 @@
 const mongoose = require('mongoose');
-const Schema = mongoose.Schema;
 
-const userSchema = new Schema({
-  // Basic user information
+// User roles constants
+const USER_ROLES = {
+  ADMIN: 'admin',
+  EMPLOYEE: 'magnet_employee', 
+  BUSINESS: 'business',
+  CUSTOMER: 'customer'
+};
+
+// Business approval status
+const BUSINESS_STATUS = {
+  PENDING: 'pending',
+  APPROVED: 'approved',
+  REJECTED: 'rejected'
+};
+
+// OTP schema for verification
+const otpSchema = {
+  code: { type: String },
+  expiresAt: { type: Date }
+};
+
+// Business information schema
+const businessInfoSchema = {
+  companyName: { type: String, trim: true },
+  crNumber: { type: String, trim: true },
+  vatNumber: { type: String, trim: true },
+  companyType: { type: String, trim: true },
+  address: {
+    city: { type: String, trim: true },
+    district: { type: String, trim: true },
+    streetName: { type: String, trim: true }
+  },
+  approvalStatus: {
+    type: String,
+    enum: Object.values(BUSINESS_STATUS),
+    default: BUSINESS_STATUS.PENDING
+  },
+  approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  approvedAt: { type: Date },
+  rejectionReason: { type: String }
+};
+
+// Main user schema
+const userSchema = new mongoose.Schema({
+  // Basic information
   firstname: {
     type: String,
     required: true,
-    trim: true
+    trim: true,
+    maxlength: 50
   },
   lastname: {
     type: String,
     required: true,
-    trim: true
+    trim: true,
+    maxlength: 50
   },
   email: {
     type: String,
     required: true,
     unique: true,
     trim: true,
-    lowercase: true
   },
   phone: {
     type: String,
     trim: true,
-    index: true,
-    sparse: true
+    sparse: true,
+    unique: true
   },
   password: {
     type: String,
     required: true,
-    trim: true
+    minlength: 6
   },
+  
+  // Role and permissions
   role: {
     type: String,
-    enum: ['admin', 'magnet_employee', 'business', 'customer'],
-    default: 'customer'
+    enum: Object.values(USER_ROLES),
+    default: USER_ROLES.CUSTOMER
   },
+  
+  // Profile information
   country: {
     type: String,
     required: true,
@@ -43,16 +90,15 @@ const userSchema = new Schema({
   },
   language: {
     type: String,
-    default: 'en',
-    enum: ['en', 'ar']
+    enum: ['en', 'ar'],
+    default: 'en'
   },
   imageUrl: {
     type: String,
-    trim: true,
-    default: null
+    trim: true
   },
   
-  // Verification fields
+  // Verification status
   isEmailVerified: {
     type: Boolean,
     default: false
@@ -61,119 +107,77 @@ const userSchema = new Schema({
     type: Boolean,
     default: false
   },
-  isDisallowed: {
+  isAllowed: {
     type: Boolean,
-    default: false
-  },
-  disallowReason: String,
-  disallowedBy: {
-    type: Schema.Types.ObjectId,
-    ref: 'User'
-  },
-  disallowedAt: Date,
-  allowedBy: {
-    type: Schema.Types.ObjectId,
-    ref: 'User'
-  },
-  allowedAt: Date,
-  emailOTP: {
-    code: String,
-    expiresAt: Date
-  },
-  phoneOTP: {
-    code: String,
-    expiresAt: Date
+    default: true
   },
   
-  // Business specific fields
-  businessInfo: {
-    crNumber: String,
-    vatNumber: String,
-    companyName: String,
-    companyType: String,
-    city: String,
-    district: String,
-    streetName: String,
-    isApproved: {
-      type: Boolean,
-      default: false
-    },
-    approvalStatus: {
-      type: String,
-      enum: ['pending', 'approved', 'rejected'],
-      default: 'pending'
-    },
-    approvedBy: {
-      type: Schema.Types.ObjectId,
-      ref: 'User'
-    },
-    approvedAt: Date,
-    rejectionReason: String
-  },
+  // Business information (only for business users)
+  businessInfo: businessInfoSchema,
+  
+  // Verification codes
+  emailOTP: otpSchema,
+  phoneOTP: otpSchema,
   
   // Password reset
-  passwordResetToken: String,
-  passwordResetExpires: Date,
+  passwordResetToken: { type: String },
+  passwordResetExpires: { type: Date },
   
-  // Timestamps
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now
+  // Access pages for dashboard
+  accessPages: {
+    dashboard: { type: Boolean, default: false },
+    analytics: { type: Boolean, default: false },
+    users: { type: Boolean, default: false },
+    products: { type: Boolean, default: false },
+    orders: { type: Boolean, default: false },
+    reviews: { type: Boolean, default: false },
+    wishlists: { type: Boolean, default: false },
+    categories: { type: Boolean, default: false },
+    addresses: { type: Boolean, default: false }
   }
 }, {
   timestamps: true
 });
 
-// Indexes for better query performance
-// userSchema.index({ email: 1 });
-// userSchema.index({ phone: 1 });
+// Indexes for better performance
 userSchema.index({ role: 1 });
 userSchema.index({ 'businessInfo.approvalStatus': 1 });
+userSchema.index({ isAllowed: 1 });
 
-// Pre-save middleware to update updatedAt
-userSchema.pre('save', function(next) {
-  this.updatedAt = new Date();
-  next();
-});
-
-// Method to generate OTP
+// Instance methods
 userSchema.methods.generateOTP = function() {
   return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
-// Method to check if user can login (business must be approved and not disallowed)
-userSchema.methods.canLogin = function() {
-  // Check if user is disallowed
-  if (this.isDisallowed) {
-    return false;
-  }
-  
-  if (this.role === 'business') {
-    return this.businessInfo.isApproved && this.businessInfo.approvalStatus === 'approved';
-  }
-  return true;
-};
-
-// Method to get full name
 userSchema.methods.getFullName = function() {
   return `${this.firstname} ${this.lastname}`;
 };
 
-// Virtual for full name
+userSchema.methods.canLogin = function() {
+  if (!this.isAllowed) return false;
+  
+  if (this.role === USER_ROLES.BUSINESS) {
+    return this.businessInfo.approvalStatus === BUSINESS_STATUS.APPROVED;
+  }
+  
+  return true;
+};
+
+userSchema.methods.isBusinessApproved = function() {
+  return this.role === USER_ROLES.BUSINESS && 
+         this.businessInfo.approvalStatus === BUSINESS_STATUS.APPROVED;
+};
+
+// Virtual fields
 userSchema.virtual('fullName').get(function() {
   return this.getFullName();
 });
 
-// Virtual for identifier (email or phone)
 userSchema.virtual('identifier').get(function() {
   return this.email || this.phone || null;
 });
 
-// Ensure virtual fields are serialized
+// JSON transformation to exclude sensitive data
 userSchema.set('toJSON', {
   virtuals: true,
   transform: function(doc, ret) {
@@ -181,8 +185,62 @@ userSchema.set('toJSON', {
     delete ret.emailOTP;
     delete ret.phoneOTP;
     delete ret.passwordResetToken;
+    delete ret.passwordResetExpires;
     return ret;
   }
 });
+
+// Pre-save middleware to set access pages based on role
+userSchema.pre('save', function(next) {
+  if (this.isNew || this.isModified('role')) {
+    if (this.role === USER_ROLES.ADMIN) {
+      // Admin has access to all pages
+      this.accessPages = {
+        dashboard: true,
+        analytics: true,
+        users: true,
+        products: true,
+        orders: true,
+        reviews: true,
+        wishlists: true,
+        categories: true,
+        addresses: true
+      };
+    } else if (this.role === USER_ROLES.EMPLOYEE) {
+      // Employee access is managed by admin - keep existing values or set defaults
+      if (!this.accessPages) {
+        this.accessPages = {
+          dashboard: false,
+          analytics: false,
+          users: false,
+          products: false,
+          orders: false,
+          reviews: false,
+          wishlists: false,
+          categories: false,
+          addresses: false
+        };
+      }
+    } else {
+      // Customer and Business have no access to dashboard pages
+      this.accessPages = {
+        dashboard: false,
+        analytics: false,
+        users: false,
+        products: false,
+        orders: false,
+        reviews: false,
+        wishlists: false,
+        categories: false,
+        addresses: false
+      };
+    }
+  }
+  next();
+});
+
+// Static methods
+userSchema.statics.getUserRoles = () => USER_ROLES;
+userSchema.statics.getBusinessStatus = () => BUSINESS_STATUS;
 
 module.exports = mongoose.model('User', userSchema);

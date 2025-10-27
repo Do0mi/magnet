@@ -22,24 +22,4 @@ const categorySchema = new mongoose.Schema({
 categorySchema.index({ 'name.en': 1 }, { unique: true });
 categorySchema.index({ 'name.ar': 1 }, { unique: true });
 
-// Method to get category data in specific language
-categorySchema.methods.getLocalizedData = function(language = 'en') {
-  const category = this.toObject();
-  
-  // If language is 'both', return the bilingual objects as they are
-  if (language === 'both') {
-    return category;
-  }
-  
-  // Convert bilingual fields to single language
-  if (category.name) {
-    category.name = category.name[language] || category.name.en;
-  }
-  if (category.description) {
-    category.description = category.description[language] || category.description.en;
-  }
-  
-  return category;
-};
-
 module.exports = mongoose.model('Category', categorySchema); 

@@ -1,0 +1,329 @@
+// User Auth Controller - User Authentication Management
+const User = require('../../../models/user-model');
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
+const { generateOTP, sendOTPEmail, sendBusinessUnderReviewNotification } = require('../../../utils/email-utils');
+const { generateOTP: generateSMSOTP, sendOTPSMS } = require('../../../utils/sms-utils');
+const { getBilingualMessage } = require('../../../utils/messages');
+const { formatUser, createResponse } = require('../../../utils/response-formatters');
+
+// In-memory OTP store (for demo; use Redis or similar in production)
+const otpStore = {};
+
+const generateToken = (user) => {
+  return jwt.sign(
+    { id: user._id, email: user.email, role: user.role },
+    process.env.JWT_SECRET || 'magnetprojecttokensecret',
+    { expiresIn: '7d' }
+  );
+};
+
+const isSaudiPhone = (phone) => {
+  return phone && (phone.startsWith('+966') || phone.startsWith('966') || phone.startsWith('00966'));
+};
+
+const getIdentifierType = (identifier) => {
+  const emailRegex = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+  return emailRegex.test(identifier) ? 'email' : 'phone';
+};
+
+// POST /api/v1/user/auth/register - Register user
+exports.register = async (req, res) => {
+  try {
+    const { firstname, lastname, email, phone, password, country, language = 'en' } = req.body;
+    const existingEmail = await User.findOne({ email });
+    if (existingEmail) {
+      return res.status(400).json({ status: 'error', message: getBilingualMessage('email_already_registered') });
+    }
+    if (phone) {
+      const existingPhone = await User.findOne({ phone });
+      if (existingPhone) {
+        return res.status(400).json({ status: 'error', message: getBilingualMessage('phone_already_registered') });
+      }
+    }
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+    let isEmailVerified = false;
+    let isPhoneVerified = false;
+    if (phone && isSaudiPhone(phone)) {
+      isPhoneVerified = true;
+      isEmailVerified = false;
+    } else if (email) {
+      isEmailVerified = true;
+      isPhoneVerified = false;
+    }
+    const user = new User({
+      firstname,
+      lastname,
+      email,
+      phone,
+      password: hashedPassword,
+      role: 'customer',
+      country,
+      language,
+      isEmailVerified,
+      isPhoneVerified,
+      isAllowed: true
+    });
+    await user.save();
+    const token = generateToken(user);
+    res.status(201).json(createResponse('success', {
+      user: formatUser(user),
+      token
+    }, getBilingualMessage('registration_success')));
+  } catch (err) {
+    console.error('Registration error:', err);
+    res.status(500).json({ status: 'error', message: getBilingualMessage('registration_failed') });
+  }
+};
+
+// POST /api/v1/user/auth/business-register - Business Register
+exports.businessRegister = async (req, res) => {
+  try {
+    const { firstname, lastname, email, phone, password, country, language = 'en', businessName, businessDescription, businessAddress, businessPhone, businessEmail, businessWebsite, businessLicense, businessType } = req.body;
+    const existingEmail = await User.findOne({ email });
+    if (existingEmail) {
+      return res.status(400).json({ status: 'error', message: getBilingualMessage('email_already_registered') });
+    }
+    if (phone) {
+      const existingPhone = await User.findOne({ phone });
+      if (existingPhone) {
+        return res.status(400).json({ status: 'error', message: getBilingualMessage('phone_already_registered') });
+      }
+    }
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+    let isEmailVerified = false;
+    let isPhoneVerified = false;
+    if (phone && isSaudiPhone(phone)) {
+      isPhoneVerified = true;
+      isEmailVerified = false;
+    } else if (email) {
+      isEmailVerified = true;
+      isPhoneVerified = false;
+    }
+    const user = new User({
+      firstname,
+      lastname,
+      email,
+      phone,
+      password: hashedPassword,
+      role: 'business',
+      country,
+      language,
+      isEmailVerified,
+      isPhoneVerified,
+      isAllowed: false,
+      businessName,
+      businessDescription,
+      businessAddress,
+      businessPhone,
+      businessEmail,
+      businessWebsite,
+      businessLicense,
+      businessType,
+      businessStatus: 'pending'
+    });
+    await user.save();
+    
+    // Send notification email
+    try {
+      await sendBusinessUnderReviewNotification(user);
+    } catch (emailError) {
+      console.error('Email notification error:', emailError);
+    }
+    
+    const token = generateToken(user);
+    res.status(201).json(createResponse('success', {
+      user: formatUser(user, { includeBusinessInfo: true }),
+      token
+    }, getBilingualMessage('business_registration_success')));
+  } catch (err) {
+    console.error('Business registration error:', err);
+    res.status(500).json({ status: 'error', message: getBilingualMessage('business_registration_failed') });
+  }
+};
+
+// POST /api/v1/user/auth/send-email-otp - Send Email OTP
+exports.sendEmailOTP = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const otp = generateOTP();
+    otpStore[email] = { otp, timestamp: Date.now() };
+    await sendOTPEmail(email, otp);
+    res.status(200).json(createResponse('success', null, getBilingualMessage('otp_sent_success')));
+  } catch (err) {
+    console.error('Send email OTP error:', err);
+    res.status(500).json({ status: 'error', message: getBilingualMessage('otp_send_failed') });
+  }
+};
+
+// POST /api/v1/user/auth/send-phone-otp - Send Phone OTP
+exports.sendPhoneOTP = async (req, res) => {
+  try {
+    const { phone } = req.body;
+    const otp = generateSMSOTP();
+    otpStore[phone] = { otp, timestamp: Date.now() };
+    await sendOTPSMS(phone, otp);
+    res.status(200).json(createResponse('success', null, getBilingualMessage('otp_sent_success')));
+  } catch (err) {
+    console.error('Send phone OTP error:', err);
+    res.status(500).json({ status: 'error', message: getBilingualMessage('otp_send_failed') });
+  }
+};
+
+// POST /api/v1/user/auth/confirm-otp - Confirm OTP
+exports.confirmOTP = async (req, res) => {
+  try {
+    const { identifier, otp } = req.body;
+    const storedOTP = otpStore[identifier];
+    if (!storedOTP || storedOTP.otp !== otp) {
+      return res.status(400).json({ status: 'error', message: getBilingualMessage('invalid_otp') });
+    }
+    if (Date.now() - storedOTP.timestamp > 300000) {
+      delete otpStore[identifier];
+      return res.status(400).json({ status: 'error', message: getBilingualMessage('otp_expired') });
+    }
+    delete otpStore[identifier];
+    res.status(200).json(createResponse('success', null, getBilingualMessage('otp_verified_success')));
+  } catch (err) {
+    console.error('Confirm OTP error:', err);
+    res.status(500).json({ status: 'error', message: getBilingualMessage('otp_verification_failed') });
+  }
+};
+
+// POST /api/v1/user/auth/login - Login
+exports.login = async (req, res) => {
+  try {
+    const { identifier, password } = req.body;
+    const identifierType = getIdentifierType(identifier);
+    const user = await User.findOne(identifierType === 'email' ? { email: identifier } : { phone: identifier });
+    if (!user) {
+      return res.status(400).json({ status: 'error', message: getBilingualMessage('invalid_credentials') });
+    }
+    if (!user.isAllowed) {
+      return res.status(403).json({ status: 'error', message: getBilingualMessage('account_not_allowed') });
+    }
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(400).json({ status: 'error', message: getBilingualMessage('invalid_credentials') });
+    }
+    const token = generateToken(user);
+    res.status(200).json(createResponse('success', {
+      user: formatUser(user, { includeBusinessInfo: true }),
+      token
+    }, getBilingualMessage('login_success')));
+  } catch (err) {
+    console.error('Login error:', err);
+    res.status(500).json({ status: 'error', message: getBilingualMessage('login_failed') });
+  }
+};
+
+// POST /api/v1/user/auth/login-with-otp - Login with OTP
+exports.loginWithOTP = async (req, res) => {
+  try {
+    const { identifier } = req.body;
+    const identifierType = getIdentifierType(identifier);
+    const user = await User.findOne(identifierType === 'email' ? { email: identifier } : { phone: identifier });
+    if (!user) {
+      return res.status(400).json({ status: 'error', message: getBilingualMessage('user_not_found') });
+    }
+    if (!user.isAllowed) {
+      return res.status(403).json({ status: 'error', message: getBilingualMessage('account_not_allowed') });
+    }
+    const otp = identifierType === 'email' ? generateOTP() : generateSMSOTP();
+    otpStore[identifier] = { otp, timestamp: Date.now() };
+    if (identifierType === 'email') {
+      await sendOTPEmail(identifier, otp);
+    } else {
+      await sendOTPSMS(identifier, otp);
+    }
+    res.status(200).json(createResponse('success', null, getBilingualMessage('otp_sent_success')));
+  } catch (err) {
+    console.error('Login with OTP error:', err);
+    res.status(500).json({ status: 'error', message: getBilingualMessage('otp_send_failed') });
+  }
+};
+
+// POST /api/v1/user/auth/confirm-login-otp - Confirm Login OTP
+exports.confirmLoginOTP = async (req, res) => {
+  try {
+    const { identifier, otp } = req.body;
+    const storedOTP = otpStore[identifier];
+    if (!storedOTP || storedOTP.otp !== otp) {
+      return res.status(400).json({ status: 'error', message: getBilingualMessage('invalid_otp') });
+    }
+    if (Date.now() - storedOTP.timestamp > 300000) {
+      delete otpStore[identifier];
+      return res.status(400).json({ status: 'error', message: getBilingualMessage('otp_expired') });
+    }
+    const identifierType = getIdentifierType(identifier);
+    const user = await User.findOne(identifierType === 'email' ? { email: identifier } : { phone: identifier });
+    if (!user) {
+      return res.status(400).json({ status: 'error', message: getBilingualMessage('user_not_found') });
+    }
+    if (!user.isAllowed) {
+      return res.status(403).json({ status: 'error', message: getBilingualMessage('account_not_allowed') });
+    }
+    delete otpStore[identifier];
+    const token = generateToken(user);
+    res.status(200).json(createResponse('success', {
+      user: formatUser(user, { includeBusinessInfo: true }),
+      token
+    }, getBilingualMessage('login_success')));
+  } catch (err) {
+    console.error('Confirm login OTP error:', err);
+    res.status(500).json({ status: 'error', message: getBilingualMessage('otp_verification_failed') });
+  }
+};
+
+
+// POST /api/v1/user/password - Change password (requires authentication)
+exports.changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        status: 'error',
+        message: getBilingualMessage('missing_required_fields')
+      });
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({
+        status: 'error',
+        message: getBilingualMessage('user_not_found')
+      });
+    }
+
+    // Verify current password
+    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
+    if (!isCurrentPasswordValid) {
+      return res.status(400).json({
+        status: 'error',
+        message: getBilingualMessage('invalid_current_password')
+      });
+    }
+
+    // Hash new password
+    const salt = await bcrypt.genSalt(10);
+    const hashedNewPassword = await bcrypt.hash(newPassword, salt);
+
+    // Update password
+    await User.findByIdAndUpdate(req.user.id, {
+      password: hashedNewPassword,
+      updatedAt: Date.now()
+    });
+
+    res.status(200).json(createResponse('success', null, getBilingualMessage('password_changed_success')));
+
+  } catch (err) {
+    console.error('Change password error:', err);
+    res.status(500).json({
+      status: 'error',
+      message: getBilingualMessage('failed_change_password')
+    });
+  }
+};

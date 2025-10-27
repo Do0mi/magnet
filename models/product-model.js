@@ -45,6 +45,16 @@ const productSchema = new mongoose.Schema({
     enum: ['pending', 'approved', 'declined'],
     default: 'pending'
   },
+  declinedReason: {
+    type: String,
+    required: function() {
+      return this.status === 'declined';
+    }
+  },
+  isAllowed: {
+    type: Boolean,
+    default: true
+  },
   owner: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
@@ -73,37 +83,6 @@ productSchema.virtual('descriptionByLang').get(function() {
   return this.description;
 });
 
-// Method to get product data in specific language
-productSchema.methods.getLocalizedData = function(language = 'en') {
-  const product = this.toObject();
-  
-  // If language is 'both', return the bilingual objects as they are
-  if (language === 'both') {
-    return product;
-  }
-  
-  // Convert bilingual fields to single language
-  if (product.name) {
-    product.name = product.name[language] || product.name.en;
-  }
-  if (product.description) {
-    product.description = product.description[language] || product.description.en;
-  }
-  if (product.category) {
-    product.category = product.category[language] || product.category.en;
-  }
-  if (product.unit) {
-    product.unit = product.unit[language] || product.unit.en;
-  }
-  if (product.customFields) {
-    product.customFields = product.customFields.map(field => ({
-      key: field.key[language] || field.key.en,
-      value: field.value[language] || field.value.en
-    }));
-  }
-  
-  return product;
-};
 
 // Method to get full bilingual data
 productSchema.methods.getBilingualData = function() {

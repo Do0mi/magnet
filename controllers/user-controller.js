@@ -52,7 +52,7 @@ exports.updateProfile = async (req, res) => {
 exports.getBusinessRequests = async (req, res) => {
   try {
     const { status = 'pending', page = 1, limit = 10 } = req.query;
-    const query = { role: 'business', 'businessInfo.approvalStatus': status };
+    const query = { role: User.getUserRoles().BUSINESS, 'businessInfo.approvalStatus': status };
     const skip = (page - 1) * limit;
     const businesses = await User.find(query)
       .select('-password -emailOTP -phoneOTP -passwordResetToken')
@@ -66,12 +66,12 @@ exports.getBusinessRequests = async (req, res) => {
     const businessStats = {
       totalBusinesses: total,
       byApprovalStatus: {
-        pending: await User.countDocuments({ role: 'business', 'businessInfo.approvalStatus': 'pending' }),
-        approved: await User.countDocuments({ role: 'business', 'businessInfo.approvalStatus': 'approved' }),
-        rejected: await User.countDocuments({ role: 'business', 'businessInfo.approvalStatus': 'rejected' })
+        pending: await User.countDocuments({ role: User.getUserRoles().BUSINESS, 'businessInfo.approvalStatus': User.getBusinessStatus().PENDING }),
+        approved: await User.countDocuments({ role: User.getUserRoles().BUSINESS, 'businessInfo.approvalStatus': User.getBusinessStatus().APPROVED }),
+        rejected: await User.countDocuments({ role: User.getUserRoles().BUSINESS, 'businessInfo.approvalStatus': User.getBusinessStatus().REJECTED })
       },
-      activeBusinesses: await User.countDocuments({ role: 'business', isDisallowed: false, 'businessInfo.approvalStatus': 'approved' }),
-      disallowedBusinesses: await User.countDocuments({ role: 'business', isDisallowed: true })
+      activeBusinesses: await User.countDocuments({ role: User.getUserRoles().BUSINESS, isAllowed: true, 'businessInfo.approvalStatus': User.getBusinessStatus().APPROVED }),
+      inactiveBusinesses: await User.countDocuments({ role: User.getUserRoles().BUSINESS, isAllowed: false })
     };
     
     res.status(200).json(createResponse('success', {
@@ -99,14 +99,13 @@ exports.businessApproval = async (req, res) => {
     if (!business) {
       return res.status(404).json({ status: 'error', message: getBilingualMessage('business_not_found') });
     }
-    if (business.role !== 'business') {
+    if (business.role !== User.getUserRoles().BUSINESS) {
       return res.status(400).json({ status: 'error', message: getBilingualMessage('user_not_business') });
     }
     business.businessInfo.approvalStatus = status;
-    business.businessInfo.isApproved = status === 'approved';
     business.businessInfo.approvedBy = adminId;
     business.businessInfo.approvedAt = new Date();
-    if (status === 'rejected' && reason) {
+    if (status === User.getBusinessStatus().REJECTED && reason) {
       business.businessInfo.rejectionReason = reason;
     }
     await business.save();
