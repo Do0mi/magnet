@@ -66,25 +66,31 @@ exports.createOrder = async (req, res) => {
         });
       }
 
-      const itemTotal = product.price * item.quantity;
+      const unitPrice = parseFloat(product.pricePerUnit);
+      
+      if (isNaN(unitPrice) || unitPrice <= 0) {
+        return res.status(400).json({
+          status: 'error',
+          message: getBilingualMessage('invalid_product_price')
+        });
+      }
+
+      const itemTotal = unitPrice * item.quantity;
       totalAmount += itemTotal;
 
       validatedItems.push({
         product: product._id,
         quantity: item.quantity,
-        price: product.price,
-        total: itemTotal
+        unitPrice: unitPrice,
+        itemTotal: itemTotal
       });
     }
 
-    // Generate order number
-    const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
-
     const order = new Order({
-      orderNumber,
       customer: req.user.id,
       items: validatedItems,
-      totalAmount,
+      subtotal: totalAmount,
+      total: totalAmount,
       shippingAddress,
       paymentMethod: paymentMethod || 'cash_on_delivery',
       status: 'pending',
@@ -101,11 +107,54 @@ exports.createOrder = async (req, res) => {
       );
     }
 
-    await order.populate('items.product', 'name price images');
-    await order.populate('shippingAddress', 'street city state postalCode country');
+    await order.populate('customer', 'firstname lastname email');
+    await order.populate('items.product', 'name pricePerUnit images');
+    await order.populate('shippingAddress', 'addressLine1 addressLine2 city state postalCode country');
+
+    // Format the order response
+    const formattedOrder = {
+      id: order._id,
+      orderNumber: `ORD-${order._id.toString().slice(-8).toUpperCase()}`,
+      customer: {
+        id: order.customer._id || order.customer,
+        name: (order.customer.firstname && order.customer.lastname) 
+          ? `${order.customer.firstname} ${order.customer.lastname}`.trim()
+          : (order.customer.fullName || `${req.user.firstname || ''} ${req.user.lastname || ''}`.trim() || 'Unknown User'),
+        email: order.customer.email || req.user.email
+      },
+      items: order.items.map(item => ({
+        id: item._id,
+        product: {
+          id: item.product._id,
+          name: item.product.name,
+          images: item.product.images,
+          pricePerUnit: item.product.pricePerUnit
+        },
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        itemTotal: item.itemTotal
+      })),
+      subtotal: order.subtotal,
+      shippingCost: order.shippingCost || 0,
+      total: order.total,
+      shippingAddress: {
+        id: order.shippingAddress._id,
+        addressLine1: order.shippingAddress.addressLine1,
+        addressLine2: order.shippingAddress.addressLine2,
+        city: order.shippingAddress.city,
+        state: order.shippingAddress.state,
+        postalCode: order.shippingAddress.postalCode,
+        country: order.shippingAddress.country
+      },
+      status: order.status,
+      paymentMethod: order.paymentMethod,
+      notes: order.notes,
+      createdAt: order.createdAt,
+      updatedAt: order.updatedAt
+    };
 
     res.status(201).json(createResponse('success', {
-      order
+      order: formattedOrder
     }, getBilingualMessage('order_created_success')));
 
   } catch (error) {
@@ -136,16 +185,59 @@ exports.getOrders = async (req, res) => {
     }
 
     const orders = await Order.find(filter)
-      .populate('items.product', 'name price images')
-      .populate('shippingAddress', 'street city state postalCode country')
+      .populate('customer', 'firstname lastname email')
+      .populate('items.product', 'name pricePerUnit images')
+      .populate('shippingAddress', 'addressLine1 addressLine2 city state postalCode country')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
 
     const total = await Order.countDocuments(filter);
 
+    // Format orders response
+    const formattedOrders = orders.map(order => ({
+      id: order._id,
+      orderNumber: `ORD-${order._id.toString().slice(-8).toUpperCase()}`,
+      customer: {
+        id: order.customer._id || order.customer,
+        name: (order.customer.firstname && order.customer.lastname) 
+          ? `${order.customer.firstname} ${order.customer.lastname}`.trim()
+          : (order.customer.fullName || `${req.user.firstname || ''} ${req.user.lastname || ''}`.trim() || 'Unknown User'),
+        email: order.customer.email || req.user.email
+      },
+      items: order.items.map(item => ({
+        id: item._id,
+        product: {
+          id: item.product._id,
+          name: item.product.name,
+          images: item.product.images,
+          pricePerUnit: item.product.pricePerUnit
+        },
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        itemTotal: item.itemTotal
+      })),
+      subtotal: order.subtotal,
+      shippingCost: order.shippingCost || 0,
+      total: order.total,
+      shippingAddress: {
+        id: order.shippingAddress._id,
+        addressLine1: order.shippingAddress.addressLine1,
+        addressLine2: order.shippingAddress.addressLine2,
+        city: order.shippingAddress.city,
+        state: order.shippingAddress.state,
+        postalCode: order.shippingAddress.postalCode,
+        country: order.shippingAddress.country
+      },
+      status: order.status,
+      paymentMethod: order.paymentMethod,
+      notes: order.notes,
+      createdAt: order.createdAt,
+      updatedAt: order.updatedAt
+    }));
+
     res.status(200).json(createResponse('success', {
-      orders,
+      orders: formattedOrders,
       pagination: {
         currentPage: parseInt(page),
         totalPages: Math.ceil(total / limit),
@@ -173,8 +265,9 @@ exports.getOrderById = async (req, res) => {
       _id: req.params.id,
       customer: req.user.id
     })
-      .populate('items.product', 'name price images description')
-      .populate('shippingAddress', 'street city state postalCode country');
+      .populate('customer', 'firstname lastname email')
+      .populate('items.product', 'name pricePerUnit images description')
+      .populate('shippingAddress', 'addressLine1 addressLine2 city state postalCode country');
 
     if (!order) {
       return res.status(404).json({
@@ -183,7 +276,50 @@ exports.getOrderById = async (req, res) => {
       });
     }
 
-    res.status(200).json(createResponse('success', { order }));
+    // Format the order response
+    const formattedOrder = {
+      id: order._id,
+      orderNumber: `ORD-${order._id.toString().slice(-8).toUpperCase()}`,
+      customer: {
+        id: order.customer._id || order.customer,
+        name: (order.customer.firstname && order.customer.lastname) 
+          ? `${order.customer.firstname} ${order.customer.lastname}`.trim()
+          : (order.customer.fullName || `${req.user.firstname || ''} ${req.user.lastname || ''}`.trim() || 'Unknown User'),
+        email: order.customer.email || req.user.email
+      },
+      items: order.items.map(item => ({
+        id: item._id,
+        product: {
+          id: item.product._id,
+          name: item.product.name,
+          images: item.product.images,
+          pricePerUnit: item.product.pricePerUnit,
+          description: item.product.description
+        },
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        itemTotal: item.itemTotal
+      })),
+      subtotal: order.subtotal,
+      shippingCost: order.shippingCost || 0,
+      total: order.total,
+      shippingAddress: {
+        id: order.shippingAddress._id,
+        addressLine1: order.shippingAddress.addressLine1,
+        addressLine2: order.shippingAddress.addressLine2,
+        city: order.shippingAddress.city,
+        state: order.shippingAddress.state,
+        postalCode: order.shippingAddress.postalCode,
+        country: order.shippingAddress.country
+      },
+      status: order.status,
+      paymentMethod: order.paymentMethod,
+      notes: order.notes,
+      createdAt: order.createdAt,
+      updatedAt: order.updatedAt
+    };
+
+    res.status(200).json(createResponse('success', { order: formattedOrder }));
 
   } catch (error) {
     console.error('Get order by ID error:', error);
@@ -246,19 +382,29 @@ exports.updateOrder = async (req, res) => {
           });
         }
 
-        const itemTotal = product.price * item.quantity;
+        const unitPrice = parseFloat(product.pricePerUnit);
+        
+        if (isNaN(unitPrice) || unitPrice <= 0) {
+          return res.status(400).json({
+            status: 'error',
+            message: getBilingualMessage('invalid_product_price')
+          });
+        }
+
+        const itemTotal = unitPrice * item.quantity;
         totalAmount += itemTotal;
 
         validatedItems.push({
           product: product._id,
           quantity: item.quantity,
-          price: product.price,
-          total: itemTotal
+          unitPrice: unitPrice,
+          itemTotal: itemTotal
         });
       }
 
       updateFields.items = validatedItems;
-      updateFields.totalAmount = totalAmount;
+      updateFields.subtotal = totalAmount;
+      updateFields.total = totalAmount;
     }
 
     if (shippingAddress) updateFields.shippingAddress = shippingAddress;
@@ -269,11 +415,54 @@ exports.updateOrder = async (req, res) => {
       updateFields,
       { new: true, runValidators: true }
     )
-      .populate('items.product', 'name price images')
-      .populate('shippingAddress', 'street city state postalCode country');
+      .populate('customer', 'firstname lastname email')
+      .populate('items.product', 'name pricePerUnit images')
+      .populate('shippingAddress', 'addressLine1 addressLine2 city state postalCode country');
+
+    // Format the order response
+    const formattedOrder = {
+      id: order._id,
+      orderNumber: `ORD-${order._id.toString().slice(-8).toUpperCase()}`,
+      customer: {
+        id: order.customer._id || order.customer,
+        name: (order.customer.firstname && order.customer.lastname) 
+          ? `${order.customer.firstname} ${order.customer.lastname}`.trim()
+          : (order.customer.fullName || `${req.user.firstname || ''} ${req.user.lastname || ''}`.trim() || 'Unknown User'),
+        email: order.customer.email || req.user.email
+      },
+      items: order.items.map(item => ({
+        id: item._id,
+        product: {
+          id: item.product._id,
+          name: item.product.name,
+          images: item.product.images,
+          pricePerUnit: item.product.pricePerUnit
+        },
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        itemTotal: item.itemTotal
+      })),
+      subtotal: order.subtotal,
+      shippingCost: order.shippingCost || 0,
+      total: order.total,
+      shippingAddress: {
+        id: order.shippingAddress._id,
+        addressLine1: order.shippingAddress.addressLine1,
+        addressLine2: order.shippingAddress.addressLine2,
+        city: order.shippingAddress.city,
+        state: order.shippingAddress.state,
+        postalCode: order.shippingAddress.postalCode,
+        country: order.shippingAddress.country
+      },
+      status: order.status,
+      paymentMethod: order.paymentMethod,
+      notes: order.notes,
+      createdAt: order.createdAt,
+      updatedAt: order.updatedAt
+    };
 
     res.status(200).json(createResponse('success', {
-      order
+      order: formattedOrder
     }, getBilingualMessage('order_updated_success')));
 
   } catch (error) {
@@ -320,8 +509,9 @@ exports.cancelOrder = async (req, res) => {
       },
       { new: true, runValidators: true }
     )
-      .populate('items.product', 'name price images')
-      .populate('shippingAddress', 'street city state postalCode country');
+      .populate('customer', 'firstname lastname email')
+      .populate('items.product', 'name pricePerUnit images')
+      .populate('shippingAddress', 'addressLine1 addressLine2 city state postalCode country');
 
     // Restore product stock
     for (const item of updatedOrder.items) {
@@ -331,8 +521,50 @@ exports.cancelOrder = async (req, res) => {
       );
     }
 
+    // Format the order response
+    const formattedOrder = {
+      id: updatedOrder._id,
+      orderNumber: `ORD-${updatedOrder._id.toString().slice(-8).toUpperCase()}`,
+      customer: {
+        id: updatedOrder.customer._id || updatedOrder.customer,
+        name: (updatedOrder.customer.firstname && updatedOrder.customer.lastname) 
+          ? `${updatedOrder.customer.firstname} ${updatedOrder.customer.lastname}`.trim()
+          : (updatedOrder.customer.fullName || `${req.user.firstname || ''} ${req.user.lastname || ''}`.trim() || 'Unknown User'),
+        email: updatedOrder.customer.email || req.user.email
+      },
+      items: updatedOrder.items.map(item => ({
+        id: item._id,
+        product: {
+          id: item.product._id,
+          name: item.product.name,
+          images: item.product.images,
+          pricePerUnit: item.product.pricePerUnit
+        },
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        itemTotal: item.itemTotal
+      })),
+      subtotal: updatedOrder.subtotal,
+      shippingCost: updatedOrder.shippingCost || 0,
+      total: updatedOrder.total,
+      shippingAddress: {
+        id: updatedOrder.shippingAddress._id,
+        addressLine1: updatedOrder.shippingAddress.addressLine1,
+        addressLine2: updatedOrder.shippingAddress.addressLine2,
+        city: updatedOrder.shippingAddress.city,
+        state: updatedOrder.shippingAddress.state,
+        postalCode: updatedOrder.shippingAddress.postalCode,
+        country: updatedOrder.shippingAddress.country
+      },
+      status: updatedOrder.status,
+      paymentMethod: updatedOrder.paymentMethod,
+      notes: updatedOrder.notes,
+      createdAt: updatedOrder.createdAt,
+      updatedAt: updatedOrder.updatedAt
+    };
+
     res.status(200).json(createResponse('success', {
-      order: updatedOrder
+      order: formattedOrder
     }, getBilingualMessage('order_cancelled_success')));
 
   } catch (error) {

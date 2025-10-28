@@ -1,13 +1,28 @@
 const Product = require('../models/product-model');
 
 async function generateProductCode() {
-  const lastProduct = await Product.findOne().sort({ createdAt: -1 }).select('code');
-  if (!lastProduct || !/^A\d{3}$/.test(lastProduct.code)) {
-    return 'A001';
+  let code;
+  let isUnique = false;
+  
+  // Keep generating until we get a unique code
+  while (!isUnique) {
+    // Generate random alphabet letter (A-Z)
+    const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const randomLetter = alphabet[Math.floor(Math.random() * alphabet.length)];
+    
+    // Generate random 2-digit number (00-99)
+    const randomNumber = Math.floor(Math.random() * 100).toString().padStart(2, '0');
+    
+    code = `${randomLetter}${randomNumber}`;
+    
+    // Check if this code already exists
+    const existingProduct = await Product.findOne({ code });
+    if (!existingProduct) {
+      isUnique = true;
+    }
   }
-  const lastNumber = parseInt(lastProduct.code.slice(1));
-  const nextNumber = (lastNumber + 1).toString().padStart(3, '0');
-  return `A${nextNumber}`;
+  
+  return code;
 }
 
 module.exports = generateProductCode; 

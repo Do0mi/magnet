@@ -174,6 +174,10 @@ Authorization: Bearer <your-jwt-token>
   - `limit` (optional): Items per page
   - `category` (optional): Filter by category
   - `search` (optional): Search term
+  - `minPrice` (optional): Minimum price filter
+  - `maxPrice` (optional): Maximum price filter
+  - `sortBy` (optional): Sort field (default: createdAt)
+  - `sortOrder` (optional): Sort order (default: desc)
 
 #### Get Product by ID
 - **GET** `/api/v1/user/products/:id`
@@ -302,6 +306,33 @@ Authorization: Bearer <your-jwt-token>
   }
   ```
 
+### Reviews (`/api/v1/user/reviews`)
+
+#### Add Review
+- **POST** `/api/v1/user/reviews/products/:id/reviews`
+- **Description**: Add a review to a product
+- **Authentication**: Required (Customer)
+- **Body**:
+  ```json
+  {
+    "rating": "number (1-5)",
+    "comment": "string"
+  }
+  ```
+
+#### Get Product Reviews
+- **GET** `/api/v1/user/reviews/products/:id/reviews`
+- **Description**: Get all reviews for a specific product
+- **Authentication**: Required (Customer)
+- **Query Parameters**:
+  - `page` (optional): Page number
+  - `limit` (optional): Items per page
+
+#### Delete Review
+- **DELETE** `/api/v1/user/reviews/products/:id/reviews/:reviewId`
+- **Description**: Delete a review (only own reviews)
+- **Authentication**: Required (Customer)
+
 ---
 
 ## 🏢 Business Routes (`/api/v1/business`)
@@ -316,6 +347,7 @@ Authorization: Bearer <your-jwt-token>
   - `page` (optional): Page number
   - `limit` (optional): Items per page
   - `status` (optional): Filter by product status
+  - `search` (optional): Search term
 
 #### Get Product by ID
 - **GET** `/api/v1/business/products/:id`
@@ -329,13 +361,26 @@ Authorization: Bearer <your-jwt-token>
 - **Body**:
   ```json
   {
-    "name": "string",
-    "description": "string",
-    "price": "number",
-    "categoryId": "string",
-    "images": "array",
+    "code": "string",
+    "category": "string",
+    "name": {
+      "en": "string",
+      "ar": "string"
+    },
+    "description": {
+      "en": "string",
+      "ar": "string"
+    },
+    "unit": {
+      "en": "string",
+      "ar": "string"
+    },
+    "minOrder": "number",
+    "pricePerUnit": "number",
     "stock": "number",
-    "isAllowed": "boolean"
+    "images": "array",
+    "customFields": "array",
+    "attachments": "array"
   }
   ```
 
@@ -346,13 +391,27 @@ Authorization: Bearer <your-jwt-token>
 - **Body**:
   ```json
   {
-    "name": "string",
-    "description": "string",
-    "price": "number",
-    "categoryId": "string",
-    "images": "array",
+    "code": "string",
+    "category": "string",
+    "name": {
+      "en": "string",
+      "ar": "string"
+    },
+    "description": {
+      "en": "string",
+      "ar": "string"
+    },
+    "unit": {
+      "en": "string",
+      "ar": "string"
+    },
+    "minOrder": "number",
+    "pricePerUnit": "number",
     "stock": "number",
-    "isAllowed": "boolean"
+    "images": "array",
+    "customFields": "array",
+    "attachments": "array",
+    "status": "string"
   }
   ```
 
@@ -563,8 +622,8 @@ Authorization: Bearer <your-jwt-token>
   - `page` (optional): Page number
   - `limit` (optional): Items per page
   - `category` (optional): Filter by category
-  - `businessId` (optional): Filter by business user
   - `status` (optional): Filter by approval status
+  - `search` (optional): Search term
 
 #### Get Product by ID
 - **GET** `/api/v1/dashboard/products/:id`
@@ -578,13 +637,26 @@ Authorization: Bearer <your-jwt-token>
 - **Body**:
   ```json
   {
-    "name": "string",
-    "description": "string",
-    "price": "number",
-    "categoryId": "string",
-    "businessId": "string",
+    "code": "string",
+    "category": "string",
+    "name": {
+      "en": "string",
+      "ar": "string"
+    },
+    "description": {
+      "en": "string",
+      "ar": "string"
+    },
+    "unit": {
+      "en": "string",
+      "ar": "string"
+    },
+    "minOrder": "number",
+    "pricePerUnit": "number",
+    "stock": "number",
     "images": "array",
-    "stock": "number"
+    "customFields": "array",
+    "attachments": "array"
   }
   ```
 
@@ -595,12 +667,27 @@ Authorization: Bearer <your-jwt-token>
 - **Body**:
   ```json
   {
-    "name": "string",
-    "description": "string",
-    "price": "number",
-    "categoryId": "string",
+    "code": "string",
+    "category": "string",
+    "name": {
+      "en": "string",
+      "ar": "string"
+    },
+    "description": {
+      "en": "string",
+      "ar": "string"
+    },
+    "unit": {
+      "en": "string",
+      "ar": "string"
+    },
+    "minOrder": "number",
+    "pricePerUnit": "number",
+    "stock": "number",
     "images": "array",
-    "stock": "number"
+    "customFields": "array",
+    "attachments": "array",
+    "status": "string"
   }
   ```
 
@@ -618,6 +705,12 @@ Authorization: Bearer <your-jwt-token>
 - **PUT** `/api/v1/dashboard/products/product/:id/decline`
 - **Description**: Decline product
 - **Authentication**: Required (Admin/Employee)
+- **Body**:
+  ```json
+  {
+    "reason": "string"
+  }
+  ```
 
 #### Toggle Product
 - **PUT** `/api/v1/dashboard/products/product/:id/toggle`
@@ -628,11 +721,17 @@ Authorization: Bearer <your-jwt-token>
 - **GET** `/api/v1/dashboard/products/:id/reviews`
 - **Description**: Get all reviews for specific product
 - **Authentication**: Required (Admin/Employee)
+- **Query Parameters**:
+  - `page` (optional): Page number
+  - `limit` (optional): Items per page
 
 #### Get Product Orders
 - **GET** `/api/v1/dashboard/products/:id/orders`
 - **Description**: Get all orders containing specific product
 - **Authentication**: Required (Admin/Employee)
+- **Query Parameters**:
+  - `page` (optional): Page number
+  - `limit` (optional): Items per page
 
 #### Get Product Review by ID
 - **GET** `/api/v1/dashboard/products/:productId/reviews/:reviewId`
@@ -650,6 +749,11 @@ Authorization: Bearer <your-jwt-token>
 - **GET** `/api/v1/dashboard/categories`
 - **Description**: Get all categories
 - **Authentication**: Required (Admin/Employee)
+- **Query Parameters**:
+  - `page` (optional): Page number
+  - `limit` (optional): Items per page
+  - `search` (optional): Search term
+  - `status` (optional): Filter by status (active/inactive)
 
 #### Get Category by ID
 - **GET** `/api/v1/dashboard/categories/:id`
@@ -663,9 +767,15 @@ Authorization: Bearer <your-jwt-token>
 - **Body**:
   ```json
   {
-    "name": "string",
-    "description": "string",
-    "isAllowed": "boolean"
+    "name": {
+      "en": "string",
+      "ar": "string"
+    },
+    "description": {
+      "en": "string",
+      "ar": "string"
+    },
+    "status": "string (active/inactive)"
   }
   ```
 
@@ -676,9 +786,15 @@ Authorization: Bearer <your-jwt-token>
 - **Body**:
   ```json
   {
-    "name": "string",
-    "description": "string",
-    "isAllowed": "boolean"
+    "name": {
+      "en": "string",
+      "ar": "string"
+    },
+    "description": {
+      "en": "string",
+      "ar": "string"
+    },
+    "status": "string (active/inactive)"
   }
   ```
 
@@ -1038,7 +1154,20 @@ Authorization: Bearer <your-jwt-token>
 
 ## Response Format
 
-All API responses follow a consistent format:
+All API responses follow a consistent format and return both English and Arabic languages by default:
+
+### Bilingual Response Format
+All endpoints now automatically return both English and Arabic content without requiring the `lang=both` parameter. Bilingual fields are structured as:
+```json
+{
+  "fieldName": {
+    "en": "English content",
+    "ar": "المحتوى العربي"
+  }
+}
+```
+
+### Standard Response Format
 
 ### Success Response
 ```json
@@ -1055,6 +1184,90 @@ All API responses follow a consistent format:
     "totalItems": 100,
     "limit": 10
   }
+}
+```
+
+### Product Response Format
+
+Product objects in responses include the following bilingual fields:
+
+#### All Products
+```json
+{
+  "id": "string",
+  "code": "string",
+  "name": {
+    "en": "string",
+    "ar": "string"
+  },
+  "description": {
+    "en": "string",
+    "ar": "string"
+  },
+  "category": {
+    "en": "string",
+    "ar": "string"
+  },
+  "unit": {
+    "en": "string",
+    "ar": "string"
+  },
+  "minOrder": "number",
+  "pricePerUnit": "number",
+  "stock": "number",
+  "images": "array",
+  "customFields": "array",
+  "attachments": "array",
+  "rating": "number",
+  "status": "string",
+  "isAllowed": "boolean",
+  "owner": {
+    "id": "string",
+    "firstname": "string",
+    "lastname": "string",
+    "email": "string",
+    "businessInfo": {
+      "companyName": "string"
+    }
+  },
+  "approvedBy": {
+    "id": "string",
+    "firstname": "string",
+    "lastname": "string",
+    "email": "string",
+    "role": "string"
+  },
+  "createdAt": "string",
+  "updatedAt": "string"
+}
+```
+
+### Category Response Format
+
+Category objects in responses include the following bilingual fields:
+
+#### All Categories
+```json
+{
+  "id": "string",
+  "name": {
+    "en": "string",
+    "ar": "string"
+  },
+  "description": {
+    "en": "string",
+    "ar": "string"
+  },
+  "status": "string (active/inactive)",
+  "createdBy": {
+    "id": "string",
+    "firstname": "string",
+    "lastname": "string",
+    "email": "string",
+    "role": "string"
+  },
+  "createdAt": "string",
+  "updatedAt": "string"
 }
 ```
 

@@ -12,18 +12,18 @@
     "dev": "nodemon index.js"
   },
   "dependencies": {
-    "@vonage/server-sdk": "^3.21.0",
+    "@vonage/server-sdk": "^3.25.1",
     "bcrypt": "^5.1.1",
     "bcryptjs": "^2.4.3",
     "cookie-session": "^2.1.0",
     "cors": "^2.8.5",
-    "dotenv": "^16.5.0",
+    "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "express-validator": "^7.2.1",
     "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.14.0",
+    "mongoose": "^8.19.2",
     "multer": "^1.4.5-lts.1",
-    "nodemailer": "^6.10.1",
+    "nodemailer": "^7.0.10",
     "passport": "^0.7.0",
     "passport-facebook": "^3.0.0",
     "passport-google-oauth20": "^2.0.0",
@@ -31,6 +31,7 @@
     "socket.io": "^4.8.1"
   },
   "devDependencies": {
-    "nodemon": "^3.1.10"
+    "nodemon": "^3.1.10",
+    "tr46": "^6.0.0"
   }
 }

@@ -2,7 +2,7 @@
 const Order = require('../../../models/order-model');
 const Product = require('../../../models/product-model');
 const { getBilingualMessage } = require('../../../utils/messages');
-const { createResponse } = require('../../../utils/response-formatters');
+const { createResponse, formatOrder } = require('../../../utils/response-formatters');
 
 // Helper function to validate business permissions
 const validateBusinessPermissions = (req, res) => {
@@ -76,8 +76,10 @@ exports.getOrders = async (req, res) => {
 
     const total = await Order.countDocuments(filter);
 
+    const formattedOrders = filteredOrders.map(order => formatOrder(order));
+
     res.status(200).json(createResponse('success', {
-      orders: filteredOrders,
+      orders: formattedOrders,
       pagination: {
         currentPage: parseInt(page),
         totalPages: Math.ceil(total / limit),
@@ -128,8 +130,10 @@ exports.getOrderById = async (req, res) => {
       )
     };
 
+    const formattedOrder = formatOrder(filteredOrder);
+
     res.status(200).json(createResponse('success', { 
-      order: filteredOrder 
+      order: formattedOrder 
     }));
 
   } catch (error) {

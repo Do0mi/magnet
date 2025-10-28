@@ -3,7 +3,8 @@ const Review = require('../../../models/review-model');
 const Product = require('../../../models/product-model');
 const User = require('../../../models/user-model');
 const { getBilingualMessage } = require('../../../utils/messages');
-const { createResponse } = require('../../../utils/response-formatters');
+const { createResponse, formatReview } = require('../../../utils/response-formatters');
+const { sendReviewRejectionNotification } = require('../../../utils/email-utils');
 
 // Helper function to validate admin or magnet employee permissions
 const validateAdminOrEmployeePermissions = (req, res) => {
@@ -32,23 +33,37 @@ exports.getReviews = async (req, res) => {
     if (search) {
       filter.$or = [
         { comment: { $regex: search, $options: 'i' } },
-        { 'customer.firstname': { $regex: search, $options: 'i' } },
-        { 'customer.lastname': { $regex: search, $options: 'i' } },
+        { 'user.firstname': { $regex: search, $options: 'i' } },
+        { 'user.lastname': { $regex: search, $options: 'i' } },
         { 'product.name': { $regex: search, $options: 'i' } }
       ];
     }
 
     const reviews = await Review.find(filter)
-      .populate('customer', 'firstname lastname email')
-      .populate('product', 'name images')
+      .populate('user', 'firstname lastname email role')
+      .populate({
+        path: 'product',
+        populate: {
+          path: 'owner',
+          select: 'firstname lastname email businessInfo.companyName'
+        }
+      })
+      .populate({
+        path: 'product',
+        populate: {
+          path: 'approvedBy',
+          select: 'firstname lastname email role'
+        }
+      })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
 
     const total = await Review.countDocuments(filter);
+    const formattedReviews = reviews.map(review => formatReview(review));
 
     res.status(200).json(createResponse('success', {
-      reviews,
+      reviews: formattedReviews,
       pagination: {
         currentPage: parseInt(page),
         totalPages: Math.ceil(total / limit),
@@ -73,8 +88,21 @@ exports.getReviewById = async (req, res) => {
     if (permissionError) return;
 
     const review = await Review.findById(req.params.id)
-      .populate('customer', 'firstname lastname email')
-      .populate('product', 'name images description');
+      .populate('user', 'firstname lastname email role')
+      .populate({
+        path: 'product',
+        populate: {
+          path: 'owner',
+          select: 'firstname lastname email businessInfo.companyName'
+        }
+      })
+      .populate({
+        path: 'product',
+        populate: {
+          path: 'approvedBy',
+          select: 'firstname lastname email role'
+        }
+      });
 
     if (!review) {
       return res.status(404).json({
@@ -83,7 +111,8 @@ exports.getReviewById = async (req, res) => {
       });
     }
 
-    res.status(200).json(createResponse('success', { review }));
+    const formattedReview = formatReview(review);
+    res.status(200).json(createResponse('success', { review: formattedReview }));
 
   } catch (error) {
     console.error('Get review by ID error:', error);
@@ -100,19 +129,47 @@ exports.rejectReview = async (req, res) => {
     const permissionError = validateAdminOrEmployeePermissions(req, res);
     if (permissionError) return;
 
-    const { reason } = req.body;
+    const { reason } = req.body || {};
+
+    // Debug logging
+    console.log('Request body:', req.body);
+    console.log('Reason:', reason);
+
+    // Validate that reason is provided
+    if (!reason || reason.trim() === '') {
+      return res.status(400).json({
+        status: 'error',
+        message: getBilingualMessage('rejection_reason_required')
+      });
+    }
 
     const review = await Review.findByIdAndUpdate(
       req.params.id,
       { 
-        status: 'rejected', 
+        status: 'reject', 
         rejectionReason: reason,
+        rejectedBy: req.user.id,
+        rejectedAt: Date.now(),
         updatedAt: Date.now() 
       },
       { new: true, runValidators: true }
     )
-      .populate('customer', 'firstname lastname email')
-      .populate('product', 'name images');
+      .populate('user', 'firstname lastname email role')
+      .populate('rejectedBy', 'firstname lastname email role')
+      .populate({
+        path: 'product',
+        populate: {
+          path: 'owner',
+          select: 'firstname lastname email businessInfo.companyName'
+        }
+      })
+      .populate({
+        path: 'product',
+        populate: {
+          path: 'approvedBy',
+          select: 'firstname lastname email role'
+        }
+      });
 
     if (!review) {
       return res.status(404).json({
@@ -121,8 +178,27 @@ exports.rejectReview = async (req, res) => {
       });
     }
 
+    const formattedReview = formatReview(review);
+    
+    // Send email notification to the user who made the review
+    try {
+      const userName = `${review.user.firstname} ${review.user.lastname}`;
+      const productName = review.product.name?.en || review.product.name?.ar || 'Product';
+      
+      await sendReviewRejectionNotification(
+        review.user.email,
+        userName,
+        productName,
+        reason
+      );
+      console.log('Review rejection email sent successfully');
+    } catch (emailError) {
+      console.error('Failed to send review rejection email:', emailError);
+      // Don't fail the request if email fails
+    }
+    
     res.status(200).json(createResponse('success', {
-      review
+      review: formattedReview
     }, getBilingualMessage('review_rejected_success')));
 
   } catch (error) {

@@ -281,6 +281,18 @@ const messages = {
     en: 'Failed to add product',
     ar: 'فشل في إضافة المنتج'
   },
+  'failed_create_product': {
+    en: 'Failed to create product',
+    ar: 'فشل في إنشاء المنتج'
+  },
+  'product_created_success': {
+    en: 'Product created successfully',
+    ar: 'تم إنشاء المنتج بنجاح'
+  },
+  'invalid_attachments': {
+    en: 'Invalid attachments. All attachments must be approved and allowed products',
+    ar: 'مرفقات غير صحيحة. يجب أن تكون جميع المرفقات منتجات معتمدة ومسموحة'
+  },
   'product_not_found': {
     en: 'Product not found',
     ar: 'المنتج غير موجود'
@@ -413,6 +425,10 @@ const messages = {
     en: 'Category deleted successfully',
     ar: 'تم حذف التصنيف بنجاح'
   },
+  'category_deleted_success': {
+    en: 'Category deleted successfully',
+    ar: 'تم حذف التصنيف بنجاح'
+  },
   'failed_delete_category': {
     en: 'Failed to delete category',
     ar: 'فشل في حذف التصنيف'
@@ -505,9 +521,29 @@ const messages = {
     en: 'Product declined successfully',
     ar: 'تم رفض المنتج بنجاح'
   },
+  'product_declined_success': {
+    en: 'Product declined successfully',
+    ar: 'تم رفض المنتج بنجاح'
+  },
   'failed_decline_product': {
     en: 'Failed to decline product',
     ar: 'فشل في رفض المنتج'
+  },
+  'product_approved_success': {
+    en: 'Product approved successfully',
+    ar: 'تمت الموافقة على المنتج بنجاح'
+  },
+  'product_toggled_success': {
+    en: 'Product status toggled successfully',
+    ar: 'تم تبديل حالة المنتج بنجاح'
+  },
+  'failed_toggle_product': {
+    en: 'Failed to toggle product status',
+    ar: 'فشل في تبديل حالة المنتج'
+  },
+  'product_deleted_success': {
+    en: 'Product deleted successfully',
+    ar: 'تم حذف المنتج بنجاح'
   },
 
   // Review messages
@@ -539,9 +575,17 @@ const messages = {
     en: 'Review deleted successfully',
     ar: 'تم حذف التقييم بنجاح'
   },
+  'review_deleted_success': {
+    en: 'Review deleted successfully',
+    ar: 'تم حذف التقييم بنجاح'
+  },
   'failed_delete_review': {
     en: 'Failed to delete review',
     ar: 'فشل في حذف التقييم'
+  },
+  'not_authorized_delete_review': {
+    en: 'Not authorized to delete this review',
+    ar: 'غير مصرح بحذف هذا التقييم'
   },
   
   'business_product_reviews_retrieved': {
@@ -648,6 +692,18 @@ const messages = {
   'invalid_category_status': {
     en: 'Invalid category status. Must be "active" or "inactive"',
     ar: 'حالة الفئة غير صحيحة. يجب أن تكون "نشط" أو "غير نشط"'
+  },
+  'category_inactive': {
+    en: 'Category is inactive',
+    ar: 'الفئة غير نشطة'
+  },
+  'category_toggled_success': {
+    en: 'Category status toggled successfully',
+    ar: 'تم تبديل حالة الفئة بنجاح'
+  },
+  'failed_toggle_category': {
+    en: 'Failed to toggle category status',
+    ar: 'فشل في تبديل حالة الفئة'
   },
   'category_status_required_both_languages': {
     en: 'Category status is required in both English and Arabic',
@@ -1145,6 +1201,46 @@ const messages = {
   'user_has_no_phone': {
     en: 'User has no phone number',
     ar: 'المستخدم ليس لديه رقم هاتف'
+  },
+  'invalid_product_price': {
+    en: 'Invalid product price',
+    ar: 'سعر المنتج غير صحيح'
+  },
+  'items_required': {
+    en: 'Items are required',
+    ar: 'العناصر مطلوبة'
+  },
+  'shipping_address_required': {
+    en: 'Shipping address is required',
+    ar: 'عنوان الشحن مطلوب'
+  },
+  'product_not_available': {
+    en: 'Product is not available',
+    ar: 'المنتج غير متوفر'
+  },
+  'insufficient_stock': {
+    en: 'Insufficient stock',
+    ar: 'مخزون غير كافي'
+  },
+  'order_created_success': {
+    en: 'Order created successfully',
+    ar: 'تم إنشاء الطلب بنجاح'
+  },
+  'order_updated_success': {
+    en: 'Order updated successfully',
+    ar: 'تم تحديث الطلب بنجاح'
+  },
+  'order_cannot_be_updated': {
+    en: 'Order cannot be updated',
+    ar: 'لا يمكن تحديث الطلب'
+  },
+  'order_cannot_be_cancelled': {
+    en: 'Order cannot be cancelled',
+    ar: 'لا يمكن إلغاء الطلب'
+  },
+  'order_cancelled_success': {
+    en: 'Order cancelled successfully',
+    ar: 'تم إلغاء الطلب بنجاح'
   }
 };
 

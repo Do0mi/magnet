@@ -3,7 +3,7 @@ const Order = require('../../../models/order-model');
 const Product = require('../../../models/product-model');
 const User = require('../../../models/user-model');
 const { getBilingualMessage } = require('../../../utils/messages');
-const { createResponse } = require('../../../utils/response-formatters');
+const { createResponse, formatOrder } = require('../../../utils/response-formatters');
 
 // Helper function to validate admin or magnet employee permissions
 const validateAdminOrEmployeePermissions = (req, res) => {
@@ -51,8 +51,10 @@ exports.getOrders = async (req, res) => {
 
     const total = await Order.countDocuments(filter);
 
+    const formattedOrders = orders.map(order => formatOrder(order));
+
     res.status(200).json(createResponse('success', {
-      orders,
+      orders: formattedOrders,
       pagination: {
         currentPage: parseInt(page),
         totalPages: Math.ceil(total / limit),
@@ -88,7 +90,9 @@ exports.getOrderById = async (req, res) => {
       });
     }
 
-    res.status(200).json(createResponse('success', { order }));
+    const formattedOrder = formatOrder(order);
+
+    res.status(200).json(createResponse('success', { order: formattedOrder }));
 
   } catch (error) {
     console.error('Get order by ID error:', error);
@@ -168,8 +172,10 @@ exports.createOrder = async (req, res) => {
     await order.populate('customer', 'firstname lastname email phone');
     await order.populate('items.product', 'name price images');
 
+    const formattedOrder = formatOrder(order);
+
     res.status(201).json(createResponse('success', {
-      order
+      order: formattedOrder
     }, getBilingualMessage('order_created_success')));
 
   } catch (error) {
@@ -239,8 +245,10 @@ exports.updateOrder = async (req, res) => {
       });
     }
 
+    const formattedOrder = formatOrder(order);
+
     res.status(200).json(createResponse('success', {
-      order
+      order: formattedOrder
     }, getBilingualMessage('order_updated_success')));
 
   } catch (error) {

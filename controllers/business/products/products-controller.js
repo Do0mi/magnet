@@ -2,7 +2,7 @@
 const Product = require('../../../models/product-model');
 const Category = require('../../../models/category-model');
 const { getBilingualMessage } = require('../../../utils/messages');
-const { createResponse } = require('../../../utils/response-formatters');
+const { createResponse, formatProduct } = require('../../../utils/response-formatters');
 
 // Helper function to validate business permissions
 const validateBusinessPermissions = (req, res) => {
@@ -50,8 +50,10 @@ exports.getProducts = async (req, res) => {
 
     const total = await Product.countDocuments(filter);
 
+    const formattedProducts = products.map(product => formatProduct(product));
+
     res.status(200).json(createResponse('success', {
-      products,
+      products: formattedProducts,
       pagination: {
         currentPage: parseInt(page),
         totalPages: Math.ceil(total / limit),
@@ -93,7 +95,9 @@ exports.getProductById = async (req, res) => {
 
     await product.populate('category', 'name');
 
-    res.status(200).json(createResponse('success', { product }));
+    const formattedProduct = formatProduct(product);
+
+    res.status(200).json(createResponse('success', { product: formattedProduct }));
 
   } catch (error) {
     console.error('Get business product by ID error:', error);

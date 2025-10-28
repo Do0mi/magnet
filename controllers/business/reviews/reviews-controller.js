@@ -2,7 +2,7 @@
 const Review = require('../../../models/review-model');
 const Product = require('../../../models/product-model');
 const { getBilingualMessage } = require('../../../utils/messages');
-const { createResponse } = require('../../../utils/response-formatters');
+const { createResponse, formatReview } = require('../../../utils/response-formatters');
 
 // Helper function to validate business permissions
 const validateBusinessPermissions = (req, res) => {
@@ -57,8 +57,10 @@ exports.getReviews = async (req, res) => {
 
     const total = await Review.countDocuments(filter);
 
+    const formattedReviews = reviews.map(review => formatReview(review));
+
     res.status(200).json(createResponse('success', {
-      reviews,
+      reviews: formattedReviews,
       pagination: {
         currentPage: parseInt(page),
         totalPages: Math.ceil(total / limit),
@@ -102,7 +104,9 @@ exports.getReviewById = async (req, res) => {
       });
     }
 
-    res.status(200).json(createResponse('success', review, getBilingualMessage('review_retrieved')));
+    const formattedReview = formatReview(review);
+
+    res.status(200).json(createResponse('success', { review: formattedReview }, getBilingualMessage('review_retrieved')));
   } catch (err) {
     console.error('Get review by ID error:', err);
     res.status(500).json({

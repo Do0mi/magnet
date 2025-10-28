@@ -147,6 +147,48 @@ const sendBusinessUnderReviewNotification = async (to, companyName) => {
   }
 };
 
+// Function to send new review notification to business user
+const sendNewReviewNotification = async (to, businessName, productName, customerName, rating, comment) => {
+  try {
+    const transporter = createTransporter();
+    
+    const mailOptions = {
+      from: process.env.EMAIL_USER || '"Magnet" <noreply@magnetproject.com>',
+      to: to,
+      subject: 'New Review on Your Product',
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #333;">New Review on Your Product</h2>
+          <p>Dear ${businessName},</p>
+          <p>A customer has left a review on your product <strong>"${productName}"</strong>.</p>
+          <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <p><strong>Customer:</strong> ${customerName}</p>
+            <p><strong>Rating:</strong> ${rating}/5 ⭐</p>
+            ${comment ? `<p><strong>Comment:</strong> "${comment}"</p>` : ''}
+          </div>
+          <p>You can view and manage all your product reviews in your business dashboard.</p>
+          <p>Thanks,<br>The Magnet Team</p>
+        </div>
+      `
+    };
+    
+    const info = await transporter.sendMail(mailOptions);
+    console.log('New review notification sent:', info.messageId);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error('New review notification failed:', {
+      error: error.message,
+      to,
+      time: new Date().toISOString()
+    });
+    return { 
+      success: false, 
+      error: 'Failed to send new review notification',
+      details: error.response || error.message 
+    };
+  }
+};
+
 // Function to send review rejection notification
 const sendReviewRejectionNotification = async (to, userName, productName, rejectionReason) => {
   try {
@@ -265,13 +307,176 @@ const sendUserAllowNotification = async (to, userName) => {
   }
 };
 
+// Function to send product approval notification
+const sendProductApprovalNotification = async (to, userName, productName, approvedBy, approvedAt) => {
+  try {
+    const transporter = createTransporter();
+    
+    const mailOptions = {
+      from: process.env.EMAIL_USER || '"Magnet" <noreply@magnetproject.com>',
+      to: to,
+      subject: 'Product Approved',
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #28a745;">Product Approved</h2>
+          <p>Dear ${userName},</p>
+          <p>Great news! Your product <strong>"${productName}"</strong> has been approved and is now live on our platform.</p>
+          <p><strong>Approved by:</strong> ${approvedBy}</p>
+          <p><strong>Approved at:</strong> ${new Date(approvedAt).toLocaleString()}</p>
+          <p>Your product is now visible to customers and ready for orders.</p>
+          <p>Thanks,<br>The Magnet Team</p>
+        </div>
+      `
+    };
+    
+    const info = await transporter.sendMail(mailOptions);
+    console.log('Product approval notification sent:', info.messageId);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error('Product approval notification failed:', {
+      error: error.message,
+      to,
+      time: new Date().toISOString()
+    });
+    return { 
+      success: false, 
+      error: 'Failed to send product approval notification',
+      details: error.response || error.message 
+    };
+  }
+};
+
+// Function to send product decline notification
+const sendProductDeclineNotification = async (to, userName, productName, declinedBy, declinedAt, reason) => {
+  try {
+    const transporter = createTransporter();
+    
+    const mailOptions = {
+      from: process.env.EMAIL_USER || '"Magnet" <noreply@magnetproject.com>',
+      to: to,
+      subject: 'Product Declined',
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #dc3545;">Product Declined</h2>
+          <p>Dear ${userName},</p>
+          <p>We regret to inform you that your product <strong>"${productName}"</strong> has been declined.</p>
+          <p><strong>Declined by:</strong> ${declinedBy}</p>
+          <p><strong>Declined at:</strong> ${new Date(declinedAt).toLocaleString()}</p>
+          ${reason ? `<p><strong>Reason:</strong> ${reason}</p>` : ''}
+          <p>Please review the feedback and make necessary changes before resubmitting your product.</p>
+          <p>If you have any questions, please contact our support team.</p>
+          <p>Thanks,<br>The Magnet Team</p>
+        </div>
+      `
+    };
+    
+    const info = await transporter.sendMail(mailOptions);
+    console.log('Product decline notification sent:', info.messageId);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error('Product decline notification failed:', {
+      error: error.message,
+      to,
+      time: new Date().toISOString()
+    });
+    return { 
+      success: false, 
+      error: 'Failed to send product decline notification',
+      details: error.response || error.message 
+    };
+  }
+};
+
+// Function to send product allow notification
+const sendProductAllowNotification = async (to, userName, productName, allowedBy, allowedAt) => {
+  try {
+    const transporter = createTransporter();
+    
+    const mailOptions = {
+      from: process.env.EMAIL_USER || '"Magnet" <noreply@magnetproject.com>',
+      to: to,
+      subject: 'Product Allowed',
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #28a745;">Product Allowed</h2>
+          <p>Dear ${userName},</p>
+          <p>Your product <strong>"${productName}"</strong> has been allowed and is now visible to customers.</p>
+          <p><strong>Allowed by:</strong> ${allowedBy}</p>
+          <p><strong>Allowed at:</strong> ${new Date(allowedAt).toLocaleString()}</p>
+          <p>Your product is now active and ready for orders.</p>
+          <p>Thanks,<br>The Magnet Team</p>
+        </div>
+      `
+    };
+    
+    const info = await transporter.sendMail(mailOptions);
+    console.log('Product allow notification sent:', info.messageId);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error('Product allow notification failed:', {
+      error: error.message,
+      to,
+      time: new Date().toISOString()
+    });
+    return { 
+      success: false, 
+      error: 'Failed to send product allow notification',
+      details: error.response || error.message 
+    };
+  }
+};
+
+// Function to send product disallow notification
+const sendProductDisallowNotification = async (to, userName, productName, disallowedBy, disallowedAt) => {
+  try {
+    const transporter = createTransporter();
+    
+    const mailOptions = {
+      from: process.env.EMAIL_USER || '"Magnet" <noreply@magnetproject.com>',
+      to: to,
+      subject: 'Product Disallowed',
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #dc3545;">Product Disallowed</h2>
+          <p>Dear ${userName},</p>
+          <p>We regret to inform you that your product <strong>"${productName}"</strong> has been disallowed and is no longer visible to customers.</p>
+          <p><strong>Disallowed by:</strong> ${disallowedBy}</p>
+          <p><strong>Disallowed at:</strong> ${new Date(disallowedAt).toLocaleString()}</p>
+          <p>If you have any questions about this action, please contact our support team.</p>
+          <p>Thanks,<br>The Magnet Team</p>
+        </div>
+      `
+    };
+    
+    const info = await transporter.sendMail(mailOptions);
+    console.log('Product disallow notification sent:', info.messageId);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error('Product disallow notification failed:', {
+      error: error.message,
+      to,
+      time: new Date().toISOString()
+    });
+    return { 
+      success: false, 
+      error: 'Failed to send product disallow notification',
+      details: error.response || error.message 
+    };
+  }
+};
+
 
 module.exports = {
   generateOTP,
   sendOTPEmail,
   sendBusinessApprovalNotification,
   sendBusinessUnderReviewNotification,
+  sendNewReviewNotification,
   sendReviewRejectionNotification,
   sendUserDisallowNotification,
-  sendUserAllowNotification
+  sendUserAllowNotification,
+  sendProductApprovalNotification,
+  sendProductDeclineNotification,
+  sendProductAllowNotification,
+  sendProductDisallowNotification
 };

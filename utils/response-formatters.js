@@ -170,48 +170,40 @@ const formatProduct = (product, options = {}) => {
     stock: product.stock,
     rating: product.rating,
     attachments: product.attachments,
+    isAllowed: product.isAllowed,
+    declinedReason: product.declinedReason,
     createdAt: product.createdAt,
     updatedAt: product.updatedAt
   };
 
-  // Handle bilingual fields
-  if (language === 'both') {
-    formatted.name = product.name;
-    formatted.description = product.description;
-    formatted.category = product.category;
-    formatted.unit = product.unit;
-    if (includeCustomFields && product.customFields) {
-      formatted.customFields = product.customFields;
-    }
-  } else {
-    formatted.name = product.name ? product.name[language] || product.name.en : null;
-    formatted.description = product.description ? product.description[language] || product.description.en : null;
-    formatted.category = product.category ? product.category[language] || product.category.en : null;
-    formatted.unit = product.unit ? product.unit[language] || product.unit.en : null;
-    if (includeCustomFields && product.customFields) {
-      formatted.customFields = product.customFields.map(field => ({
-        key: field.key[language] || field.key.en,
-        value: field.value[language] || field.value.en
-      }));
-    }
+  // Handle bilingual fields - always return both languages by default
+  formatted.name = product.name;
+  formatted.description = product.description;
+  formatted.category = product.category;
+  formatted.unit = product.unit;
+  if (includeCustomFields && product.customFields) {
+    formatted.customFields = product.customFields;
   }
 
   if (includeOwner && product.owner) {
     if (typeof product.owner === 'object' && product.owner.businessInfo) {
-      formatted.ownerCompanyName = product.owner.businessInfo.companyName;
       formatted.owner = {
         id: product.owner._id,
         firstname: product.owner.firstname,
         lastname: product.owner.lastname,
         email: product.owner.email,
-        companyName: product.owner.businessInfo.companyName
+        role: product.owner.role,
+        businessInfo: {
+          companyName: product.owner.businessInfo.companyName
+        }
       };
     } else if (typeof product.owner === 'object') {
       formatted.owner = {
         id: product.owner._id,
         firstname: product.owner.firstname,
         lastname: product.owner.lastname,
-        email: product.owner.email
+        email: product.owner.email,
+        role: product.owner.role
       };
     } else {
       formatted.owner = product.owner;
@@ -230,6 +222,12 @@ const formatProduct = (product, options = {}) => {
       };
     } else {
       formatted.approvedBy = product.approvedBy;
+    }
+    
+    // Add decline information if product is declined
+    if (product.status === 'declined') {
+      formatted.declinedBy = formatted.approvedBy; // Same person who declined
+      formatted.declinedAt = product.updatedAt;
     }
   }
 
@@ -266,12 +264,8 @@ const formatOrder = (order, options = {}) => {
     updatedAt: order.updatedAt
   };
 
-  // Handle status localization
-  if (language === 'both') {
-    formatted.status = order.status;
-  } else {
-    formatted.status = order.status ? order.status[language] || order.status.en : null;
-  }
+  // Handle status localization - always return both languages by default
+  formatted.status = order.status;
 
   if (includeCustomer && order.customer) {
     if (typeof order.customer === 'object') {
@@ -369,23 +363,20 @@ const formatCategory = (category, options = {}) => {
     updatedAt: category.updatedAt
   };
 
-  // Handle bilingual fields
-  if (language === 'both') {
-    formatted.name = category.name;
-    formatted.description = category.description;
-    formatted.status = category.status;
-  } else {
-    formatted.name = category.name ? category.name[language] || category.name.en : null;
-    formatted.description = category.description ? category.description[language] || category.description.en : null;
-    formatted.status = category.status ? category.status[language] || category.status.en : null;
-  }
+  // Handle bilingual fields - always return both languages by default
+  formatted.name = category.name;
+  formatted.description = category.description;
+  formatted.status = category.status; // Status is now a simple string
 
   if (includeCreator && category.createdBy) {
     if (typeof category.createdBy === 'object') {
-      formatted.createdBy = formatUser(category.createdBy, { 
-        includeBusinessInfo: false, 
-        includeVerification: false 
-      });
+      formatted.createdBy = {
+        id: category.createdBy._id || category.createdBy.id,
+        firstname: category.createdBy.firstname,
+        lastname: category.createdBy.lastname,
+        email: category.createdBy.email,
+        role: category.createdBy.role
+      };
     } else {
       formatted.createdBy = category.createdBy;
     }
@@ -420,7 +411,17 @@ const formatReview = (review, options = {}) => {
 
   // Add rejection details if review is rejected
   if (review.status === 'reject') {
-    formatted.rejectedBy = review.rejectedBy;
+    if (review.rejectedBy && typeof review.rejectedBy === 'object') {
+      formatted.rejectedBy = {
+        id: review.rejectedBy._id,
+        firstname: review.rejectedBy.firstname,
+        lastname: review.rejectedBy.lastname,
+        email: review.rejectedBy.email,
+        role: review.rejectedBy.role
+      };
+    } else {
+      formatted.rejectedBy = review.rejectedBy;
+    }
     formatted.rejectedAt = review.rejectedAt;
     formatted.rejectionReason = review.rejectionReason;
   }

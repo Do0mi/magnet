@@ -2,7 +2,7 @@
 const Category = require('../../../models/category-model');
 const Product = require('../../../models/product-model');
 const { getBilingualMessage } = require('../../../utils/messages');
-const { createResponse } = require('../../../utils/response-formatters');
+const { createResponse, formatCategory } = require('../../../utils/response-formatters');
 
 // Helper function to validate admin or magnet employee permissions
 const validateAdminOrEmployeePermissions = (req, res) => {
@@ -21,24 +21,37 @@ exports.getCategories = async (req, res) => {
     const permissionError = validateAdminOrEmployeePermissions(req, res);
     if (permissionError) return;
 
-    const { page = 1, limit = 10, search } = req.query;
+    const { page = 1, limit = 10, search, status } = req.query;
     const skip = (page - 1) * limit;
 
     // Build filter object
     const filter = {};
     if (search) {
-      filter.name = { $regex: search, $options: 'i' };
+      filter.$or = [
+        { 'name.en': { $regex: search, $options: 'i' } },
+        { 'name.ar': { $regex: search, $options: 'i' } },
+        { 'description.en': { $regex: search, $options: 'i' } },
+        { 'description.ar': { $regex: search, $options: 'i' } }
+      ];
+    }
+    if (status) {
+      if (['active', 'inactive'].includes(status)) {
+        filter.status = status;
+      }
     }
 
     const categories = await Category.find(filter)
+      .populate('createdBy', 'firstname lastname email role')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
 
     const total = await Category.countDocuments(filter);
 
+    const formattedCategories = categories.map(category => formatCategory(category));
+
     res.status(200).json(createResponse('success', {
-      categories,
+      categories: formattedCategories,
       pagination: {
         currentPage: parseInt(page),
         totalPages: Math.ceil(total / limit),
@@ -62,7 +75,8 @@ exports.getCategoryById = async (req, res) => {
     const permissionError = validateAdminOrEmployeePermissions(req, res);
     if (permissionError) return;
 
-    const category = await Category.findById(req.params.id);
+    const category = await Category.findById(req.params.id)
+      .populate('createdBy', 'firstname lastname email role');
 
     if (!category) {
       return res.status(404).json({
@@ -71,7 +85,9 @@ exports.getCategoryById = async (req, res) => {
       });
     }
 
-    res.status(200).json(createResponse('success', { category }));
+    const formattedCategory = formatCategory(category);
+
+    res.status(200).json(createResponse('success', { category: formattedCategory }));
 
   } catch (error) {
     console.error('Get category by ID error:', error);
@@ -88,32 +104,37 @@ exports.createCategory = async (req, res) => {
     const permissionError = validateAdminOrEmployeePermissions(req, res);
     if (permissionError) return;
 
-    const { name, description, imageUrl, parentCategory } = req.body;
-
-    // Validate required fields
-    if (!name) {
+    // Check if req.body exists
+    if (!req.body) {
       return res.status(400).json({
         status: 'error',
-        message: getBilingualMessage('category_name_required')
+        message: getBilingualMessage('missing_required_fields')
       });
     }
 
-    // Check if category already exists
-    const existingCategory = await Category.findOne({ name });
-    if (existingCategory) {
-      return res.status(400).json({
-        status: 'error',
-        message: getBilingualMessage('category_already_exists')
+    const { name, description, status } = req.body;
+
+    // Validate bilingual fields
+    if (!name || !name.en || !name.ar) {
+      return res.status(400).json({ 
+        status: 'error', 
+        message: getBilingualMessage('category_name_required_both_languages') 
       });
     }
 
-    // Check if parent category exists (if provided)
-    if (parentCategory) {
-      const parentExists = await Category.findById(parentCategory);
-      if (!parentExists) {
-        return res.status(400).json({
-          status: 'error',
-          message: getBilingualMessage('parent_category_not_found')
+    if (description && (!description.en || !description.ar)) {
+      return res.status(400).json({ 
+        status: 'error', 
+        message: getBilingualMessage('category_description_required_both_languages') 
+      });
+    }
+
+    // Validate status if provided
+    if (status) {
+      if (!['active', 'inactive'].includes(status)) {
+        return res.status(400).json({ 
+          status: 'error', 
+          message: getBilingualMessage('invalid_category_status') 
         });
       }
     }
@@ -121,17 +142,38 @@ exports.createCategory = async (req, res) => {
     const category = new Category({
       name,
       description,
-      imageUrl,
-      parentCategory
+      status: status || 'inactive',
+      createdBy: req.user.id
     });
 
     await category.save();
 
+    // Re-populate to get the createdBy details
+    const populatedCategory = await Category.findById(category._id)
+      .populate('createdBy', 'firstname lastname email role');
+
+    const formattedCategory = formatCategory(populatedCategory);
+
     res.status(201).json(createResponse('success', {
-      category
+      category: formattedCategory
     }, getBilingualMessage('category_created_success')));
 
   } catch (error) {
+    // Handle duplicate key error (unique constraint violation)
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyPattern)[0];
+      if (field === 'name.en') {
+        return res.status(400).json({ 
+          status: 'error', 
+          message: getBilingualMessage('category_name_en_already_exists') || 'Category name in English already exists'
+        });
+      } else if (field === 'name.ar') {
+        return res.status(400).json({ 
+          status: 'error', 
+          message: getBilingualMessage('category_name_ar_already_exists') || 'Category name in Arabic already exists'
+        });
+      }
+    }
     console.error('Create category error:', error);
     res.status(500).json({
       status: 'error',
@@ -146,45 +188,42 @@ exports.updateCategory = async (req, res) => {
     const permissionError = validateAdminOrEmployeePermissions(req, res);
     if (permissionError) return;
 
-    const { name, description, imageUrl, parentCategory } = req.body;
-    const updateFields = { updatedAt: Date.now() };
-
-    if (name) updateFields.name = name;
-    if (description !== undefined) updateFields.description = description;
-    if (imageUrl !== undefined) updateFields.imageUrl = imageUrl;
-    if (parentCategory !== undefined) updateFields.parentCategory = parentCategory;
-
-    // Check if category with same name already exists (excluding current category)
-    if (name) {
-      const existingCategory = await Category.findOne({ 
-        name, 
-        _id: { $ne: req.params.id } 
+    // Check if req.body exists
+    if (!req.body) {
+      return res.status(400).json({
+        status: 'error',
+        message: getBilingualMessage('missing_required_fields')
       });
-      if (existingCategory) {
-        return res.status(400).json({
-          status: 'error',
-          message: getBilingualMessage('category_already_exists')
+    }
+
+    const { name, description, status } = req.body;
+
+    // Validate bilingual fields if provided
+    if (name && (!name.en || !name.ar)) {
+      return res.status(400).json({ 
+        status: 'error', 
+        message: getBilingualMessage('category_name_required_both_languages') 
+      });
+    }
+
+    if (description && (!description.en || !description.ar)) {
+      return res.status(400).json({ 
+        status: 'error', 
+        message: getBilingualMessage('category_description_required_both_languages') 
+      });
+    }
+
+    // Validate status if provided
+    if (status) {
+      if (!['active', 'inactive'].includes(status)) {
+        return res.status(400).json({ 
+          status: 'error', 
+          message: getBilingualMessage('invalid_category_status') 
         });
       }
     }
 
-    // Check if parent category exists (if provided)
-    if (parentCategory) {
-      const parentExists = await Category.findById(parentCategory);
-      if (!parentExists) {
-        return res.status(400).json({
-          status: 'error',
-          message: getBilingualMessage('parent_category_not_found')
-        });
-      }
-    }
-
-    const category = await Category.findByIdAndUpdate(
-      req.params.id,
-      updateFields,
-      { new: true, runValidators: true }
-    );
-
+    const category = await Category.findById(req.params.id);
     if (!category) {
       return res.status(404).json({
         status: 'error',
@@ -192,11 +231,38 @@ exports.updateCategory = async (req, res) => {
       });
     }
 
+    if (name) category.name = name;
+    if (description) category.description = description;
+    if (status) category.status = status;
+    category.updatedAt = new Date();
+    await category.save();
+
+    // Re-populate to get the updated createdBy details
+    const updatedCategory = await Category.findById(req.params.id)
+      .populate('createdBy', 'firstname lastname email role');
+
+    const formattedCategory = formatCategory(updatedCategory);
+
     res.status(200).json(createResponse('success', {
-      category
+      category: formattedCategory
     }, getBilingualMessage('category_updated_success')));
 
   } catch (error) {
+    // Handle duplicate key error (unique constraint violation)
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyPattern)[0];
+      if (field === 'name.en') {
+        return res.status(400).json({ 
+          status: 'error', 
+          message: getBilingualMessage('category_name_en_already_exists') || 'Category name in English already exists'
+        });
+      } else if (field === 'name.ar') {
+        return res.status(400).json({ 
+          status: 'error', 
+          message: getBilingualMessage('category_name_ar_already_exists') || 'Category name in Arabic already exists'
+        });
+      }
+    }
     console.error('Update category error:', error);
     res.status(500).json({
       status: 'error',
@@ -249,7 +315,7 @@ exports.deleteCategory = async (req, res) => {
   }
 };
 
-// PUT /api/v1/dashboard/categories/category/:id/toggle - Toggle allow category
+// PUT /api/v1/dashboard/categories/category/:id/toggle - Toggle category status
 exports.toggleCategory = async (req, res) => {
   try {
     const permissionError = validateAdminOrEmployeePermissions(req, res);
@@ -264,14 +330,19 @@ exports.toggleCategory = async (req, res) => {
       });
     }
 
+    // Toggle between 'active' and 'inactive'
+    const newStatus = category.status === 'active' ? 'inactive' : 'active';
+
     const updatedCategory = await Category.findByIdAndUpdate(
       req.params.id,
-      { isAllowed: !category.isAllowed },
+      { status: newStatus },
       { new: true, runValidators: true }
-    );
+    ).populate('createdBy', 'firstname lastname email role');
+
+    const formattedCategory = formatCategory(updatedCategory);
 
     res.status(200).json(createResponse('success', {
-      category: updatedCategory
+      category: formattedCategory
     }, getBilingualMessage('category_toggled_success')));
 
   } catch (error) {
