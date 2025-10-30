@@ -8,6 +8,7 @@ const addressSchema = new mongoose.Schema({
   state: { type: String, required: true },
   postalCode: String,
   country: { type: String, required: true },
+  isDefault: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });

@@ -39,23 +39,26 @@ Authorization: Bearer <your-jwt-token>
   }
   ```
 
-#### Business Registration Request
-- **POST** `/api/v1/user/auth/business-request`
-- **Description**: Submit a business registration request
+#### Business Registration
+- **POST** `/api/v1/user/auth/business-register`
+- **Description**: Register a business user (goes under review)
 - **Authentication**: None required
 - **Body**:
   ```json
   {
     "firstname": "string",
     "lastname": "string",
-    "email": "string", 
+    "email": "string",
     "phone": "string",
     "password": "string",
-    "businessName": "string",
-    "businessType": "string",
-    "businessDescription": "string",
+    "crNumber": "string",
+    "vatNumber": "string",
+    "companyName": "string",
+    "companyType": "string",
     "country": "string",
-    "language": "string"
+    "city": "string",
+    "district": "string",
+    "streetName": "string"
   }
   ```
 
@@ -129,7 +132,7 @@ Authorization: Bearer <your-jwt-token>
   ```
 
 #### Change Password
-- **POST** `/api/v1/user/auth/password`
+- **POST** `/api/v1/user/password`
 - **Description**: Change user password
 - **Authentication**: Required (Customer)
 - **Body**:
@@ -167,8 +170,8 @@ Authorization: Bearer <your-jwt-token>
 
 #### Get All Products
 - **GET** `/api/v1/user/products`
-- **Description**: Get all approved and allowed products (protected public endpoint)
-- **Authentication**: Required
+- **Description**: Get all approved and allowed products
+- **Authentication**: Public (Optional auth)
 - **Query Parameters**:
   - `page` (optional): Page number
   - `limit` (optional): Items per page
@@ -182,7 +185,7 @@ Authorization: Bearer <your-jwt-token>
 #### Get Product by ID
 - **GET** `/api/v1/user/products/:id`
 - **Description**: Get specific product details
-- **Authentication**: Required
+- **Authentication**: Public (Optional auth)
 
 ### Orders (`/api/v1/user/orders`)
 
@@ -201,7 +204,7 @@ Authorization: Bearer <your-jwt-token>
 - **Authentication**: Required (Customer)
 
 #### Create Order
-- **POST** `/api/v1/user/orders/order`
+- **POST** `/api/v1/user/orders`
 - **Description**: Create a new order
 - **Authentication**: Required (Customer)
 - **Body**:
@@ -258,33 +261,35 @@ Authorization: Bearer <your-jwt-token>
 - **Body**:
   ```json
   {
-    "street": "string",
+    "addressLine1": "string",
+    "addressLine2": "string",
     "city": "string",
     "state": "string",
-    "zipCode": "string",
+    "postalCode": "string",
     "country": "string",
     "isDefault": "boolean"
   }
   ```
 
 #### Update Address
-- **PUT** `/api/v1/user/addresses/address/:id`
+- **PUT** `/api/v1/user/addresses/:id`
 - **Description**: Update existing address
 - **Authentication**: Required (Customer)
 - **Body**:
   ```json
   {
-    "street": "string",
-    "city": "string", 
+    "addressLine1": "string",
+    "addressLine2": "string",
+    "city": "string",
     "state": "string",
-    "zipCode": "string",
+    "postalCode": "string",
     "country": "string",
     "isDefault": "boolean"
   }
   ```
 
 #### Delete Address
-- **DELETE** `/api/v1/user/addresses/address/:id`
+- **DELETE** `/api/v1/user/addresses/:id`
 - **Description**: Delete existing address
 - **Authentication**: Required (Customer)
 
@@ -306,10 +311,10 @@ Authorization: Bearer <your-jwt-token>
   }
   ```
 
-### Reviews (`/api/v1/user/reviews`)
+### Reviews
 
 #### Add Review
-- **POST** `/api/v1/user/reviews/products/:id/reviews`
+- **POST** `/api/v1/user/products/:id/reviews`
 - **Description**: Add a review to a product
 - **Authentication**: Required (Customer)
 - **Body**:
@@ -320,16 +325,14 @@ Authorization: Bearer <your-jwt-token>
   }
   ```
 
-#### Get Product Reviews
-- **GET** `/api/v1/user/reviews/products/:id/reviews`
+- **GET** `/api/v1/user/products/:id/reviews`
 - **Description**: Get all reviews for a specific product
 - **Authentication**: Required (Customer)
 - **Query Parameters**:
   - `page` (optional): Page number
   - `limit` (optional): Items per page
 
-#### Delete Review
-- **DELETE** `/api/v1/user/reviews/products/:id/reviews/:reviewId`
+- **DELETE** `/api/v1/user/products/:id/reviews/:reviewId`
 - **Description**: Delete a review (only own reviews)
 - **Authentication**: Required (Customer)
 

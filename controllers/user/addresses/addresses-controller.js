@@ -21,7 +21,7 @@ exports.getAddresses = async (req, res) => {
     if (permissionError) return;
 
     const addresses = await Address.find({ user: req.user.id })
-      .populate('user', 'firstname lastname email role')
+      .populate('user', 'firstname lastname email phone role')
       .sort({ isDefault: -1, createdAt: -1 });
     
     const formattedAddresses = addresses.map(address => formatAddress(address));
@@ -47,7 +47,7 @@ exports.getAddressById = async (req, res) => {
       _id: req.params.id,
       user: req.user.id
     })
-      .populate('user', 'firstname lastname email role');
+      .populate('user', 'firstname lastname email phone role');
 
     if (!address) {
       return res.status(404).json({
@@ -116,7 +116,7 @@ exports.createAddress = async (req, res) => {
 
     // Re-populate to get the user details
     const populatedAddress = await Address.findById(address._id)
-      .populate('user', 'firstname lastname email role');
+      .populate('user', 'firstname lastname email phone role');
     
     const formattedAddress = formatAddress(populatedAddress);
 
@@ -141,7 +141,7 @@ exports.updateAddress = async (req, res) => {
     if (permissionError) return;
 
     const address = await Address.findById(req.params.id)
-      .populate('user', 'firstname lastname email role');
+      .populate('user', 'firstname lastname email phone role');
     if (!address || address.user._id.toString() !== req.user.id) {
       return res.status(404).json({ status: 'error', message: getBilingualMessage('address_not_found') });
     }
@@ -169,7 +169,7 @@ exports.updateAddress = async (req, res) => {
     
     // Re-populate to get the updated user details
     const updatedAddress = await Address.findById(req.params.id)
-      .populate('user', 'firstname lastname email role');
+      .populate('user', 'firstname lastname email phone role');
     
     const formattedAddress = formatAddress(updatedAddress);
     
@@ -194,7 +194,7 @@ exports.deleteAddress = async (req, res) => {
     if (permissionError) return;
 
     const address = await Address.findById(req.params.id)
-      .populate('user', 'firstname lastname email role');
+      .populate('user', 'firstname lastname email phone role');
     if (!address || address.user._id.toString() !== req.user.id) {
       return res.status(404).json({ status: 'error', message: getBilingualMessage('address_not_found') });
     }

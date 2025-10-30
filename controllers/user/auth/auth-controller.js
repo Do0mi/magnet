@@ -80,66 +80,56 @@ exports.register = async (req, res) => {
 // POST /api/v1/user/auth/business-register - Business Register
 exports.businessRegister = async (req, res) => {
   try {
-    const { firstname, lastname, email, phone, password, country, language = 'en', businessName, businessDescription, businessAddress, businessPhone, businessEmail, businessWebsite, businessLicense, businessType } = req.body;
+    const { firstname, lastname, email, password, crNumber, vatNumber, companyName, companyType, country, city, district, streetName, phone } = req.body;
     const existingEmail = await User.findOne({ email });
     if (existingEmail) {
       return res.status(400).json({ status: 'error', message: getBilingualMessage('email_already_registered') });
     }
-    if (phone) {
-      const existingPhone = await User.findOne({ phone });
-      if (existingPhone) {
-        return res.status(400).json({ status: 'error', message: getBilingualMessage('phone_already_registered') });
-      }
+    const existingPhone = await User.findOne({ phone });
+    if (existingPhone) {
+      return res.status(400).json({ status: 'error', message: getBilingualMessage('phone_already_registered') });
     }
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
     let isEmailVerified = false;
     let isPhoneVerified = false;
-    if (phone && isSaudiPhone(phone)) {
+    if (phone) {
       isPhoneVerified = true;
       isEmailVerified = false;
-    } else if (email) {
-      isEmailVerified = true;
-      isPhoneVerified = false;
     }
-    const user = new User({
+    const newBusiness = new User({
       firstname,
       lastname,
       email,
       phone,
       password: hashedPassword,
-      role: 'business',
+      role: User.getUserRoles().BUSINESS,
       country,
-      language,
       isEmailVerified,
       isPhoneVerified,
-      isAllowed: false,
-      businessName,
-      businessDescription,
-      businessAddress,
-      businessPhone,
-      businessEmail,
-      businessWebsite,
-      businessLicense,
-      businessType,
-      businessStatus: 'pending'
+      businessInfo: {
+        crNumber,
+        vatNumber,
+        companyName,
+        companyType,
+        address: {
+          city,
+          district,
+          streetName
+        },
+        approvalStatus: User.getBusinessStatus().PENDING
+      }
     });
-    await user.save();
-    
-    // Send notification email
-    try {
-      await sendBusinessUnderReviewNotification(user);
-    } catch (emailError) {
-      console.error('Email notification error:', emailError);
-    }
-    
-    const token = generateToken(user);
+    await newBusiness.save();
+    await sendBusinessUnderReviewNotification(email, companyName);
     res.status(201).json(createResponse('success', {
-      user: formatUser(user, { includeBusinessInfo: true }),
-      token
-    }, getBilingualMessage('business_registration_success')));
+      business: formatUser(newBusiness, { 
+        includeVerification: false,
+        includeBusinessInfo: true 
+      })
+    }, getBilingualMessage('business_registration_submitted')));
   } catch (err) {
-    console.error('Business registration error:', err);
+    console.error('Business register error:', err);
     res.status(500).json({ status: 'error', message: getBilingualMessage('business_registration_failed') });
   }
 };
@@ -148,13 +138,21 @@ exports.businessRegister = async (req, res) => {
 exports.sendEmailOTP = async (req, res) => {
   try {
     const { email } = req.body;
+    const user = await User.findOne({ email });
+    if (user) {
+      return res.status(400).json({ status: 'error', message: getBilingualMessage('email_already_exists') });
+    }
     const otp = generateOTP();
-    otpStore[email] = { otp, timestamp: Date.now() };
-    await sendOTPEmail(email, otp);
-    res.status(200).json(createResponse('success', null, getBilingualMessage('otp_sent_success')));
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+    otpStore[email] = { code: otp, expiresAt };
+    const emailResult = await sendOTPEmail(email, otp);
+    if (!emailResult.success) {
+      return res.status(500).json({ status: 'error', message: getBilingualMessage('failed_send_otp_email') });
+    }
+    res.status(200).json({ status: 'success', message: getBilingualMessage('otp_sent_email_success') });
   } catch (err) {
     console.error('Send email OTP error:', err);
-    res.status(500).json({ status: 'error', message: getBilingualMessage('otp_send_failed') });
+    res.status(500).json({ status: 'error', message: getBilingualMessage('failed_send_otp') });
   }
 };
 
@@ -162,13 +160,21 @@ exports.sendEmailOTP = async (req, res) => {
 exports.sendPhoneOTP = async (req, res) => {
   try {
     const { phone } = req.body;
+    const user = await User.findOne({ phone });
+    if (user) {
+      return res.status(400).json({ status: 'error', message: getBilingualMessage('phone_already_exists') });
+    }
     const otp = generateSMSOTP();
-    otpStore[phone] = { otp, timestamp: Date.now() };
-    await sendOTPSMS(phone, otp);
-    res.status(200).json(createResponse('success', null, getBilingualMessage('otp_sent_success')));
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+    otpStore[phone] = { code: otp, expiresAt };
+    const smsResult = await sendOTPSMS(phone, otp);
+    if (!smsResult.success) {
+      return res.status(500).json({ status: 'error', message: getBilingualMessage('failed_send_otp_sms') });
+    }
+    res.status(200).json({ status: 'success', message: getBilingualMessage('otp_sent_phone_success') });
   } catch (err) {
     console.error('Send phone OTP error:', err);
-    res.status(500).json({ status: 'error', message: getBilingualMessage('otp_send_failed') });
+    res.status(500).json({ status: 'error', message: getBilingualMessage('failed_send_otp') });
   }
 };
 
@@ -176,19 +182,21 @@ exports.sendPhoneOTP = async (req, res) => {
 exports.confirmOTP = async (req, res) => {
   try {
     const { identifier, otp } = req.body;
-    const storedOTP = otpStore[identifier];
-    if (!storedOTP || storedOTP.otp !== otp) {
+    const otpData = otpStore[identifier];
+    if (!otpData || !otpData.code) {
+      return res.status(400).json({ status: 'error', message: getBilingualMessage('no_otp_found') });
+    }
+    if (otpData.code !== otp) {
       return res.status(400).json({ status: 'error', message: getBilingualMessage('invalid_otp') });
     }
-    if (Date.now() - storedOTP.timestamp > 300000) {
-      delete otpStore[identifier];
+    if (otpData.expiresAt < new Date()) {
       return res.status(400).json({ status: 'error', message: getBilingualMessage('otp_expired') });
     }
     delete otpStore[identifier];
-    res.status(200).json(createResponse('success', null, getBilingualMessage('otp_verified_success')));
+    res.status(200).json({ status: 'success', message: getBilingualMessage('otp_verified_success') });
   } catch (err) {
     console.error('Confirm OTP error:', err);
-    res.status(500).json({ status: 'error', message: getBilingualMessage('otp_verification_failed') });
+    res.status(500).json({ status: 'error', message: getBilingualMessage('otp_confirmation_failed') });
   }
 };
 
@@ -224,24 +232,38 @@ exports.loginWithOTP = async (req, res) => {
   try {
     const { identifier } = req.body;
     const identifierType = getIdentifierType(identifier);
-    const user = await User.findOne(identifierType === 'email' ? { email: identifier } : { phone: identifier });
-    if (!user) {
-      return res.status(400).json({ status: 'error', message: getBilingualMessage('user_not_found') });
+    const query = identifierType === 'email' ? { email: identifier } : { phone: identifier };
+    if (identifierType === 'phone' && !isSaudiPhone(identifier)) {
+      return res.status(400).json({ status: 'error', message: getBilingualMessage('phone_login_saudi_only') });
     }
-    if (!user.isAllowed) {
-      return res.status(403).json({ status: 'error', message: getBilingualMessage('account_not_allowed') });
+    const user = await User.findOne(query);
+    if (!user) {
+      return res.status(404).json({ status: 'error', message: getBilingualMessage('user_not_found') });
+    }
+    if (!user.canLogin()) {
+      if (user.isDisallowed) {
+        return res.status(403).json({ status: 'error', message: getBilingualMessage('account_disallowed') });
+      }
+      return res.status(403).json({ status: 'error', message: getBilingualMessage('account_not_active') });
     }
     const otp = identifierType === 'email' ? generateOTP() : generateSMSOTP();
-    otpStore[identifier] = { otp, timestamp: Date.now() };
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+    const otpField = identifierType === 'email' ? 'emailOTP' : 'phoneOTP';
+    user[otpField] = { code: otp, expiresAt };
+    await user.save();
+    let sendResult;
     if (identifierType === 'email') {
-      await sendOTPEmail(identifier, otp);
+      sendResult = await sendOTPEmail(identifier, otp);
     } else {
-      await sendOTPSMS(identifier, otp);
+      sendResult = await sendOTPSMS(identifier, otp);
     }
-    res.status(200).json(createResponse('success', null, getBilingualMessage('otp_sent_success')));
+    if (!sendResult.success) {
+      return res.status(500).json({ status: 'error', message: getBilingualMessage('failed_send_otp_to') });
+    }
+    res.status(200).json({ status: 'success', message: getBilingualMessage('otp_sent_to_success') });
   } catch (err) {
     console.error('Login with OTP error:', err);
-    res.status(500).json({ status: 'error', message: getBilingualMessage('otp_send_failed') });
+    res.status(500).json({ status: 'error', message: getBilingualMessage('login_with_otp_failed') });
   }
 };
 
@@ -249,34 +271,36 @@ exports.loginWithOTP = async (req, res) => {
 exports.confirmLoginOTP = async (req, res) => {
   try {
     const { identifier, otp } = req.body;
-    const storedOTP = otpStore[identifier];
-    if (!storedOTP || storedOTP.otp !== otp) {
+    const identifierType = getIdentifierType(identifier);
+    const query = identifierType === 'email' ? { email: identifier } : { phone: identifier };
+    const user = await User.findOne(query);
+    if (!user) {
+      return res.status(404).json({ status: 'error', message: getBilingualMessage('user_not_found') });
+    }
+    const otpField = identifierType === 'email' ? 'emailOTP' : 'phoneOTP';
+    if (!user[otpField] || !user[otpField].code) {
+      return res.status(400).json({ status: 'error', message: getBilingualMessage('no_otp_found_user') });
+    }
+    if (user[otpField].code !== otp) {
       return res.status(400).json({ status: 'error', message: getBilingualMessage('invalid_otp') });
     }
-    if (Date.now() - storedOTP.timestamp > 300000) {
-      delete otpStore[identifier];
+    if (user[otpField].expiresAt < new Date()) {
       return res.status(400).json({ status: 'error', message: getBilingualMessage('otp_expired') });
     }
-    const identifierType = getIdentifierType(identifier);
-    const user = await User.findOne(identifierType === 'email' ? { email: identifier } : { phone: identifier });
-    if (!user) {
-      return res.status(400).json({ status: 'error', message: getBilingualMessage('user_not_found') });
-    }
-    if (!user.isAllowed) {
-      return res.status(403).json({ status: 'error', message: getBilingualMessage('account_not_allowed') });
-    }
-    delete otpStore[identifier];
+    const verificationField = identifierType === 'email' ? 'isEmailVerified' : 'isPhoneVerified';
+    user[verificationField] = true;
+    user[otpField] = null;
+    await user.save();
     const token = generateToken(user);
     res.status(200).json(createResponse('success', {
       user: formatUser(user, { includeBusinessInfo: true }),
       token
-    }, getBilingualMessage('login_success')));
+    }, getBilingualMessage('email_phone_verified_login')));
   } catch (err) {
-    console.error('Confirm login OTP error:', err);
-    res.status(500).json({ status: 'error', message: getBilingualMessage('otp_verification_failed') });
+    console.error('Confirm Login OTP error:', err);
+    res.status(500).json({ status: 'error', message: getBilingualMessage('otp_confirmation_failed') });
   }
 };
-
 
 // POST /api/v1/user/password - Change password (requires authentication)
 exports.changePassword = async (req, res) => {

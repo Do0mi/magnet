@@ -5,6 +5,10 @@ const messages = {
     en: 'Email already registered',
     ar: 'البريد الإلكتروني مسجل بالفعل'
   },
+  'registration_success': {
+    en: 'Registration successful',
+    ar: 'تم التسجيل بنجاح'
+  },
   'phone_already_registered': {
     en: 'Phone number already registered',
     ar: 'رقم الهاتف مسجل بالفعل'
@@ -20,6 +24,10 @@ const messages = {
   'business_registration_submitted': {
     en: 'Business registration submitted successfully. Your application is under review.',
     ar: 'تم تقديم تسجيل الأعمال بنجاح. طلبك قيد المراجعة.'
+  },
+  'business_registration_success': {
+    en: 'Business registered successfully',
+    ar: 'تم تسجيل الأعمال بنجاح'
   },
   'business_registration_failed': {
     en: 'Business registration failed',

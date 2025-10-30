@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const ProductController = require('../../../controllers/user/products/products-controller');
-const verifyToken = require('../../../middleware/auth-middleware');
+const optionalAuth = require('../../../middleware/optional-auth-middleware');
 
-// All user product routes require authentication (protected public endpoints)
-router.use(verifyToken);
+// Public routes with optional authentication: attaches req.user if a valid token is provided
+router.use(optionalAuth);
 
 // GET /api/v1/user/products - Get all approved and allowed products
 router.get('/', ProductController.getProducts);

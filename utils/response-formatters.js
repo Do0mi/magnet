@@ -43,36 +43,37 @@ const formatUser = (user, options = {}) => {
       formatted.allowedBy = user.allowedBy;
       formatted.allowedAt = user.allowedAt;
     }
-    if (user.disallowedBy) {
-      formatted.disallowReason = user.disallowReason;
-      formatted.disallowedBy = user.disallowedBy;
-      formatted.disallowedAt = user.disallowedAt;
-      
-      // If disallowedBy is populated, format it properly
-      if (typeof user.disallowedBy === 'object') {
-        formatted.disallowedBy = {
-          id: user.disallowedBy._id,
-          firstname: user.disallowedBy.firstname,
-          lastname: user.disallowedBy.lastname,
-          email: user.disallowedBy.email,
-          role: user.disallowedBy.role
-        };
-      }
+    formatted.disallowReason = user.disallowReason || null;
+    if (user.disallowedBy && typeof user.disallowedBy === 'object') {
+      formatted.disallowedBy = {
+        id: user.disallowedBy._id,
+        firstname: user.disallowedBy.firstname,
+        lastname: user.disallowedBy.lastname,
+        email: user.disallowedBy.email,
+        role: user.disallowedBy.role
+      };
+    } else if (user.disallowedBy) {
+      formatted.disallowedBy = { id: user.disallowedBy };
+    } else {
+      formatted.disallowedBy = null;
+    }
+    formatted.disallowedAt = user.disallowedAt || null;
+
+    // If user is allowed, hide disallow fields completely
+    if (user.isAllowed) {
+      delete formatted.disallowReason;
+      delete formatted.disallowedBy;
+      delete formatted.disallowedAt;
     }
   }
 
   if (includeBusinessInfo && user.businessInfo) {
     formatted.businessInfo = {
-      crNumber: user.businessInfo.crNumber,
-      vatNumber: user.businessInfo.vatNumber,
-      companyName: user.businessInfo.companyName,
-      companyType: user.businessInfo.companyType,
-      approvalStatus: user.businessInfo.approvalStatus,
-      approvedBy: user.businessInfo.approvedBy,
-      approvedAt: user.businessInfo.approvedAt,
-      rejectedBy: user.businessInfo.rejectedBy,
-      rejectedAt: user.businessInfo.rejectedAt,
-      rejectionReason: user.businessInfo.rejectionReason
+      crNumber: user.businessInfo.crNumber || null,
+      vatNumber: user.businessInfo.vatNumber || null,
+      companyName: user.businessInfo.companyName || null,
+      companyType: user.businessInfo.companyType || null,
+      approvalStatus: user.businessInfo.approvalStatus
     };
 
     // Handle address fields - check if they exist directly or nested under address
@@ -91,7 +92,7 @@ const formatUser = (user, options = {}) => {
       };
     }
     
-    // If approvedBy is populated, format it properly
+    // If approvedBy is populated, format it properly; otherwise include id or null
     if (user.businessInfo.approvedBy && typeof user.businessInfo.approvedBy === 'object') {
       formatted.businessInfo.approvedBy = {
         id: user.businessInfo.approvedBy._id,
@@ -100,9 +101,14 @@ const formatUser = (user, options = {}) => {
         email: user.businessInfo.approvedBy.email,
         role: user.businessInfo.approvedBy.role
       };
+    } else if (user.businessInfo.approvedBy) {
+      formatted.businessInfo.approvedBy = { id: user.businessInfo.approvedBy };
+    }
+    if (user.businessInfo.approvedAt) {
+      formatted.businessInfo.approvedAt = user.businessInfo.approvedAt;
     }
     
-    // If rejectedBy is populated, format it properly
+    // If rejectedBy is populated, format it properly; otherwise include id or null
     if (user.businessInfo.rejectedBy && typeof user.businessInfo.rejectedBy === 'object') {
       formatted.businessInfo.rejectedBy = {
         id: user.businessInfo.rejectedBy._id,
@@ -111,6 +117,47 @@ const formatUser = (user, options = {}) => {
         email: user.businessInfo.rejectedBy.email,
         role: user.businessInfo.rejectedBy.role
       };
+    } else if (user.businessInfo.rejectedBy) {
+      formatted.businessInfo.rejectedBy = { id: user.businessInfo.rejectedBy };
+    }
+    if (user.businessInfo.rejectedAt) {
+      formatted.businessInfo.rejectedAt = user.businessInfo.rejectedAt;
+    }
+    if (user.businessInfo.rejectionReason) {
+      formatted.businessInfo.rejectionReason = user.businessInfo.rejectionReason;
+    }
+
+    // Conditionally show approval/rejection metadata based on status
+    const status = user.businessInfo.approvalStatus;
+    if (status === 'approved') {
+      // Ensure only approval metadata is present (and keep core business fields)
+      delete formatted.businessInfo.rejectedBy;
+      delete formatted.businessInfo.rejectedAt;
+      delete formatted.businessInfo.rejectionReason;
+      // Always include approvedBy key (null if missing)
+      if (formatted.businessInfo.approvedBy === undefined) {
+        formatted.businessInfo.approvedBy = null;
+      }
+      if (formatted.businessInfo.approvedAt === undefined) {
+        formatted.businessInfo.approvedAt = null;
+      }
+    } else if (status === 'rejected') {
+      // Show only rejection metadata (and keep core business fields)
+      delete formatted.businessInfo.approvedBy;
+      delete formatted.businessInfo.approvedAt;
+      // Always include rejection keys (null if missing)
+      if (formatted.businessInfo.rejectedBy === undefined) {
+        formatted.businessInfo.rejectedBy = null;
+      }
+      if (formatted.businessInfo.rejectedAt === undefined) {
+        formatted.businessInfo.rejectedAt = null;
+      }
+      if (formatted.businessInfo.rejectionReason === undefined) {
+        formatted.businessInfo.rejectionReason = null;
+      }
+    } else {
+      // Pending: businessInfo should contain ONLY approvalStatus
+      formatted.businessInfo = { approvalStatus: status };
     }
   }
 
@@ -472,6 +519,7 @@ const formatAddress = (address) => {
     state: address.state,
     postalCode: address.postalCode,
     country: address.country,
+    isDefault: address.isDefault,
     createdAt: address.createdAt,
     updatedAt: address.updatedAt
   };

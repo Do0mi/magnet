@@ -208,7 +208,7 @@ exports.login = async (req, res) => {
       return res.status(401).json({ status: 'error', message: getBilingualMessage('invalid_credentials') });
     }
     if (!user.canLogin()) {
-      if (user.isDisallowed) {
+      if (!user.isAllowed) {
         return res.status(403).json({ status: 'error', message: getBilingualMessage('account_disallowed') });
       }
       return res.status(403).json({ status: 'error', message: getBilingualMessage('account_not_active') });

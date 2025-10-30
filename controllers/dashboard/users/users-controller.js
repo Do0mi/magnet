@@ -125,7 +125,7 @@ exports.createUser = async (req, res) => {
           streetName
         },
         approvalStatus: 'approved', // Auto-approve when created by admin
-        approvedBy: req.user._id,
+        approvedBy: req.user.id || req.user._id,
         approvedAt: new Date()
       };
     }
@@ -151,6 +151,11 @@ exports.createUser = async (req, res) => {
     const user = new User(userData);
 
     await user.save();
+
+    // Populate approver/rejector/disallowedBy if present
+    await user.populate('businessInfo.approvedBy', 'firstname lastname email role');
+    await user.populate('businessInfo.rejectedBy', 'firstname lastname email role');
+    await user.populate('disallowedBy', 'firstname lastname email role');
 
     res.status(201).json(createResponse('success', {
       user: formatUser(user, { includeBusinessInfo: true })
@@ -190,6 +195,9 @@ exports.getUsers = async (req, res) => {
 
     const users = await User.find(filter)
       .select('-password')
+      .populate('businessInfo.approvedBy', 'firstname lastname email role')
+      .populate('businessInfo.rejectedBy', 'firstname lastname email role')
+      .populate('disallowedBy', 'firstname lastname email role')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
@@ -259,11 +267,14 @@ exports.toggleUser = async (req, res) => {
       updateFields.disallowedAt = null;
     }
 
-    const updatedUser = await User.findByIdAndUpdate(
+    let updatedUser = await User.findByIdAndUpdate(
       req.params.id,
       updateFields,
       { new: true }
     ).select('-password');
+
+    // Populate disallowedBy for richer response if set
+    updatedUser = await updatedUser.populate('disallowedBy', 'firstname lastname email role');
 
     // Send appropriate email notification based on the NEW status
     try {
@@ -307,7 +318,11 @@ exports.getUserById = async (req, res) => {
     const permissionError = validateAdminOrEmployeePermissions(req, res);
     if (permissionError) return;
 
-    const user = await User.findById(req.params.id).select('-password');
+    const user = await User.findById(req.params.id)
+      .select('-password')
+      .populate('businessInfo.approvedBy', 'firstname lastname email role')
+      .populate('businessInfo.rejectedBy', 'firstname lastname email role')
+      .populate('disallowedBy', 'firstname lastname email role');
     if (!user) {
       return res.status(404).json({
         status: 'error',
@@ -409,13 +424,13 @@ exports.updateUser = async (req, res) => {
 
       // Handle approval/rejection tracking
       if (approvalStatus === 'approved') {
-        businessInfoUpdate.approvedBy = req.user._id;
+        businessInfoUpdate.approvedBy = req.user.id || req.user._id;
         businessInfoUpdate.approvedAt = new Date();
         businessInfoUpdate.rejectedBy = undefined;
         businessInfoUpdate.rejectedAt = undefined;
         businessInfoUpdate.rejectionReason = undefined;
       } else if (approvalStatus === 'rejected') {
-        businessInfoUpdate.rejectedBy = req.user._id;
+        businessInfoUpdate.rejectedBy = req.user.id || req.user._id;
         businessInfoUpdate.rejectedAt = new Date();
         businessInfoUpdate.approvedBy = undefined;
         businessInfoUpdate.approvedAt = undefined;
@@ -447,7 +462,7 @@ exports.updateUser = async (req, res) => {
     if ((currentUser.role === 'customer' || role === 'customer') && disallowReason !== undefined) {
       if (disallowReason) {
         updateFields.disallowReason = disallowReason;
-        updateFields.disallowedBy = req.user._id;
+        updateFields.disallowedBy = req.user.id || req.user._id;
         updateFields.disallowedAt = new Date();
       } else {
         updateFields.disallowReason = undefined;
@@ -456,11 +471,17 @@ exports.updateUser = async (req, res) => {
       }
     }
 
-    const user = await User.findByIdAndUpdate(
+    let user = await User.findByIdAndUpdate(
       req.params.id,
       updateFields,
       { new: true, runValidators: true }
     ).select('-password');
+
+    // Populate approver/rejector/disallowedBy for richer response
+    user = await user
+      .populate('businessInfo.approvedBy', 'firstname lastname email role')
+      .populate('businessInfo.rejectedBy', 'firstname lastname email role')
+      .populate('disallowedBy', 'firstname lastname email role');
 
     if (!user) {
       return res.status(404).json({

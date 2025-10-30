@@ -18,7 +18,7 @@ const {
 router.post('/register', validateRegister, AuthController.register);
 
 // POST /api/v1/user/auth/business-request - Business registration request
-router.post('/business-request', validateBusinessRegister, AuthController.businessRegister);
+router.post('/business-register', validateBusinessRegister, AuthController.businessRegister);
 
 // POST /api/v1/user/auth/login - Login
 router.post('/login', validateLogin, AuthController.login);

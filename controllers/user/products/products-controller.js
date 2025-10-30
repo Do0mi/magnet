@@ -40,7 +40,9 @@ exports.getProducts = async (req, res) => {
             { description: { $regex: search, $options: 'i' } },
             { tags: { $in: [new RegExp(search, 'i')] } },
             { 'ownerInfo.firstname': { $regex: search, $options: 'i' } },
-            { 'ownerInfo.lastname': { $regex: search, $options: 'i' } }
+            { 'ownerInfo.lastname': { $regex: search, $options: 'i' } },
+            { 'ownerInfo.businessInfo.companyName': { $regex: search, $options: 'i' } },
+            { 'ownerInfo.businessInfo.companyType': { $regex: search, $options: 'i' } }
           ]
         }
       });
@@ -52,6 +54,16 @@ exports.getProducts = async (req, res) => {
           localField: 'category',
           foreignField: '_id',
           as: 'categoryInfo'
+        }
+      });
+
+      // Lookup approvedBy user to include full approver info
+      pipeline.push({
+        $lookup: {
+          from: 'users',
+          localField: 'approvedBy',
+          foreignField: '_id',
+          as: 'approvedByInfo'
         }
       });
 
@@ -74,11 +86,21 @@ exports.getProducts = async (req, res) => {
             _id: { $arrayElemAt: ['$ownerInfo._id', 0] },
             firstname: { $arrayElemAt: ['$ownerInfo.firstname', 0] },
             lastname: { $arrayElemAt: ['$ownerInfo.lastname', 0] },
-            businessName: { $arrayElemAt: ['$ownerInfo.businessInfo.companyName', 0] }
+            businessInfo: {
+              companyName: { $arrayElemAt: ['$ownerInfo.businessInfo.companyName', 0] },
+              companyType: { $arrayElemAt: ['$ownerInfo.businessInfo.companyType', 0] }
+            }
           },
           category: {
             _id: { $arrayElemAt: ['$categoryInfo._id', 0] },
             name: { $arrayElemAt: ['$categoryInfo.name', 0] }
+          },
+          approvedBy: {
+            _id: { $arrayElemAt: ['$approvedByInfo._id', 0] },
+            firstname: { $arrayElemAt: ['$approvedByInfo.firstname', 0] },
+            lastname: { $arrayElemAt: ['$approvedByInfo.lastname', 0] },
+            email: { $arrayElemAt: ['$approvedByInfo.email', 0] },
+            role: { $arrayElemAt: ['$approvedByInfo.role', 0] }
           }
         }
       });
@@ -113,7 +135,9 @@ exports.getProducts = async (req, res) => {
               { description: { $regex: search, $options: 'i' } },
               { tags: { $in: [new RegExp(search, 'i')] } },
               { 'ownerInfo.firstname': { $regex: search, $options: 'i' } },
-              { 'ownerInfo.lastname': { $regex: search, $options: 'i' } }
+              { 'ownerInfo.lastname': { $regex: search, $options: 'i' } },
+              { 'ownerInfo.businessInfo.companyName': { $regex: search, $options: 'i' } },
+              { 'ownerInfo.businessInfo.companyType': { $regex: search, $options: 'i' } }
             ]
           }
         },
@@ -144,7 +168,8 @@ exports.getProducts = async (req, res) => {
       sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
 
       const products = await Product.find(filter)
-        .populate('owner', 'firstname lastname businessName')
+        .populate('owner', 'firstname lastname businessInfo.companyName businessInfo.companyType')
+        .populate('approvedBy', 'firstname lastname email role')
         .populate('category', 'name')
         .sort(sort)
         .skip(skip)
@@ -181,7 +206,8 @@ exports.getProductById = async (req, res) => {
       _id: req.params.id, 
       status: 'approved' 
     })
-      .populate('owner', 'firstname lastname businessName')
+      .populate('owner', 'firstname lastname businessInfo.companyName businessInfo.companyType')
+      .populate('approvedBy', 'firstname lastname email role')
       .populate('category', 'name');
 
     if (!product) {
