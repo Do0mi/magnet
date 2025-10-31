@@ -8,7 +8,8 @@ const { formatUser, createResponse } = require('../utils/response-formatters');
 
 exports.getProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id);
+    const user = await User.findById(req.user.id)
+      .populate('businessInfo.approvedBy', 'firstname lastname email role');
     if (!user) {
       return res.status(404).json({ status: 'error', message: getBilingualMessage('user_not_found') });
     }
@@ -35,7 +36,8 @@ exports.updateProfile = async (req, res) => {
       req.user.id,
       updateFields,
       { new: true, runValidators: true }
-    );
+    )
+      .populate('businessInfo.approvedBy', 'firstname lastname email role');
     if (!updatedUser) {
       return res.status(404).json({ status: 'error', message: getBilingualMessage('user_not_found') });
     }
@@ -56,6 +58,8 @@ exports.getBusinessRequests = async (req, res) => {
     const skip = (page - 1) * limit;
     const businesses = await User.find(query)
       .select('-password -emailOTP -phoneOTP -passwordResetToken')
+      .populate('businessInfo.approvedBy', 'firstname lastname email role')
+      .populate('businessInfo.rejectedBy', 'firstname lastname email role')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
@@ -119,6 +123,7 @@ exports.businessApproval = async (req, res) => {
     // Re-populate to get the approvedBy details
     const updatedBusiness = await User.findById(businessId)
       .populate('businessInfo.approvedBy', 'firstname lastname email role')
+      .populate('businessInfo.rejectedBy', 'firstname lastname email role')
       .select('-password -emailOTP -phoneOTP -passwordResetToken');
     
     res.status(200).json(createResponse('success', {
@@ -136,7 +141,10 @@ exports.businessApproval = async (req, res) => {
 exports.getBusinessDetails = async (req, res) => {
   try {
     const { businessId } = req.params;
-    const business = await User.findById(businessId).select('-password -emailOTP -phoneOTP -passwordResetToken');
+    const business = await User.findById(businessId)
+      .select('-password -emailOTP -phoneOTP -passwordResetToken')
+      .populate('businessInfo.approvedBy', 'firstname lastname email role')
+      .populate('businessInfo.rejectedBy', 'firstname lastname email role');
     if (!business) {
       return res.status(404).json({ status: 'error', message: getBilingualMessage('business_not_found') });
     }
@@ -154,7 +162,8 @@ exports.getBusinessDetails = async (req, res) => {
 
 exports.getBusinessProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id);
+    const user = await User.findById(req.user.id)
+      .populate('businessInfo.approvedBy', 'firstname lastname email role');
     if (!user) {
       return res.status(404).json({ status: 'error', message: getBilingualMessage('user_not_found') });
     }

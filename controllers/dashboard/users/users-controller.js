@@ -273,8 +273,11 @@ exports.toggleUser = async (req, res) => {
       { new: true }
     ).select('-password');
 
-    // Populate disallowedBy for richer response if set
-    updatedUser = await updatedUser.populate('disallowedBy', 'firstname lastname email role');
+    // Populate disallowedBy, approvedBy, and rejectedBy for richer response
+    updatedUser = await updatedUser
+      .populate('disallowedBy', 'firstname lastname email role')
+      .populate('businessInfo.approvedBy', 'firstname lastname email role')
+      .populate('businessInfo.rejectedBy', 'firstname lastname email role');
 
     // Send appropriate email notification based on the NEW status
     try {

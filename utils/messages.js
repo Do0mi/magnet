@@ -579,6 +579,10 @@ const messages = {
     en: 'Review not found',
     ar: 'التقييم غير موجود'
   },
+  'review_retrieved': {
+    en: 'Review retrieved successfully',
+    ar: 'تم استرجاع التقييم بنجاح'
+  },
   'review_deleted': {
     en: 'Review deleted successfully',
     ar: 'تم حذف التقييم بنجاح'

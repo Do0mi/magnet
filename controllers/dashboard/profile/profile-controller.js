@@ -20,7 +20,8 @@ exports.getProfile = async (req, res) => {
     const permissionError = validateAdminOrEmployeePermissions(req, res);
     if (permissionError) return;
 
-    const user = await User.findById(req.user.id);
+    const user = await User.findById(req.user.id)
+      .populate('businessInfo.approvedBy', 'firstname lastname email role');
     if (!user) {
       return res.status(404).json({ 
         status: 'error', 
@@ -61,7 +62,8 @@ exports.updateProfile = async (req, res) => {
       req.user.id,
       updateFields,
       { new: true, runValidators: true }
-    );
+    )
+      .populate('businessInfo.approvedBy', 'firstname lastname email role');
 
     if (!updatedUser) {
       return res.status(404).json({ 

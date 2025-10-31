@@ -42,15 +42,13 @@ exports.getReviews = async (req, res) => {
     if (search) {
       filter.$or = [
         { comment: { $regex: search, $options: 'i' } },
-        { 'customer.firstname': { $regex: search, $options: 'i' } },
-        { 'customer.lastname': { $regex: search, $options: 'i' } },
         { 'product.name': { $regex: search, $options: 'i' } }
       ];
     }
 
     const reviews = await Review.find(filter)
-      .populate('customer', 'firstname lastname email')
-      .populate('product', 'name images')
+      .populate('user', 'firstname lastname email role')
+      .populate('product')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
@@ -85,8 +83,8 @@ exports.getReviewById = async (req, res) => {
     if (permissionError) return;
 
     const review = await Review.findById(req.params.id)
-      .populate('customer', 'firstName lastName email')
-      .populate('product', 'name price images');
+      .populate('user', 'firstname lastname email role')
+      .populate('product');
 
     if (!review) {
       return res.status(404).json({
@@ -97,7 +95,11 @@ exports.getReviewById = async (req, res) => {
 
     // Check if the review is for a business product
     const businessProductIds = await getBusinessProductIds(req.user.id);
-    if (!businessProductIds.includes(review.product._id)) {
+    // Convert to strings for comparison
+    const businessProductIdsStr = businessProductIds.map(id => id.toString());
+    const reviewProductIdStr = review.product._id ? review.product._id.toString() : review.product.toString();
+    
+    if (!businessProductIdsStr.includes(reviewProductIdStr)) {
       return res.status(403).json({
         status: 'error',
         message: getBilingualMessage('insufficient_permissions')

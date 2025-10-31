@@ -32,6 +32,8 @@ exports.getBusinesses = async (req, res) => {
 
     const businesses = await User.find(filter)
       .select('-password')
+      .populate('businessInfo.approvedBy', 'firstname lastname email role')
+      .populate('businessInfo.rejectedBy', 'firstname lastname email role')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
@@ -83,14 +85,20 @@ exports.approveBusiness = async (req, res) => {
     const updateFields = { 
       updatedAt: Date.now(),
       businessStatus: 'approved',
-      isAllowed: true
+      isAllowed: true,
+      'businessInfo.approvalStatus': 'approved',
+      'businessInfo.approvedBy': req.user.id || req.user._id,
+      'businessInfo.approvedAt': new Date()
     };
 
     const updatedBusiness = await User.findByIdAndUpdate(
       businessId,
       updateFields,
       { new: true, runValidators: true }
-    ).select('-password');
+    )
+      .select('-password')
+      .populate('businessInfo.approvedBy', 'firstname lastname email role')
+      .populate('businessInfo.rejectedBy', 'firstname lastname email role');
 
     // Send notification email
     try {
@@ -138,18 +146,24 @@ exports.declineBusiness = async (req, res) => {
     const updateFields = { 
       updatedAt: Date.now(),
       businessStatus: 'rejected',
-      isAllowed: false
+      isAllowed: false,
+      'businessInfo.approvalStatus': 'rejected',
+      'businessInfo.rejectedBy': req.user.id || req.user._id,
+      'businessInfo.rejectedAt': new Date()
     };
 
     if (rejectionReason) {
-      updateFields.rejectionReason = rejectionReason;
+      updateFields['businessInfo.rejectionReason'] = rejectionReason;
     }
 
     const updatedBusiness = await User.findByIdAndUpdate(
       businessId,
       updateFields,
       { new: true, runValidators: true }
-    ).select('-password');
+    )
+      .select('-password')
+      .populate('businessInfo.approvedBy', 'firstname lastname email role')
+      .populate('businessInfo.rejectedBy', 'firstname lastname email role');
 
     // Send notification email
     try {
@@ -178,7 +192,9 @@ exports.getBusinessById = async (req, res) => {
     if (permissionError) return;
 
     const business = await User.findById(req.params.id)
-      .select('-password');
+      .select('-password')
+      .populate('businessInfo.approvedBy', 'firstname lastname email role')
+      .populate('businessInfo.rejectedBy', 'firstname lastname email role');
 
     if (!business || business.role !== 'business') {
       return res.status(404).json({
