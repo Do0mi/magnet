@@ -13,6 +13,15 @@ router.use(verifyToken);
 // GET /api/v1/dashboard/users - Get all users
 router.get('/', requireAdminOrEmployee, UserController.getUsers);
 
+// GET /api/v1/dashboard/users/business/pending - Get pending business users
+router.get('/business/pending', requireAdminOrEmployee, UserController.getPendingBusinessUsers);
+
+// PUT /api/v1/dashboard/users/business/:id/approve - Approve business user
+router.put('/business/:id/approve', requireAdminOrEmployee, UserController.approveBusinessUser);
+
+// PUT /api/v1/dashboard/users/business/:id/decline - Decline business user
+router.put('/business/:id/decline', requireAdminOrEmployee, UserController.declineBusinessUser);
+
 // GET /api/v1/dashboard/users/:id - Get user by id
 router.get('/:id', requireAdminOrEmployee, UserController.getUserById);
 

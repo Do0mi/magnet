@@ -240,6 +240,37 @@ exports.createProduct = async (req, res) => {
       });
     }
 
+    // Check if business user exists and is a business user
+    const businessUser = await User.findById(businessUserId);
+    if (!businessUser) {
+      return res.status(404).json({
+        status: 'error',
+        message: getBilingualMessage('business_not_found')
+      });
+    }
+
+    if (businessUser.role !== 'business') {
+      return res.status(400).json({
+        status: 'error',
+        message: getBilingualMessage('user_not_business')
+      });
+    }
+
+    // Check if business user is approved and allowed
+    if (businessUser.businessInfo?.approvalStatus !== 'approved') {
+      return res.status(400).json({
+        status: 'error',
+        message: getBilingualMessage('business_not_approved')
+      });
+    }
+
+    if (!businessUser.isAllowed) {
+      return res.status(400).json({
+        status: 'error',
+        message: getBilingualMessage('business_not_allowed')
+      });
+    }
+
     // Validate custom fields
     if (!customFields || !Array.isArray(customFields) || customFields.length < 3 || customFields.length > 10) {
       return res.status(400).json({ status: 'error', message: getBilingualMessage('invalid_custom_fields_count') });
@@ -356,10 +387,20 @@ exports.updateProduct = async (req, res) => {
     const permissionError = validateAdminOrEmployeePermissions(req, res);
     if (permissionError) return;
 
-    const { code, category, name, images, description, unit, minOrder, pricePerUnit, stock, customFields, attachments, status } = req.body;
+    const { category, name, images, description, unit, minOrder, pricePerUnit, stock, customFields, attachments, status, declinedReason } = req.body;
+    
+    // Get current product to check status change
+    const currentProduct = await Product.findById(req.params.id);
+    if (!currentProduct) {
+      return res.status(404).json({
+        status: 'error',
+        message: getBilingualMessage('product_not_found')
+      });
+    }
+
+    const oldStatus = currentProduct.status;
     const updateFields = { updatedAt: Date.now() };
 
-    if (code) updateFields.code = code;
     if (category) updateFields.category = category;
     if (name) updateFields.name = name;
     if (images) updateFields.images = images;
@@ -370,7 +411,18 @@ exports.updateProduct = async (req, res) => {
     if (stock !== undefined) updateFields.stock = stock;
     if (customFields && Array.isArray(customFields) && customFields.length >= 3 && customFields.length <= 10) updateFields.customFields = customFields;
     if (attachments) updateFields.attachments = attachments;
-    if (status) updateFields.status = status;
+    if (status) {
+      updateFields.status = status;
+      // Update isAllowed based on status
+      if (status === 'approved') {
+        updateFields.isAllowed = true;
+        updateFields.approvedBy = req.user.id;
+        updateFields.declinedReason = undefined;
+      } else if (status === 'declined') {
+        updateFields.isAllowed = false;
+        if (declinedReason) updateFields.declinedReason = declinedReason;
+      }
+    }
 
     const product = await Product.findByIdAndUpdate(
       req.params.id,
@@ -388,6 +440,43 @@ exports.updateProduct = async (req, res) => {
     }
 
     const formattedProduct = formatProduct(product);
+
+    // Send email notification if status changed
+    if (status && status !== oldStatus) {
+      try {
+        const owner = await User.findById(product.owner).select('email firstname lastname');
+        const actionUser = await User.findById(req.user.id).select('firstname lastname');
+        
+        if (owner && actionUser) {
+          const productName = product.name?.en || product.name?.ar || 'Unknown Product';
+          const actionBy = `${actionUser.firstname} ${actionUser.lastname}`;
+          
+          if (status === 'approved' && oldStatus !== 'approved') {
+            // Status changed to approved
+            await sendProductApprovalNotification(
+              owner.email,
+              `${owner.firstname} ${owner.lastname}`,
+              productName,
+              actionBy,
+              new Date()
+            );
+          } else if (status === 'declined' && oldStatus !== 'declined') {
+            // Status changed to declined
+            await sendProductDeclineNotification(
+              owner.email,
+              `${owner.firstname} ${owner.lastname}`,
+              productName,
+              actionBy,
+              new Date(),
+              declinedReason || product.declinedReason || 'No reason provided'
+            );
+          }
+        }
+      } catch (emailError) {
+        console.error('Failed to send status change email:', emailError);
+        // Don't fail the request if email fails
+      }
+    }
 
     res.status(200).json(createResponse('success', {
       product: formattedProduct

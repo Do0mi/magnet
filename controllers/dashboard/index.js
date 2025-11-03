@@ -1,6 +1,5 @@
 // Dashboard Controllers Index
 const usersController = require('./users/users-controller');
-const businessController = require('./business/business-controller');
 const productsController = require('./products/products-controller');
 const categoriesController = require('./categories/categories-controller');
 const profileController = require('./profile/profile-controller');
@@ -12,7 +11,6 @@ const statsController = require('./stats/stats-controller');
 
 module.exports = {
   usersController,
-  businessController,
   productsController,
   categoriesController,
   profileController,

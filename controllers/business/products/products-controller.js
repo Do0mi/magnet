@@ -44,6 +44,8 @@ exports.getProducts = async (req, res) => {
 
     const products = await Product.find(filter)
       .populate('category', 'name')
+      .populate('owner', 'firstname lastname email role businessInfo.companyName')
+      .populate('approvedBy', 'firstname lastname email role')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
@@ -94,6 +96,8 @@ exports.getProductById = async (req, res) => {
     }
 
     await product.populate('category', 'name');
+    await product.populate('owner', 'firstname lastname email role businessInfo.companyName');
+    await product.populate('approvedBy', 'firstname lastname email role');
 
     const formattedProduct = formatProduct(product);
 
@@ -114,17 +118,118 @@ exports.createProduct = async (req, res) => {
     const permissionError = validateBusinessPermissions(req, res);
     if (permissionError) return;
 
-    const productData = {
-      ...req.body,
+    const { category, name, images, description, unit, minOrder, pricePerUnit, stock, customFields, attachments } = req.body;
+    let { code } = req.body;
+
+    // Validate required fields
+    if (!name || !description || !pricePerUnit || !category) {
+      return res.status(400).json({
+        status: 'error',
+        message: getBilingualMessage('missing_required_fields')
+      });
+    }
+
+    // Validate custom fields
+    if (!customFields || !Array.isArray(customFields) || customFields.length < 3 || customFields.length > 10) {
+      return res.status(400).json({ status: 'error', message: getBilingualMessage('invalid_custom_fields_count') });
+    }
+
+    // Validate bilingual fields
+    if (!name || !name.en || !name.ar) {
+      return res.status(400).json({ status: 'error', message: getBilingualMessage('product_name_required_both_languages') });
+    }
+
+    if (description && (!description.en || !description.ar)) {
+      return res.status(400).json({ status: 'error', message: getBilingualMessage('product_description_required_both_languages') });
+    }
+
+    if (!category || !category.en || !category.ar) {
+      return res.status(400).json({ status: 'error', message: getBilingualMessage('product_category_required_both_languages') });
+    }
+
+    if (unit && (!unit.en || !unit.ar)) {
+      return res.status(400).json({ status: 'error', message: getBilingualMessage('product_unit_required_both_languages') });
+    }
+
+    // Validate custom fields have bilingual content
+    for (let field of customFields) {
+      if (!field.key || !field.key.en || !field.key.ar || !field.value || !field.value.en || !field.value.ar) {
+        return res.status(400).json({ status: 'error', message: getBilingualMessage('custom_fields_required_both_languages') });
+      }
+    }
+
+    // Check if category exists and is active
+    const categoryExists = await Category.findOne({
+      'name.en': category.en,
+      'name.ar': category.ar
+    });
+    
+    if (!categoryExists) {
+      return res.status(400).json({
+        status: 'error',
+        message: getBilingualMessage('category_not_found')
+      });
+    }
+
+    // Check if category is active
+    if (categoryExists.status !== 'active') {
+      return res.status(400).json({
+        status: 'error',
+        message: getBilingualMessage('category_inactive')
+      });
+    }
+
+    // Validate attachments if provided
+    if (attachments && attachments.length > 0) {
+      const attachmentProducts = await Product.find({
+        _id: { $in: attachments },
+        status: 'approved',
+        isAllowed: true
+      }).select('_id status isAllowed');
+      
+      if (attachmentProducts.length !== attachments.length) {
+        return res.status(400).json({
+          status: 'error',
+          message: getBilingualMessage('invalid_attachments')
+        });
+      }
+    }
+
+    // Generate product code if not provided
+    if (!code) {
+      const generateProductCode = require('../../../utils/generateProductCode');
+      code = await generateProductCode();
+    }
+
+    const product = new Product({
+      code,
+      category,
+      name,
+      images: images || [],
+      description,
+      unit,
+      minOrder,
+      pricePerUnit,
+      stock: stock || 0,
+      customFields,
+      attachments: attachments || [],
+      status: 'pending', // Business products need approval
+      isAllowed: true,
       owner: req.user.id
-    };
+    });
 
-    const product = new Product(productData);
     await product.save();
+    await product.populate('owner', 'firstname lastname email role businessInfo.companyName');
+    await product.populate('approvedBy', 'firstname lastname email role');
 
-    res.status(201).json(createResponse('success', product, getBilingualMessage('product_created')));
-  } catch (err) {
-    console.error('Create product error:', err);
+    const formattedProduct = formatProduct(product);
+
+    res.status(201).json(createResponse('success', {
+      product: formattedProduct
+    }, getBilingualMessage('product_created_success')));
+
+  } catch (error) {
+    console.error('Create product error:', error);
     res.status(500).json({
       status: 'error',
       message: getBilingualMessage('failed_create_product')
@@ -154,25 +259,55 @@ exports.updateProduct = async (req, res) => {
       });
     }
 
-    const { name, description, price, category, images, specifications, stock, tags } = req.body;
+    const { category, name, images, description, unit, minOrder, pricePerUnit, stock, customFields, attachments } = req.body;
     const updateFields = { updatedAt: Date.now() };
 
-    if (name) updateFields.name = name;
-    if (description) updateFields.description = description;
-    if (price !== undefined) updateFields.price = price;
     if (category) updateFields.category = category;
+    if (name) updateFields.name = name;
     if (images) updateFields.images = images;
-    if (specifications) updateFields.specifications = specifications;
+    if (description) updateFields.description = description;
+    if (unit) updateFields.unit = unit;
+    if (minOrder !== undefined) updateFields.minOrder = minOrder;
+    if (pricePerUnit) updateFields.pricePerUnit = pricePerUnit;
     if (stock !== undefined) updateFields.stock = stock;
-    if (tags) updateFields.tags = tags;
+    if (customFields && Array.isArray(customFields) && customFields.length >= 3 && customFields.length <= 10) updateFields.customFields = customFields;
+    if (attachments) updateFields.attachments = attachments;
 
-    // If updating category, check if it exists
+    // If updating category, check if it exists and is active
     if (category) {
-      const categoryExists = await Category.findById(category);
+      const categoryExists = await Category.findOne({
+        'name.en': category.en,
+        'name.ar': category.ar
+      });
+      
       if (!categoryExists) {
         return res.status(400).json({
           status: 'error',
           message: getBilingualMessage('category_not_found')
+        });
+      }
+
+      // Check if category is active
+      if (categoryExists.status !== 'active') {
+        return res.status(400).json({
+          status: 'error',
+          message: getBilingualMessage('category_inactive')
+        });
+      }
+    }
+
+    // Validate attachments if provided
+    if (attachments && attachments.length > 0) {
+      const attachmentProducts = await Product.find({
+        _id: { $in: attachments },
+        status: 'approved',
+        isAllowed: true
+      }).select('_id status isAllowed');
+      
+      if (attachmentProducts.length !== attachments.length) {
+        return res.status(400).json({
+          status: 'error',
+          message: getBilingualMessage('invalid_attachments')
         });
       }
     }
@@ -180,6 +315,7 @@ exports.updateProduct = async (req, res) => {
     // Reset status to pending if product is being updated (needs re-approval)
     if (product.status === 'approved') {
       updateFields.status = 'pending';
+      updateFields.approvedBy = undefined;
     }
 
     const updatedProduct = await Product.findByIdAndUpdate(
@@ -187,10 +323,21 @@ exports.updateProduct = async (req, res) => {
       updateFields,
       { new: true, runValidators: true }
     )
-      .populate('category', 'name');
+      .populate('category', 'name')
+      .populate('owner', 'firstname lastname email role businessInfo.companyName')
+      .populate('approvedBy', 'firstname lastname email role');
+
+    if (!updatedProduct) {
+      return res.status(404).json({
+        status: 'error',
+        message: getBilingualMessage('product_not_found')
+      });
+    }
+
+    const formattedProduct = formatProduct(updatedProduct);
 
     res.status(200).json(createResponse('success', {
-      product: updatedProduct
+      product: formattedProduct
     }, getBilingualMessage('product_updated_success')));
 
   } catch (error) {
@@ -224,7 +371,14 @@ exports.deleteProduct = async (req, res) => {
       });
     }
 
-    await Product.findByIdAndDelete(req.params.id);
+    const deletedProduct = await Product.findByIdAndDelete(req.params.id);
+
+    if (!deletedProduct) {
+      return res.status(404).json({
+        status: 'error',
+        message: getBilingualMessage('product_not_found')
+      });
+    }
 
     res.status(200).json(createResponse('success', null, getBilingualMessage('product_deleted_success')));
 
@@ -263,10 +417,13 @@ exports.toggleProduct = async (req, res) => {
       req.params.id,
       { isAllowed: !product.isAllowed },
       { new: true, runValidators: true }
-    );
+    )
+      .populate('owner', 'firstname lastname email role businessInfo.companyName')
+      .populate('approvedBy', 'firstname lastname email role');
 
+    const formattedProduct = formatProduct(updatedProduct);
     res.status(200).json(createResponse('success', {
-      product: updatedProduct
+      product: formattedProduct
     }, getBilingualMessage('product_toggled_success')));
 
   } catch (error) {

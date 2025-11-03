@@ -233,18 +233,7 @@ const formatProduct = (product, options = {}) => {
   }
 
   if (includeOwner && product.owner) {
-    if (typeof product.owner === 'object' && product.owner.businessInfo) {
-      formatted.owner = {
-        id: product.owner._id,
-        firstname: product.owner.firstname,
-        lastname: product.owner.lastname,
-        email: product.owner.email,
-        role: product.owner.role,
-        businessInfo: {
-          companyName: product.owner.businessInfo.companyName
-        }
-      };
-    } else if (typeof product.owner === 'object') {
+    if (typeof product.owner === 'object') {
       formatted.owner = {
         id: product.owner._id,
         firstname: product.owner.firstname,
@@ -252,6 +241,13 @@ const formatProduct = (product, options = {}) => {
         email: product.owner.email,
         role: product.owner.role
       };
+      
+      // Include businessInfo for business role users
+      if (product.owner.role === 'business') {
+        formatted.owner.businessInfo = {
+          companyName: product.owner.businessInfo?.companyName || null
+        };
+      }
     } else {
       formatted.owner = product.owner;
     }
@@ -268,7 +264,7 @@ const formatProduct = (product, options = {}) => {
         role: product.approvedBy.role
       };
     } else {
-      formatted.approvedBy = product.approvedBy;
+      formatted.approvedBy = product.approvedBy || null;
     }
     
     // Add decline information if product is declined
@@ -570,3 +566,4 @@ module.exports = {
   formatAddress,
   createResponse
 };
+

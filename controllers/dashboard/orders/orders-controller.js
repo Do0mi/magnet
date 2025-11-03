@@ -109,7 +109,7 @@ exports.createOrder = async (req, res) => {
     const permissionError = validateAdminOrEmployeePermissions(req, res);
     if (permissionError) return;
 
-    const { customerId, items, shippingAddress, paymentMethod, notes } = req.body;
+    const { customerId, items, shippingAddressId, shippingCost, paymentMethod, notes } = req.body;
 
     // Validate required fields
     if (!customerId || !items || !Array.isArray(items) || items.length === 0) {
@@ -119,7 +119,7 @@ exports.createOrder = async (req, res) => {
       });
     }
 
-    // Check if customer exists
+    // Check if customer exists and is a customer
     const customer = await User.findById(customerId);
     if (!customer) {
       return res.status(404).json({
@@ -128,49 +128,110 @@ exports.createOrder = async (req, res) => {
       });
     }
 
-    // Validate products and calculate total
-    let totalAmount = 0;
+    if (customer.role !== 'customer') {
+      return res.status(400).json({
+        status: 'error',
+        message: getBilingualMessage('user_not_customer')
+      });
+    }
+
+    // Validate shipping address if provided
+    if (shippingAddressId) {
+      const Address = require('../../../models/address-model');
+      const shippingAddress = await Address.findById(shippingAddressId);
+      if (!shippingAddress) {
+        return res.status(404).json({
+          status: 'error',
+          message: getBilingualMessage('address_not_found')
+        });
+      }
+      
+      // Verify address belongs to customer
+      if (shippingAddress.user.toString() !== customerId.toString()) {
+        return res.status(400).json({
+          status: 'error',
+          message: getBilingualMessage('address_not_belong_to_customer')
+        });
+      }
+    }
+
+    // Validate products and prepare items
     const validatedItems = [];
 
     for (const item of items) {
+      if (!item.productId || !item.quantity || item.quantity <= 0) {
+        return res.status(400).json({
+          status: 'error',
+          message: getBilingualMessage('invalid_order_item')
+        });
+      }
+
       const product = await Product.findById(item.productId);
       if (!product) {
-        return res.status(400).json({
+        return res.status(404).json({
           status: 'error',
           message: getBilingualMessage('product_not_found')
         });
       }
 
-      const itemTotal = product.price * item.quantity;
-      totalAmount += itemTotal;
+      // Check if product is approved and allowed
+      if (product.status !== 'approved') {
+        return res.status(400).json({
+          status: 'error',
+          message: getBilingualMessage('product_not_approved')
+        });
+      }
+
+      if (!product.isAllowed) {
+        return res.status(400).json({
+          status: 'error',
+          message: getBilingualMessage('product_not_allowed')
+        });
+      }
+
+      // Check stock availability
+      if (product.stock !== undefined && product.stock < item.quantity) {
+        return res.status(400).json({
+          status: 'error',
+          message: getBilingualMessage('insufficient_stock')
+        });
+      }
+
+      const unitPrice = parseFloat(product.pricePerUnit) || 0;
+      const itemTotal = unitPrice * item.quantity;
 
       validatedItems.push({
         product: product._id,
         quantity: item.quantity,
-        price: product.price,
-        total: itemTotal
+        unitPrice: unitPrice,
+        itemTotal: itemTotal
       });
     }
 
-    // Generate order number
-    const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+    const statusMapping = Order.getStatusMapping();
+    const confirmedStatus = statusMapping['confirmed'];
 
     const order = new Order({
-      orderNumber,
       customer: customerId,
       items: validatedItems,
-      totalAmount,
-      shippingAddress,
-      paymentMethod: paymentMethod || 'admin_created',
+      shippingAddress: shippingAddressId || undefined,
+      shippingCost: shippingCost || 0,
+      paymentMethod: paymentMethod || 'Cash on delivery',
       status: 'confirmed',
-      adminNotes: notes,
-      createdBy: req.user.id
+      notes: notes,
+      statusLog: [{
+        status: confirmedStatus,
+        timestamp: new Date(),
+        updatedBy: req.user.id,
+        note: 'Order created by admin/employee'
+      }]
     });
 
     await order.save();
 
     await order.populate('customer', 'firstname lastname email phone');
-    await order.populate('items.product', 'name price images');
+    await order.populate('shippingAddress');
+    await order.populate('items.product', 'name pricePerUnit images');
 
     const formattedOrder = formatOrder(order);
 

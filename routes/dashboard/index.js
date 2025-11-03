@@ -3,7 +3,6 @@ const router = express.Router();
 
 // Import all dashboard sub-routes
 const usersRoutes = require('./users/users-routes');
-const businessRoutes = require('./business/business-routes');
 const productsRoutes = require('./products/products-routes');
 const categoriesRoutes = require('./categories/categories-routes');
 const profileRoutes = require('./profile/profile-routes');
@@ -15,7 +14,6 @@ const statsRoutes = require('./stats/stats-routes');
 
 // Mount all dashboard sub-routes
 router.use('/users', usersRoutes);
-router.use('/business', businessRoutes);
 router.use('/products', productsRoutes);
 router.use('/categories', categoriesRoutes);
 router.use('/profile', profileRoutes);

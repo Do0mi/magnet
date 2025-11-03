@@ -105,6 +105,22 @@ const messages = {
     en: 'User not found',
     ar: 'المستخدم غير موجود'
   },
+  'customer_not_found': {
+    en: 'Customer not found',
+    ar: 'العميل غير موجود'
+  },
+  'user_not_customer': {
+    en: 'User is not a customer',
+    ar: 'المستخدم ليس عميلاً'
+  },
+  'address_not_belong_to_customer': {
+    en: 'Address does not belong to this customer',
+    ar: 'العنوان لا ينتمي لهذا العميل'
+  },
+  'product_not_allowed': {
+    en: 'Product is not allowed',
+    ar: 'المنتج غير مسموح'
+  },
   'failed_send_otp_to': {
     en: 'Failed to send OTP to',
     ar: 'فشل في إرسال رمز التحقق إلى'
@@ -166,6 +182,14 @@ const messages = {
   'user_not_business': {
     en: 'User is not a business',
     ar: 'المستخدم ليس عملاً تجارياً'
+  },
+  'business_not_approved': {
+    en: 'Business is not approved',
+    ar: 'الأعمال غير معتمدة'
+  },
+  'business_not_allowed': {
+    en: 'Business is not allowed',
+    ar: 'الأعمال غير مسموحة'
   },
   'business_approved_rejected': {
     en: 'Business',
@@ -360,6 +384,34 @@ const messages = {
   'business_approval_success': {
     en: 'Business approval processed successfully',
     ar: 'تمت معالجة موافقة الأعمال بنجاح'
+  },
+  'business_approved_success': {
+    en: 'Business approved successfully',
+    ar: 'تمت الموافقة على الأعمال بنجاح'
+  },
+  'failed_approve_business': {
+    en: 'Failed to approve business',
+    ar: 'فشل في الموافقة على الأعمال'
+  },
+  'business_declined_success': {
+    en: 'Business declined successfully',
+    ar: 'تم رفض الأعمال بنجاح'
+  },
+  'failed_decline_business': {
+    en: 'Failed to decline business',
+    ar: 'فشل في رفض الأعمال'
+  },
+  'failed_get_pending_businesses': {
+    en: 'Failed to get pending businesses',
+    ar: 'فشل في الحصول على الأعمال المعلقة'
+  },
+  'business_already_approved': {
+    en: 'Business is already approved',
+    ar: 'الأعمال معتمدة بالفعل'
+  },
+  'business_already_rejected': {
+    en: 'Business is already rejected',
+    ar: 'الأعمال مرفوضة بالفعل'
   },
 
   // Address messages

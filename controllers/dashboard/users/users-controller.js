@@ -238,8 +238,8 @@ exports.toggleUser = async (req, res) => {
       });
     }
 
-    // Check if user is being disallowed
-    const isBeingDisallowed = !user.isAllowed;
+    // Check if user is being disallowed (if currently allowed, will be disallowed after toggle)
+    const isBeingDisallowed = user.isAllowed;
     
     // If user is being disallowed, disallowReason is required
     if (isBeingDisallowed && !disallowReason) {
@@ -258,7 +258,7 @@ exports.toggleUser = async (req, res) => {
     if (isBeingDisallowed) {
       // User is being disallowed - set disallow fields
       updateFields.disallowReason = disallowReason;
-      updateFields.disallowedBy = req.user._id;
+      updateFields.disallowedBy = req.user.id || req.user._id;
       updateFields.disallowedAt = new Date();
     } else {
       // User is being allowed - clear disallow fields
@@ -273,11 +273,17 @@ exports.toggleUser = async (req, res) => {
       { new: true }
     ).select('-password');
 
+    if (!updatedUser) {
+      return res.status(404).json({
+        status: 'error',
+        message: getBilingualMessage('user_not_found')
+      });
+    }
+
     // Populate disallowedBy, approvedBy, and rejectedBy for richer response
-    updatedUser = await updatedUser
-      .populate('disallowedBy', 'firstname lastname email role')
-      .populate('businessInfo.approvedBy', 'firstname lastname email role')
-      .populate('businessInfo.rejectedBy', 'firstname lastname email role');
+    await updatedUser.populate('disallowedBy', 'firstname lastname email role');
+    await updatedUser.populate('businessInfo.approvedBy', 'firstname lastname email role');
+    await updatedUser.populate('businessInfo.rejectedBy', 'firstname lastname email role');
 
     // Send appropriate email notification based on the NEW status
     try {
@@ -356,8 +362,6 @@ exports.updateUser = async (req, res) => {
       // Basic user fields
       firstname, 
       lastname, 
-      email, 
-      phone, 
       role, 
       country, 
       language, 
@@ -381,21 +385,6 @@ exports.updateUser = async (req, res) => {
       disallowReason
     } = req.body;
 
-    const updateFields = { updatedAt: Date.now() };
-
-    // Update basic user fields
-    if (firstname) updateFields.firstname = firstname;
-    if (lastname) updateFields.lastname = lastname;
-    if (email) updateFields.email = email;
-    if (phone) updateFields.phone = phone;
-    if (role) updateFields.role = role;
-    if (country) updateFields.country = country;
-    if (language) updateFields.language = language;
-    if (imageUrl !== undefined) updateFields.imageUrl = imageUrl;
-    if (isAllowed !== undefined) updateFields.isAllowed = isAllowed;
-    if (isEmailVerified !== undefined) updateFields.isEmailVerified = isEmailVerified;
-    if (isPhoneVerified !== undefined) updateFields.isPhoneVerified = isPhoneVerified;
-
     // Get the current user to check their role
     const currentUser = await User.findById(req.params.id);
     if (!currentUser) {
@@ -404,6 +393,19 @@ exports.updateUser = async (req, res) => {
         message: getBilingualMessage('user_not_found')
       });
     }
+
+    const updateFields = { updatedAt: Date.now() };
+
+    // Update basic user fields (email and phone cannot be updated)
+    if (firstname) updateFields.firstname = firstname;
+    if (lastname) updateFields.lastname = lastname;
+    if (role) updateFields.role = role;
+    if (country) updateFields.country = country;
+    if (language) updateFields.language = language;
+    if (imageUrl !== undefined) updateFields.imageUrl = imageUrl;
+    if (isAllowed !== undefined) updateFields.isAllowed = isAllowed;
+    if (isEmailVerified !== undefined) updateFields.isEmailVerified = isEmailVerified;
+    if (isPhoneVerified !== undefined) updateFields.isPhoneVerified = isPhoneVerified;
 
     // Handle business info updates
     if (currentUser.role === 'business' || role === 'business') {
@@ -480,18 +482,17 @@ exports.updateUser = async (req, res) => {
       { new: true, runValidators: true }
     ).select('-password');
 
-    // Populate approver/rejector/disallowedBy for richer response
-    user = await user
-      .populate('businessInfo.approvedBy', 'firstname lastname email role')
-      .populate('businessInfo.rejectedBy', 'firstname lastname email role')
-      .populate('disallowedBy', 'firstname lastname email role');
-
     if (!user) {
       return res.status(404).json({
         status: 'error',
         message: getBilingualMessage('user_not_found')
       });
     }
+
+    // Populate approver/rejector/disallowedBy for richer response
+    await user.populate('businessInfo.approvedBy', 'firstname lastname email role');
+    await user.populate('businessInfo.rejectedBy', 'firstname lastname email role');
+    await user.populate('disallowedBy', 'firstname lastname email role');
 
     res.status(200).json(createResponse('success', {
       user: formatUser(user, { includeBusinessInfo: true })
@@ -527,6 +528,228 @@ exports.deleteUser = async (req, res) => {
     res.status(500).json({
       status: 'error',
       message: getBilingualMessage('failed_delete_user')
+    });
+  }
+};
+
+// GET /api/v1/dashboard/users/business/pending - Get pending business users
+exports.getPendingBusinessUsers = async (req, res) => {
+  try {
+    const permissionError = validateAdminOrEmployeePermissions(req, res);
+    if (permissionError) return;
+
+    const { page = 1, limit = 10 } = req.query;
+    const skip = (page - 1) * limit;
+
+    const filter = {
+      role: 'business',
+      'businessInfo.approvalStatus': 'pending'
+    };
+
+    const pendingBusinesses = await User.find(filter)
+      .select('-password')
+      .populate('businessInfo.approvedBy', 'firstname lastname email role')
+      .populate('businessInfo.rejectedBy', 'firstname lastname email role')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    const total = await User.countDocuments(filter);
+
+    res.status(200).json(createResponse('success', {
+      businesses: pendingBusinesses.map(business => formatUser(business, { includeBusinessInfo: true })),
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages: Math.ceil(total / limit),
+        totalBusinesses: total,
+        limit: parseInt(limit)
+      }
+    }));
+
+  } catch (error) {
+    console.error('Get pending business users error:', error);
+    res.status(500).json({
+      status: 'error',
+      message: getBilingualMessage('failed_get_pending_businesses')
+    });
+  }
+};
+
+// PUT /api/v1/dashboard/users/business/:id/approve - Approve business user
+exports.approveBusinessUser = async (req, res) => {
+  try {
+    const permissionError = validateAdminOrEmployeePermissions(req, res);
+    if (permissionError) return;
+
+    const business = await User.findById(req.params.id);
+    if (!business) {
+      return res.status(404).json({
+        status: 'error',
+        message: getBilingualMessage('business_not_found')
+      });
+    }
+
+    if (business.role !== 'business') {
+      return res.status(400).json({
+        status: 'error',
+        message: getBilingualMessage('user_not_business')
+      });
+    }
+
+    const currentStatus = business.businessInfo?.approvalStatus;
+    if (currentStatus === 'approved') {
+      return res.status(400).json({
+        status: 'error',
+        message: getBilingualMessage('business_already_approved')
+      });
+    }
+
+    // Update business info
+    const updateFields = {
+      updatedAt: Date.now(),
+      'businessInfo.approvalStatus': 'approved',
+      'businessInfo.approvedBy': req.user.id || req.user._id,
+      'businessInfo.approvedAt': new Date(),
+      'businessInfo.rejectedBy': undefined,
+      'businessInfo.rejectedAt': undefined,
+      'businessInfo.rejectionReason': undefined,
+      isAllowed: true
+    };
+
+    const updatedBusiness = await User.findByIdAndUpdate(
+      req.params.id,
+      updateFields,
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    if (!updatedBusiness) {
+      return res.status(404).json({
+        status: 'error',
+        message: getBilingualMessage('business_not_found')
+      });
+    }
+
+    // Populate approver/rejector for richer response
+    await updatedBusiness.populate('businessInfo.approvedBy', 'firstname lastname email role');
+    await updatedBusiness.populate('businessInfo.rejectedBy', 'firstname lastname email role');
+
+    // Send approval notification email
+    try {
+      const { sendBusinessApprovalNotification } = require('../../../utils/email-utils');
+      await sendBusinessApprovalNotification(
+        updatedBusiness.email,
+        updatedBusiness.businessInfo?.companyName || 'Your Business',
+        'approved',
+        null
+      );
+    } catch (emailError) {
+      console.error('Email notification error:', emailError);
+      // Don't fail the request if email fails
+    }
+
+    res.status(200).json(createResponse('success', {
+      business: formatUser(updatedBusiness, { includeBusinessInfo: true })
+    }, getBilingualMessage('business_approved_success')));
+
+  } catch (error) {
+    console.error('Approve business user error:', error);
+    res.status(500).json({
+      status: 'error',
+      message: getBilingualMessage('failed_approve_business')
+    });
+  }
+};
+
+// PUT /api/v1/dashboard/users/business/:id/decline - Decline business user
+exports.declineBusinessUser = async (req, res) => {
+  try {
+    const permissionError = validateAdminOrEmployeePermissions(req, res);
+    if (permissionError) return;
+
+    const { rejectionReason } = req.body || {};
+
+    if (!rejectionReason) {
+      return res.status(400).json({
+        status: 'error',
+        message: getBilingualMessage('rejection_reason_required')
+      });
+    }
+
+    const business = await User.findById(req.params.id);
+    if (!business) {
+      return res.status(404).json({
+        status: 'error',
+        message: getBilingualMessage('business_not_found')
+      });
+    }
+
+    if (business.role !== 'business') {
+      return res.status(400).json({
+        status: 'error',
+        message: getBilingualMessage('user_not_business')
+      });
+    }
+
+    const currentStatus = business.businessInfo?.approvalStatus;
+    if (currentStatus === 'rejected') {
+      return res.status(400).json({
+        status: 'error',
+        message: getBilingualMessage('business_already_rejected')
+      });
+    }
+
+    // Update business info
+    const updateFields = {
+      updatedAt: Date.now(),
+      'businessInfo.approvalStatus': 'rejected',
+      'businessInfo.rejectedBy': req.user.id || req.user._id,
+      'businessInfo.rejectedAt': new Date(),
+      'businessInfo.rejectionReason': rejectionReason,
+      'businessInfo.approvedBy': undefined,
+      'businessInfo.approvedAt': undefined,
+      isAllowed: false
+    };
+
+    const updatedBusiness = await User.findByIdAndUpdate(
+      req.params.id,
+      updateFields,
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    if (!updatedBusiness) {
+      return res.status(404).json({
+        status: 'error',
+        message: getBilingualMessage('business_not_found')
+      });
+    }
+
+    // Populate approver/rejector for richer response
+    await updatedBusiness.populate('businessInfo.approvedBy', 'firstname lastname email role');
+    await updatedBusiness.populate('businessInfo.rejectedBy', 'firstname lastname email role');
+
+    // Send rejection notification email
+    try {
+      const { sendBusinessApprovalNotification } = require('../../../utils/email-utils');
+      await sendBusinessApprovalNotification(
+        updatedBusiness.email,
+        updatedBusiness.businessInfo?.companyName || 'Your Business',
+        'rejected',
+        rejectionReason
+      );
+    } catch (emailError) {
+      console.error('Email notification error:', emailError);
+      // Don't fail the request if email fails
+    }
+
+    res.status(200).json(createResponse('success', {
+      business: formatUser(updatedBusiness, { includeBusinessInfo: true })
+    }, getBilingualMessage('business_declined_success')));
+
+  } catch (error) {
+    console.error('Decline business user error:', error);
+    res.status(500).json({
+      status: 'error',
+      message: getBilingualMessage('failed_decline_business')
     });
   }
 };
