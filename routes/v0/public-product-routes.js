@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const ProductController = require('../controllers/product-controller');
+const ProductController = require('../../controllers/v0/product-controller');
 const optionalAuth = require('../middleware/optional-auth-middleware');
 
 // Public routes for unauthorized users

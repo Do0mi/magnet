@@ -43,8 +43,9 @@ exports.getOrders = async (req, res) => {
     }
 
     const orders = await Order.find(filter)
-      .populate('customer', 'firstname lastname email phone')
+      .populate('customer', 'firstname lastname email phone imageUrl')
       .populate('items.product', 'name price images')
+      .populate('shippingAddress', 'addressLine1 addressLine2 city state postalCode country')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
@@ -79,9 +80,9 @@ exports.getOrderById = async (req, res) => {
     if (permissionError) return;
 
     const order = await Order.findById(req.params.id)
-      .populate('customer', 'firstname lastname email phone')
+      .populate('customer', 'firstname lastname email phone imageUrl')
       .populate('items.product', 'name price images description')
-      .populate('shippingAddress', 'street city state postalCode country');
+      .populate('shippingAddress', 'addressLine1 addressLine2 city state postalCode country');
 
     if (!order) {
       return res.status(404).json({
@@ -109,13 +110,20 @@ exports.createOrder = async (req, res) => {
     const permissionError = validateAdminOrEmployeePermissions(req, res);
     if (permissionError) return;
 
-    const { customerId, items, shippingAddressId, shippingCost, paymentMethod, notes } = req.body;
+    const { customerId, items, shippingAddress, shippingCost, paymentMethod, notes } = req.body;
 
     // Validate required fields
     if (!customerId || !items || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({
         status: 'error',
         message: getBilingualMessage('missing_required_fields')
+      });
+    }
+
+    if (!shippingAddress) {
+      return res.status(400).json({
+        status: 'error',
+        message: getBilingualMessage('shipping_address_required')
       });
     }
 
@@ -135,70 +143,62 @@ exports.createOrder = async (req, res) => {
       });
     }
 
-    // Validate shipping address if provided
-    if (shippingAddressId) {
-      const Address = require('../../../models/address-model');
-      const shippingAddress = await Address.findById(shippingAddressId);
-      if (!shippingAddress) {
-        return res.status(404).json({
-          status: 'error',
-          message: getBilingualMessage('address_not_found')
-        });
-      }
-      
-      // Verify address belongs to customer
-      if (shippingAddress.user.toString() !== customerId.toString()) {
-        return res.status(400).json({
-          status: 'error',
-          message: getBilingualMessage('address_not_belong_to_customer')
-        });
-      }
+    // Validate shipping address exists and belongs to customer
+    const Address = require('../../../models/address-model');
+    const addressDoc = await Address.findById(shippingAddress);
+    if (!addressDoc) {
+      return res.status(404).json({
+        status: 'error',
+        message: getBilingualMessage('address_not_found')
+      });
+    }
+    
+    // Verify address belongs to customer
+    if (addressDoc.user.toString() !== customerId.toString()) {
+      return res.status(400).json({
+        status: 'error',
+        message: getBilingualMessage('address_not_belong_to_customer')
+      });
     }
 
-    // Validate products and prepare items
+    // Validate products and calculate total
+    let totalAmount = 0;
     const validatedItems = [];
 
     for (const item of items) {
-      if (!item.productId || !item.quantity || item.quantity <= 0) {
-        return res.status(400).json({
-          status: 'error',
-          message: getBilingualMessage('invalid_order_item')
-        });
-      }
-
       const product = await Product.findById(item.productId);
       if (!product) {
-        return res.status(404).json({
+        return res.status(400).json({
           status: 'error',
           message: getBilingualMessage('product_not_found')
         });
       }
 
-      // Check if product is approved and allowed
       if (product.status !== 'approved') {
         return res.status(400).json({
           status: 'error',
-          message: getBilingualMessage('product_not_approved')
+          message: getBilingualMessage('product_not_available')
         });
       }
 
-      if (!product.isAllowed) {
-        return res.status(400).json({
-          status: 'error',
-          message: getBilingualMessage('product_not_allowed')
-        });
-      }
-
-      // Check stock availability
-      if (product.stock !== undefined && product.stock < item.quantity) {
+      if (product.stock < item.quantity) {
         return res.status(400).json({
           status: 'error',
           message: getBilingualMessage('insufficient_stock')
         });
       }
 
-      const unitPrice = parseFloat(product.pricePerUnit) || 0;
+      const unitPrice = parseFloat(product.pricePerUnit);
+      
+      if (isNaN(unitPrice) || unitPrice <= 0) {
+        return res.status(400).json({
+          status: 'error',
+          message: getBilingualMessage('invalid_product_price')
+        });
+      }
+
       const itemTotal = unitPrice * item.quantity;
+      totalAmount += itemTotal;
 
       validatedItems.push({
         product: product._id,
@@ -214,9 +214,11 @@ exports.createOrder = async (req, res) => {
     const order = new Order({
       customer: customerId,
       items: validatedItems,
-      shippingAddress: shippingAddressId || undefined,
+      subtotal: totalAmount,
+      total: totalAmount + (shippingCost || 0),
+      shippingAddress: shippingAddress,
       shippingCost: shippingCost || 0,
-      paymentMethod: paymentMethod || 'Cash on delivery',
+      paymentMethod: paymentMethod || 'cash_on_delivery',
       status: 'confirmed',
       notes: notes,
       statusLog: [{
@@ -229,11 +231,60 @@ exports.createOrder = async (req, res) => {
 
     await order.save();
 
-    await order.populate('customer', 'firstname lastname email phone');
-    await order.populate('shippingAddress');
-    await order.populate('items.product', 'name pricePerUnit images');
+    // Update product stock
+    for (const item of validatedItems) {
+      await Product.findByIdAndUpdate(
+        item.product,
+        { $inc: { stock: -item.quantity } }
+      );
+    }
 
-    const formattedOrder = formatOrder(order);
+    await order.populate('customer', 'firstname lastname email phone imageUrl');
+    await order.populate('items.product', 'name pricePerUnit images');
+    await order.populate('shippingAddress', 'addressLine1 addressLine2 city state postalCode country');
+
+    // Format the order response
+    const formattedOrder = {
+      id: order._id,
+      orderNumber: `ORD-${order._id.toString().slice(-8).toUpperCase()}`,
+      customer: {
+        id: order.customer._id || order.customer,
+        firstname: order.customer.firstname,
+        lastname: order.customer.lastname,
+        email: order.customer.email,
+        phone: order.customer.phone || null,
+        imageUrl: order.customer.imageUrl || null
+      },
+      items: order.items.map(item => ({
+        id: item._id,
+        product: {
+          id: item.product._id,
+          name: item.product.name,
+          images: item.product.images,
+          pricePerUnit: item.product.pricePerUnit
+        },
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        itemTotal: item.itemTotal
+      })),
+      subtotal: order.subtotal,
+      shippingCost: order.shippingCost || 0,
+      total: order.total,
+      shippingAddress: order.shippingAddress ? {
+        id: order.shippingAddress._id,
+        addressLine1: order.shippingAddress.addressLine1,
+        ...(order.shippingAddress.addressLine2 && { addressLine2: order.shippingAddress.addressLine2 }),
+        city: order.shippingAddress.city,
+        state: order.shippingAddress.state,
+        postalCode: order.shippingAddress.postalCode,
+        country: order.shippingAddress.country
+      } : null,
+      status: order.status,
+      paymentMethod: order.paymentMethod,
+      notes: order.notes,
+      createdAt: order.createdAt,
+      updatedAt: order.updatedAt
+    };
 
     res.status(201).json(createResponse('success', {
       order: formattedOrder
@@ -254,7 +305,18 @@ exports.updateOrder = async (req, res) => {
     const permissionError = validateAdminOrEmployeePermissions(req, res);
     if (permissionError) return;
 
-    const { items, shippingAddress, paymentMethod, notes, status } = req.body;
+    const { items, shippingAddress, paymentMethod, notes, status, shippingCost } = req.body;
+
+    // Check if order exists
+    const existingOrder = await Order.findById(req.params.id);
+
+    if (!existingOrder) {
+      return res.status(404).json({
+        status: 'error',
+        message: getBilingualMessage('order_not_found')
+      });
+    }
+
     const updateFields = { updatedAt: Date.now() };
 
     if (items && Array.isArray(items)) {
@@ -271,24 +333,72 @@ exports.updateOrder = async (req, res) => {
           });
         }
 
-        const itemTotal = product.price * item.quantity;
+        if (product.status !== 'approved') {
+          return res.status(400).json({
+            status: 'error',
+            message: getBilingualMessage('product_not_available')
+          });
+        }
+
+        const unitPrice = parseFloat(product.pricePerUnit);
+        
+        if (isNaN(unitPrice) || unitPrice <= 0) {
+          return res.status(400).json({
+            status: 'error',
+            message: getBilingualMessage('invalid_product_price')
+          });
+        }
+
+        const itemTotal = unitPrice * item.quantity;
         totalAmount += itemTotal;
 
         validatedItems.push({
           product: product._id,
           quantity: item.quantity,
-          price: product.price,
-          total: itemTotal
+          unitPrice: unitPrice,
+          itemTotal: itemTotal
         });
       }
 
       updateFields.items = validatedItems;
-      updateFields.totalAmount = totalAmount;
+      updateFields.subtotal = totalAmount;
+      const finalShippingCost = shippingCost !== undefined ? shippingCost : existingOrder.shippingCost || 0;
+      updateFields.shippingCost = finalShippingCost;
+      updateFields.total = totalAmount + finalShippingCost;
+    } else if (shippingCost !== undefined) {
+      // If only shipping cost is updated
+      updateFields.shippingCost = shippingCost;
+      updateFields.total = (existingOrder.subtotal || 0) + shippingCost;
     }
 
-    if (shippingAddress) updateFields.shippingAddress = shippingAddress;
+    if (shippingAddress !== undefined) {
+      if (shippingAddress) {
+        // Validate shipping address exists
+        const Address = require('../../../models/address-model');
+        const addressDoc = await Address.findById(shippingAddress);
+        if (!addressDoc) {
+          return res.status(404).json({
+            status: 'error',
+            message: getBilingualMessage('address_not_found')
+          });
+        }
+        
+        // Verify address belongs to customer
+        const customerId = existingOrder.customer._id ? existingOrder.customer._id.toString() : existingOrder.customer.toString();
+        if (addressDoc.user.toString() !== customerId) {
+          return res.status(400).json({
+            status: 'error',
+            message: getBilingualMessage('address_not_belong_to_customer')
+          });
+        }
+        
+        updateFields.shippingAddress = shippingAddress;
+      } else {
+        updateFields.shippingAddress = null;
+      }
+    }
     if (paymentMethod) updateFields.paymentMethod = paymentMethod;
-    if (notes) updateFields.adminNotes = notes;
+    if (notes) updateFields.notes = notes;
     if (status) updateFields.status = status;
 
     const order = await Order.findByIdAndUpdate(
@@ -296,17 +406,52 @@ exports.updateOrder = async (req, res) => {
       updateFields,
       { new: true, runValidators: true }
     )
-      .populate('customer', 'firstname lastname email phone')
-      .populate('items.product', 'name price images');
+      .populate('customer', 'firstname lastname email phone imageUrl')
+      .populate('items.product', 'name pricePerUnit images')
+      .populate('shippingAddress', 'addressLine1 addressLine2 city state postalCode country');
 
-    if (!order) {
-      return res.status(404).json({
-        status: 'error',
-        message: getBilingualMessage('order_not_found')
-      });
-    }
-
-    const formattedOrder = formatOrder(order);
+    // Format the order response
+    const formattedOrder = {
+      id: order._id,
+      orderNumber: `ORD-${order._id.toString().slice(-8).toUpperCase()}`,
+      customer: {
+        id: order.customer._id || order.customer,
+        firstname: order.customer.firstname,
+        lastname: order.customer.lastname,
+        email: order.customer.email,
+        phone: order.customer.phone || null,
+        imageUrl: order.customer.imageUrl || null
+      },
+      items: order.items.map(item => ({
+        id: item._id,
+        product: {
+          id: item.product._id,
+          name: item.product.name,
+          images: item.product.images,
+          pricePerUnit: item.product.pricePerUnit
+        },
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        itemTotal: item.itemTotal
+      })),
+      subtotal: order.subtotal,
+      shippingCost: order.shippingCost || 0,
+      total: order.total,
+      shippingAddress: order.shippingAddress ? {
+        id: order.shippingAddress._id,
+        addressLine1: order.shippingAddress.addressLine1,
+        ...(order.shippingAddress.addressLine2 && { addressLine2: order.shippingAddress.addressLine2 }),
+        city: order.shippingAddress.city,
+        state: order.shippingAddress.state,
+        postalCode: order.shippingAddress.postalCode,
+        country: order.shippingAddress.country
+      } : null,
+      status: order.status,
+      paymentMethod: order.paymentMethod,
+      notes: order.notes,
+      createdAt: order.createdAt,
+      updatedAt: order.updatedAt
+    };
 
     res.status(200).json(createResponse('success', {
       order: formattedOrder

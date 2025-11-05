@@ -326,7 +326,7 @@ const formatOrder = (order, options = {}) => {
       formatted.shippingAddress = {
         id: order.shippingAddress._id,
         addressLine1: order.shippingAddress.addressLine1,
-        addressLine2: order.shippingAddress.addressLine2,
+        ...(order.shippingAddress.addressLine2 && { addressLine2: order.shippingAddress.addressLine2 }),
         city: order.shippingAddress.city,
         state: order.shippingAddress.state,
         postalCode: order.shippingAddress.postalCode,

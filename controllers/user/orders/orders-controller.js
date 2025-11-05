@@ -4,9 +4,9 @@ const Product = require('../../../models/product-model');
 const { getBilingualMessage } = require('../../../utils/messages');
 const { createResponse } = require('../../../utils/response-formatters');
 
-// Helper function to validate customer permissions
+// Helper function to validate customer or business permissions
 const validateCustomerPermissions = (req, res) => {
-  if (req.user.role !== 'customer') {
+  if (req.user.role !== 'customer' && req.user.role !== 'business') {
     return res.status(403).json({ 
       status: 'error', 
       message: getBilingualMessage('insufficient_permissions') 
@@ -16,7 +16,7 @@ const validateCustomerPermissions = (req, res) => {
 };
 
 
-// POST /api/v1/user/orders - Create order (Customer)
+// POST /api/v1/user/orders - Create order (Customer or Business)
 exports.createOrder = async (req, res) => {
   try {
     const permissionError = validateCustomerPermissions(req, res);
@@ -166,7 +166,7 @@ exports.createOrder = async (req, res) => {
   }
 };
 
-// GET /api/v1/user/orders - Get all customer's orders
+// GET /api/v1/user/orders - Get all user's orders (Customer or Business)
 exports.getOrders = async (req, res) => {
   try {
     const permissionError = validateCustomerPermissions(req, res);
@@ -255,7 +255,7 @@ exports.getOrders = async (req, res) => {
   }
 };
 
-// GET /api/v1/user/orders/:id - Get a specific customer's order
+// GET /api/v1/user/orders/:id - Get a specific user's order (Customer or Business)
 exports.getOrderById = async (req, res) => {
   try {
     const permissionError = validateCustomerPermissions(req, res);
@@ -338,7 +338,7 @@ exports.updateOrder = async (req, res) => {
 
     const { items, shippingAddress, notes } = req.body;
 
-    // Check if order exists and belongs to customer
+    // Check if order exists and belongs to user
     const existingOrder = await Order.findOne({
       _id: req.params.id,
       customer: req.user.id

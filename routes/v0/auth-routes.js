@@ -1,7 +1,7 @@
 const express = require('express');
 const passport = require('passport');
 const router = express.Router();
-const AuthController = require('../controllers/auth-controller');
+const AuthController = require('../../controllers/v0/auth-controller');
 const verifyToken = require('../middleware/auth-middleware');
 const { 
   validateRegister, 

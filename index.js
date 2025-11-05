@@ -16,18 +16,6 @@ const dashboardRoutes = require('./routes/dashboard');
 const businessRoutes = require('./routes/business');
 const userRoutes = require('./routes/user');
 
-// Legacy Routes (keeping for backward compatibility)
-const authRoutes = require('./routes/auth-routes');
-const userRoutesLegacy = require('./routes/user-routes');
-const productRoutes = require('./routes/product-routes');
-const publicProductRoutes = require('./routes/public-product-routes');
-const categoryRoutes = require('./routes/category-routes');
-const orderRoutes = require('./routes/order-routes');
-const reviewRoutes = require('./routes/review-routes');
-const wishlistRoutes = require('./routes/wishlist-routes');
-const addressRoutes = require('./routes/address-routes');
-const adminRoutes = require('./routes/admin-routes');
-
 // Config
 require('./config/passport-setup');
 
@@ -140,18 +128,6 @@ app.set('io', io);
 app.use('/api/v1/dashboard', dashboardRoutes);
 app.use('/api/v1/business', businessRoutes);
 app.use('/api/v1/user', userRoutes);
-
-// Legacy Routes (keeping for backward compatibility)
-app.use('/api/auth', authRoutes);
-app.use('/api/user-legacy', userRoutesLegacy);
-app.use('/api/products', productRoutes);
-app.use('/api/public/products', publicProductRoutes); // Public routes for unauthorized users
-app.use('/api/categories', categoryRoutes);
-app.use('/api/orders', orderRoutes);
-app.use('/api/reviews', reviewRoutes);
-app.use('/api/wishlist', wishlistRoutes);
-app.use('/api/addresses', addressRoutes);
-app.use('/api/admin', adminRoutes);
 
 // Health check route
 app.get('/api/health', (req, res) => {

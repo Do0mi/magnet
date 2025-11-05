@@ -3,9 +3,9 @@ const Address = require('../../../models/address-model');
 const { getBilingualMessage } = require('../../../utils/messages');
 const { createResponse, formatAddress } = require('../../../utils/response-formatters');
 
-// Helper function to validate customer permissions
+// Helper function to validate customer or business permissions
 const validateCustomerPermissions = (req, res) => {
-  if (req.user.role !== 'customer') {
+  if (req.user.role !== 'customer' && req.user.role !== 'business') {
     return res.status(403).json({ 
       status: 'error', 
       message: getBilingualMessage('insufficient_permissions') 
@@ -14,7 +14,7 @@ const validateCustomerPermissions = (req, res) => {
   return null;
 };
 
-// GET /api/v1/user/addresses - Get user addresses (Customer only)
+// GET /api/v1/user/addresses - Get user addresses (Customer or Business)
 exports.getAddresses = async (req, res) => {
   try {
     const permissionError = validateCustomerPermissions(req, res);
@@ -93,8 +93,35 @@ exports.createAddress = async (req, res) => {
       return res.status(400).json({ status: 'error', message: getBilingualMessage('country_required') });
     }
 
+    // Check if this address already exists for the user
+    const duplicateAddress = await Address.findOne({
+      user: req.user.id,
+      addressLine1: addressLine1.trim(),
+      addressLine2: addressLine2 ? addressLine2.trim() : null,
+      city: city.trim(),
+      state: state.trim(),
+      postalCode: postalCode ? postalCode.trim() : null,
+      country: country.trim()
+    });
+
+    if (duplicateAddress) {
+      return res.status(400).json({
+        status: 'error',
+        message: {
+          en: 'This address already exists for your account',
+          ar: 'هذا العنوان موجود بالفعل في حسابك'
+        }
+      });
+    }
+
+    // Check if user has any existing addresses
+    const existingAddressCount = await Address.countDocuments({ user: req.user.id });
+    
+    // If this is the first address, automatically set it as default
+    const finalIsDefault = existingAddressCount === 0 ? true : isDefault;
+
     // If this is set as default, unset other default addresses
-    if (isDefault) {
+    if (finalIsDefault) {
       await Address.updateMany(
         { user: req.user.id, isDefault: true },
         { isDefault: false }
@@ -109,7 +136,7 @@ exports.createAddress = async (req, res) => {
       state,
       postalCode,
       country,
-      isDefault
+      isDefault: finalIsDefault
     });
 
     await address.save();
@@ -134,7 +161,7 @@ exports.createAddress = async (req, res) => {
   }
 };
 
-// PUT /api/v1/user/addresses/:id - Update address (Customer only)
+// PUT /api/v1/user/addresses/:id - Update address (Customer or Business)
 exports.updateAddress = async (req, res) => {
   try {
     const permissionError = validateCustomerPermissions(req, res);
@@ -148,12 +175,42 @@ exports.updateAddress = async (req, res) => {
     
     const { addressLine1, addressLine2, city, state, postalCode, country, isDefault } = req.body;
     
-    if (addressLine1) address.addressLine1 = addressLine1;
-    if (addressLine2 !== undefined) address.addressLine2 = addressLine2;
-    if (city) address.city = city;
-    if (state) address.state = state;
-    if (postalCode !== undefined) address.postalCode = postalCode;
-    if (country) address.country = country;
+    // Prepare the updated address fields
+    const updatedAddressLine1 = addressLine1 ? addressLine1.trim() : address.addressLine1;
+    const updatedAddressLine2 = addressLine2 !== undefined ? (addressLine2 ? addressLine2.trim() : null) : address.addressLine2;
+    const updatedCity = city ? city.trim() : address.city;
+    const updatedState = state ? state.trim() : address.state;
+    const updatedPostalCode = postalCode !== undefined ? (postalCode ? postalCode.trim() : null) : address.postalCode;
+    const updatedCountry = country ? country.trim() : address.country;
+
+    // Check if the updated address would be a duplicate (excluding current address)
+    const duplicateAddress = await Address.findOne({
+      user: req.user.id,
+      _id: { $ne: req.params.id },
+      addressLine1: updatedAddressLine1,
+      addressLine2: updatedAddressLine2,
+      city: updatedCity,
+      state: updatedState,
+      postalCode: updatedPostalCode,
+      country: updatedCountry
+    });
+
+    if (duplicateAddress) {
+      return res.status(400).json({
+        status: 'error',
+        message: {
+          en: 'This address already exists for your account',
+          ar: 'هذا العنوان موجود بالفعل في حسابك'
+        }
+      });
+    }
+    
+    if (addressLine1) address.addressLine1 = updatedAddressLine1;
+    if (addressLine2 !== undefined) address.addressLine2 = updatedAddressLine2;
+    if (city) address.city = updatedCity;
+    if (state) address.state = updatedState;
+    if (postalCode !== undefined) address.postalCode = updatedPostalCode;
+    if (country) address.country = updatedCountry;
     if (isDefault !== undefined) address.isDefault = isDefault;
     
     address.updatedAt = new Date();
@@ -187,7 +244,7 @@ exports.updateAddress = async (req, res) => {
   }
 };
 
-// DELETE /api/v1/user/addresses/:id - Delete address (Customer only)
+// DELETE /api/v1/user/addresses/:id - Delete address (Customer or Business)
 exports.deleteAddress = async (req, res) => {
   try {
     const permissionError = validateCustomerPermissions(req, res);

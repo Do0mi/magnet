@@ -4,9 +4,9 @@ const Product = require('../../../models/product-model');
 const { getBilingualMessage } = require('../../../utils/messages');
 const { createResponse } = require('../../../utils/response-formatters');
 
-// Helper function to validate customer permissions
+// Helper function to validate customer or business permissions
 const validateCustomerPermissions = (req, res) => {
-  if (req.user.role !== 'customer') {
+  if (req.user.role !== 'customer' && req.user.role !== 'business') {
     return res.status(403).json({ 
       status: 'error', 
       message: getBilingualMessage('insufficient_permissions') 
@@ -15,7 +15,7 @@ const validateCustomerPermissions = (req, res) => {
   return null;
 };
 
-// GET /api/v1/user/wishlists - Get user wishlist (Customer only)
+// GET /api/v1/user/wishlists - Get user wishlist (Customer or Business)
 exports.getWishlist = async (req, res) => {
   try {
     const permissionError = validateCustomerPermissions(req, res);

@@ -3,7 +3,7 @@ const Wishlist = require('../../../models/wishlist-model');
 const User = require('../../../models/user-model');
 const Product = require('../../../models/product-model');
 const { getBilingualMessage } = require('../../../utils/messages');
-const { createResponse } = require('../../../utils/response-formatters');
+const { createResponse, formatUser, formatProduct } = require('../../../utils/response-formatters');
 
 // Helper function to validate admin or magnet employee permissions
 const validateAdminOrEmployeePermissions = (req, res) => {
@@ -37,16 +37,30 @@ exports.getWishlists = async (req, res) => {
     }
 
     const wishlists = await Wishlist.find(filter)
-      .populate('user', 'firstname lastname email')
-      .populate('products', 'name price images')
+      .populate('user', 'firstname lastname email phone role')
+      .populate('products', 'name pricePerUnit images description')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
 
     const total = await Wishlist.countDocuments(filter);
 
+    const formattedWishlists = wishlists.map(wishlist => ({
+      id: wishlist._id,
+      user: formatUser(wishlist.user, { 
+        includeBusinessInfo: false, 
+        includeVerification: false 
+      }),
+      products: wishlist.products.map(product => formatProduct(product, {
+        includeOwner: false,
+        includeApproval: false
+      })),
+      createdAt: wishlist.createdAt,
+      updatedAt: wishlist.updatedAt
+    }));
+
     res.status(200).json(createResponse('success', {
-      wishlists,
+      wishlists: formattedWishlists,
       pagination: {
         currentPage: parseInt(page),
         totalPages: Math.ceil(total / limit),
@@ -71,8 +85,8 @@ exports.getWishlistById = async (req, res) => {
     if (permissionError) return;
 
     const wishlist = await Wishlist.findById(req.params.id)
-      .populate('user', 'firstname lastname email')
-      .populate('products', 'name price images description');
+      .populate('user', 'firstname lastname email phone role')
+      .populate('products', 'name pricePerUnit images description');
 
     if (!wishlist) {
       return res.status(404).json({
@@ -81,7 +95,22 @@ exports.getWishlistById = async (req, res) => {
       });
     }
 
-    res.status(200).json(createResponse('success', { wishlist }));
+    // Format the wishlist response
+    const formattedWishlist = {
+      id: wishlist._id,
+      user: formatUser(wishlist.user, { 
+        includeBusinessInfo: false, 
+        includeVerification: false 
+      }),
+      products: wishlist.products.map(product => formatProduct(product, {
+        includeOwner: false,
+        includeApproval: false
+      })),
+      createdAt: wishlist.createdAt,
+      updatedAt: wishlist.updatedAt
+    };
+
+    res.status(200).json(createResponse('success', { wishlist: formattedWishlist }));
 
   } catch (error) {
     console.error('Get wishlist by ID error:', error);
@@ -144,11 +173,26 @@ exports.createWishlist = async (req, res) => {
 
     await wishlist.save();
 
-    await wishlist.populate('user', 'firstname lastname email');
-    await wishlist.populate('products', 'name price images');
+    await wishlist.populate('user', 'firstname lastname email phone role');
+    await wishlist.populate('products', 'name pricePerUnit images description');
+
+    // Format the wishlist response
+    const formattedWishlist = {
+      id: wishlist._id,
+      user: formatUser(wishlist.user, { 
+        includeBusinessInfo: false, 
+        includeVerification: false 
+      }),
+      products: wishlist.products.map(product => formatProduct(product, {
+        includeOwner: false,
+        includeApproval: false
+      })),
+      createdAt: wishlist.createdAt,
+      updatedAt: wishlist.updatedAt
+    };
 
     res.status(201).json(createResponse('success', {
-      wishlist
+      wishlist: formattedWishlist
     }, getBilingualMessage('wishlist_created_success')));
 
   } catch (error) {
@@ -186,8 +230,8 @@ exports.updateWishlist = async (req, res) => {
       updateFields,
       { new: true, runValidators: true }
     )
-      .populate('user', 'firstname lastname email')
-      .populate('products', 'name price images');
+      .populate('user', 'firstname lastname email phone role')
+      .populate('products', 'name pricePerUnit images description');
 
     if (!wishlist) {
       return res.status(404).json({
@@ -196,8 +240,23 @@ exports.updateWishlist = async (req, res) => {
       });
     }
 
+    // Format the wishlist response
+    const formattedWishlist = {
+      id: wishlist._id,
+      user: formatUser(wishlist.user, { 
+        includeBusinessInfo: false, 
+        includeVerification: false 
+      }),
+      products: wishlist.products.map(product => formatProduct(product, {
+        includeOwner: false,
+        includeApproval: false
+      })),
+      createdAt: wishlist.createdAt,
+      updatedAt: wishlist.updatedAt
+    };
+
     res.status(200).json(createResponse('success', {
-      wishlist
+      wishlist: formattedWishlist
     }, getBilingualMessage('wishlist_updated_success')));
 
   } catch (error) {

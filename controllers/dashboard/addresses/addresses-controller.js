@@ -2,7 +2,7 @@
 const Address = require('../../../models/address-model');
 const User = require('../../../models/user-model');
 const { getBilingualMessage } = require('../../../utils/messages');
-const { createResponse } = require('../../../utils/response-formatters');
+const { createResponse, formatAddress } = require('../../../utils/response-formatters');
 
 // Helper function to validate admin or magnet employee permissions
 const validateAdminOrEmployeePermissions = (req, res) => {
@@ -30,26 +30,30 @@ exports.getAddresses = async (req, res) => {
     if (city) filter.city = { $regex: city, $options: 'i' };
     if (search) {
       filter.$or = [
-        { street: { $regex: search, $options: 'i' } },
+        { addressLine1: { $regex: search, $options: 'i' } },
+        { addressLine2: { $regex: search, $options: 'i' } },
         { city: { $regex: search, $options: 'i' } },
         { state: { $regex: search, $options: 'i' } },
         { postalCode: { $regex: search, $options: 'i' } },
         { 'user.firstname': { $regex: search, $options: 'i' } },
         { 'user.lastname': { $regex: search, $options: 'i' } },
-        { 'user.email': { $regex: search, $options: 'i' } }
+        { 'user.email': { $regex: search, $options: 'i' } },
+        { 'user.phone': { $regex: search, $options: 'i' } }
       ];
     }
 
     const addresses = await Address.find(filter)
-      .populate('user', 'firstname lastname email phone')
-      .sort({ createdAt: -1 })
+      .populate('user', 'firstname lastname email phone role')
+      .sort({ isDefault: -1, createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
 
     const total = await Address.countDocuments(filter);
 
+    const formattedAddresses = addresses.map(address => formatAddress(address));
+
     res.status(200).json(createResponse('success', {
-      addresses,
+      addresses: formattedAddresses,
       pagination: {
         currentPage: parseInt(page),
         totalPages: Math.ceil(total / limit),
@@ -74,7 +78,7 @@ exports.getAddressById = async (req, res) => {
     if (permissionError) return;
 
     const address = await Address.findById(req.params.id)
-      .populate('user', 'firstname lastname email phone');
+      .populate('user', 'firstname lastname email phone role');
 
     if (!address) {
       return res.status(404).json({
@@ -83,7 +87,8 @@ exports.getAddressById = async (req, res) => {
       });
     }
 
-    res.status(200).json(createResponse('success', { address }));
+    const formattedAddress = formatAddress(address);
+    res.status(200).json(createResponse('success', { address: formattedAddress }));
 
   } catch (error) {
     console.error('Get address by ID error:', error);
@@ -100,14 +105,30 @@ exports.createAddress = async (req, res) => {
     const permissionError = validateAdminOrEmployeePermissions(req, res);
     if (permissionError) return;
 
-    const { userId, street, city, state, postalCode, country, isDefault = false } = req.body;
+    const { userId, addressLine1, addressLine2, city, state, postalCode, country, isDefault = false } = req.body;
 
     // Validate required fields
-    if (!userId || !street || !city || !country) {
+    if (!userId) {
       return res.status(400).json({
         status: 'error',
         message: getBilingualMessage('missing_required_fields')
       });
+    }
+
+    if (!addressLine1) {
+      return res.status(400).json({ status: 'error', message: getBilingualMessage('address_line1_required') });
+    }
+    
+    if (!city) {
+      return res.status(400).json({ status: 'error', message: getBilingualMessage('city_required') });
+    }
+    
+    if (!state) {
+      return res.status(400).json({ status: 'error', message: getBilingualMessage('state_required') });
+    }
+    
+    if (!country) {
+      return res.status(400).json({ status: 'error', message: getBilingualMessage('country_required') });
     }
 
     // Check if user exists
@@ -119,8 +140,35 @@ exports.createAddress = async (req, res) => {
       });
     }
 
+    // Check if this address already exists for the user
+    const duplicateAddress = await Address.findOne({
+      user: userId,
+      addressLine1: addressLine1.trim(),
+      addressLine2: addressLine2 ? addressLine2.trim() : null,
+      city: city.trim(),
+      state: state.trim(),
+      postalCode: postalCode ? postalCode.trim() : null,
+      country: country.trim()
+    });
+
+    if (duplicateAddress) {
+      return res.status(400).json({
+        status: 'error',
+        message: {
+          en: 'This address already exists for this user',
+          ar: 'هذا العنوان موجود بالفعل لهذا المستخدم'
+        }
+      });
+    }
+
+    // Check if user has any existing addresses
+    const existingAddressCount = await Address.countDocuments({ user: userId });
+    
+    // If this is the first address, automatically set it as default
+    const finalIsDefault = existingAddressCount === 0 ? true : isDefault;
+
     // If this is set as default, unset other default addresses for this user
-    if (isDefault) {
+    if (finalIsDefault) {
       await Address.updateMany(
         { user: userId, isDefault: true },
         { isDefault: false }
@@ -129,27 +177,33 @@ exports.createAddress = async (req, res) => {
 
     const address = new Address({
       user: userId,
-      street,
+      addressLine1,
+      addressLine2,
       city,
       state,
       postalCode,
       country,
-      isDefault
+      isDefault: finalIsDefault
     });
 
     await address.save();
 
-    await address.populate('user', 'firstname lastname email phone');
+    // Re-populate to get the user details
+    const populatedAddress = await Address.findById(address._id)
+      .populate('user', 'firstname lastname email phone role');
+    
+    const formattedAddress = formatAddress(populatedAddress);
 
-    res.status(201).json(createResponse('success', {
-      address
-    }, getBilingualMessage('address_created_success')));
+    res.status(201).json(createResponse('success', 
+      { address: formattedAddress },
+      getBilingualMessage('address_added')
+    ));
 
   } catch (error) {
-    console.error('Create address error:', error);
+    console.error('Add address error:', error);
     res.status(500).json({
       status: 'error',
-      message: getBilingualMessage('failed_create_address')
+      message: getBilingualMessage('failed_add_address')
     });
   }
 };
@@ -160,44 +214,74 @@ exports.updateAddress = async (req, res) => {
     const permissionError = validateAdminOrEmployeePermissions(req, res);
     if (permissionError) return;
 
-    const { street, city, state, postalCode, country, isDefault } = req.body;
-    const updateFields = { updatedAt: Date.now() };
+    const address = await Address.findById(req.params.id)
+      .populate('user', 'firstname lastname email phone role');
+    
+    if (!address) {
+      return res.status(404).json({ status: 'error', message: getBilingualMessage('address_not_found') });
+    }
+    
+    const { addressLine1, addressLine2, city, state, postalCode, country, isDefault } = req.body;
+    
+    // Prepare the updated address fields
+    const updatedAddressLine1 = addressLine1 ? addressLine1.trim() : address.addressLine1;
+    const updatedAddressLine2 = addressLine2 !== undefined ? (addressLine2 ? addressLine2.trim() : null) : address.addressLine2;
+    const updatedCity = city ? city.trim() : address.city;
+    const updatedState = state ? state.trim() : address.state;
+    const updatedPostalCode = postalCode !== undefined ? (postalCode ? postalCode.trim() : null) : address.postalCode;
+    const updatedCountry = country ? country.trim() : address.country;
 
-    if (street) updateFields.street = street;
-    if (city) updateFields.city = city;
-    if (state) updateFields.state = state;
-    if (postalCode) updateFields.postalCode = postalCode;
-    if (country) updateFields.country = country;
-    if (isDefault !== undefined) updateFields.isDefault = isDefault;
+    // Check if the updated address would be a duplicate (excluding current address)
+    const duplicateAddress = await Address.findOne({
+      user: address.user,
+      _id: { $ne: req.params.id },
+      addressLine1: updatedAddressLine1,
+      addressLine2: updatedAddressLine2,
+      city: updatedCity,
+      state: updatedState,
+      postalCode: updatedPostalCode,
+      country: updatedCountry
+    });
+
+    if (duplicateAddress) {
+      return res.status(400).json({
+        status: 'error',
+        message: {
+          en: 'This address already exists for this user',
+          ar: 'هذا العنوان موجود بالفعل لهذا المستخدم'
+        }
+      });
+    }
+    
+    if (addressLine1) address.addressLine1 = updatedAddressLine1;
+    if (addressLine2 !== undefined) address.addressLine2 = updatedAddressLine2;
+    if (city) address.city = updatedCity;
+    if (state) address.state = updatedState;
+    if (postalCode !== undefined) address.postalCode = updatedPostalCode;
+    if (country) address.country = updatedCountry;
+    if (isDefault !== undefined) address.isDefault = isDefault;
+    
+    address.updatedAt = new Date();
+    await address.save();
 
     // If this is set as default, unset other default addresses for this user
     if (isDefault) {
-      const address = await Address.findById(req.params.id);
-      if (address) {
-        await Address.updateMany(
-          { user: address.user, isDefault: true, _id: { $ne: req.params.id } },
-          { isDefault: false }
-        );
-      }
+      await Address.updateMany(
+        { user: address.user, isDefault: true, _id: { $ne: req.params.id } },
+        { isDefault: false }
+      );
     }
-
-    const address = await Address.findByIdAndUpdate(
-      req.params.id,
-      updateFields,
-      { new: true, runValidators: true }
-    )
-      .populate('user', 'firstname lastname email phone');
-
-    if (!address) {
-      return res.status(404).json({
-        status: 'error',
-        message: getBilingualMessage('address_not_found')
-      });
-    }
-
-    res.status(200).json(createResponse('success', {
-      address
-    }, getBilingualMessage('address_updated_success')));
+    
+    // Re-populate to get the updated user details
+    const updatedAddress = await Address.findById(req.params.id)
+      .populate('user', 'firstname lastname email phone role');
+    
+    const formattedAddress = formatAddress(updatedAddress);
+    
+    res.status(200).json(createResponse('success', 
+      { address: formattedAddress },
+      getBilingualMessage('address_updated')
+    ));
 
   } catch (error) {
     console.error('Update address error:', error);
@@ -214,16 +298,15 @@ exports.deleteAddress = async (req, res) => {
     const permissionError = validateAdminOrEmployeePermissions(req, res);
     if (permissionError) return;
 
-    const address = await Address.findByIdAndDelete(req.params.id);
-
+    const address = await Address.findById(req.params.id)
+      .populate('user', 'firstname lastname email phone role');
+    
     if (!address) {
-      return res.status(404).json({
-        status: 'error',
-        message: getBilingualMessage('address_not_found')
-      });
+      return res.status(404).json({ status: 'error', message: getBilingualMessage('address_not_found') });
     }
-
-    res.status(200).json(createResponse('success', null, getBilingualMessage('address_deleted_success')));
+    
+    await address.deleteOne();
+    res.status(200).json(createResponse('success', null, getBilingualMessage('address_deleted')));
 
   } catch (error) {
     console.error('Delete address error:', error);

@@ -3,9 +3,9 @@ const User = require('../../../models/user-model');
 const { getBilingualMessage } = require('../../../utils/messages');
 const { formatUser, createResponse } = require('../../../utils/response-formatters');
 
-// Helper function to validate customer permissions
+// Helper function to validate customer or business permissions
 const validateCustomerPermissions = (req, res) => {
-  if (req.user.role !== 'customer') {
+  if (req.user.role !== 'customer' && req.user.role !== 'business') {
     return res.status(403).json({ 
       status: 'error', 
       message: getBilingualMessage('insufficient_permissions') 
@@ -14,7 +14,7 @@ const validateCustomerPermissions = (req, res) => {
   return null;
 };
 
-// GET /api/v1/user/profile - Get current user profile (Customer)
+// GET /api/v1/user/profile - Get current user profile (Customer or Business)
 exports.getProfile = async (req, res) => {
   try {
     const permissionError = validateCustomerPermissions(req, res);
@@ -42,7 +42,7 @@ exports.getProfile = async (req, res) => {
   }
 };
 
-// PUT /api/v1/user/profile - Update user profile (Customer)
+// PUT /api/v1/user/profile - Update user profile (Customer or Business)
 exports.updateProfile = async (req, res) => {
   try {
     const permissionError = validateCustomerPermissions(req, res);

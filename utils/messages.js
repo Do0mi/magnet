@@ -415,7 +415,7 @@ const messages = {
   },
 
   // Address messages
-  'failed_get_addresses': {
+  'failed_get_address': {
     en: 'Failed to get addresses',
     ar: 'فشل في الحصول على العناوين'
   },
@@ -674,6 +674,10 @@ const messages = {
   'wishlist_not_found': {
     en: 'Wishlist not found',
     ar: 'قائمة الرغبات غير موجودة'
+  },
+  'wishlist_already_exists': {
+    en: 'Wishlist already exists for this user',
+    ar: 'قائمة الرغبات موجودة بالفعل لهذا المستخدم'
   },
   'product_added_wishlist': {
     en: 'Product added to wishlist',
@@ -1074,7 +1078,7 @@ const messages = {
     en: 'Failed to get wishlist',
     ar: 'فشل في الحصول على قائمة الرغبات'
   },
-  'wishlist_created_successfully': {
+  'wishlist_created_success': {
     en: 'Wishlist created successfully',
     ar: 'تم إنشاء قائمة الرغبات بنجاح'
   },
@@ -1082,7 +1086,7 @@ const messages = {
     en: 'Failed to create wishlist',
     ar: 'فشل في إنشاء قائمة الرغبات'
   },
-  'wishlist_updated_successfully': {
+  'wishlist_updated_success': {
     en: 'Wishlist updated successfully',
     ar: 'تم تحديث قائمة الرغبات بنجاح'
   },
@@ -1090,7 +1094,7 @@ const messages = {
     en: 'Failed to update wishlist',
     ar: 'فشل في تحديث قائمة الرغبات'
   },
-  'wishlist_deleted_successfully': {
+  'wishlist_deleted_success': {
     en: 'Wishlist deleted successfully',
     ar: 'تم حذف قائمة الرغبات بنجاح'
   },
@@ -1176,7 +1180,7 @@ const messages = {
   },
 
   // Admin Order Management Messages
-  'order_created_successfully': {
+  'order_created_success': {
     en: 'Order created successfully',
     ar: 'تم إنشاء الطلب بنجاح'
   },
@@ -1184,7 +1188,7 @@ const messages = {
     en: 'Failed to create order',
     ar: 'فشل في إنشاء الطلب'
   },
-  'order_updated_successfully': {
+  'order_updated_success': {
     en: 'Order updated successfully',
     ar: 'تم تحديث الطلب بنجاح'
   },
@@ -1192,7 +1196,7 @@ const messages = {
     en: 'Failed to update order',
     ar: 'فشل في تحديث الطلب'
   },
-  'order_deleted_successfully': {
+  'order_deleted_success': {
     en: 'Order deleted successfully',
     ar: 'تم حذف الطلب بنجاح'
   },

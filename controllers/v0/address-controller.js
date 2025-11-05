@@ -43,6 +43,41 @@ exports.addAddress = async (req, res) => {
       return res.status(400).json({ status: 'error', message: getBilingualMessage('country_required') });
     }
     
+    // Check if this address already exists for the user
+    const duplicateAddress = await Address.findOne({
+      user: req.user.id,
+      addressLine1: addressLine1.trim(),
+      addressLine2: addressLine2 ? addressLine2.trim() : null,
+      city: city.trim(),
+      state: state.trim(),
+      postalCode: postalCode ? postalCode.trim() : null,
+      country: country.trim()
+    });
+
+    if (duplicateAddress) {
+      return res.status(400).json({
+        status: 'error',
+        message: {
+          en: 'This address already exists for your account',
+          ar: 'هذا العنوان موجود بالفعل في حسابك'
+        }
+      });
+    }
+    
+    // Check if user has any existing addresses
+    const existingAddressCount = await Address.countDocuments({ user: req.user.id });
+    
+    // If this is the first address, automatically set it as default
+    const isDefault = existingAddressCount === 0;
+
+    // If this is set as default, unset other default addresses
+    if (isDefault) {
+      await Address.updateMany(
+        { user: req.user.id, isDefault: true },
+        { isDefault: false }
+      );
+    }
+
     const address = new Address({
       user: req.user.id,
       addressLine1,
@@ -50,7 +85,8 @@ exports.addAddress = async (req, res) => {
       city,
       state,
       postalCode,
-      country
+      country,
+      isDefault
     });
     await address.save();
     
@@ -80,12 +116,42 @@ exports.updateAddress = async (req, res) => {
     
     const { addressLine1, addressLine2, city, state, postalCode, country } = req.body;
     
-    if (addressLine1) address.addressLine1 = addressLine1;
-    if (addressLine2 !== undefined) address.addressLine2 = addressLine2;
-    if (city) address.city = city;
-    if (state) address.state = state;
-    if (postalCode !== undefined) address.postalCode = postalCode;
-    if (country) address.country = country;
+    // Prepare the updated address fields
+    const updatedAddressLine1 = addressLine1 ? addressLine1.trim() : address.addressLine1;
+    const updatedAddressLine2 = addressLine2 !== undefined ? (addressLine2 ? addressLine2.trim() : null) : address.addressLine2;
+    const updatedCity = city ? city.trim() : address.city;
+    const updatedState = state ? state.trim() : address.state;
+    const updatedPostalCode = postalCode !== undefined ? (postalCode ? postalCode.trim() : null) : address.postalCode;
+    const updatedCountry = country ? country.trim() : address.country;
+
+    // Check if the updated address would be a duplicate (excluding current address)
+    const duplicateAddress = await Address.findOne({
+      user: req.user.id,
+      _id: { $ne: req.params.id },
+      addressLine1: updatedAddressLine1,
+      addressLine2: updatedAddressLine2,
+      city: updatedCity,
+      state: updatedState,
+      postalCode: updatedPostalCode,
+      country: updatedCountry
+    });
+
+    if (duplicateAddress) {
+      return res.status(400).json({
+        status: 'error',
+        message: {
+          en: 'This address already exists for your account',
+          ar: 'هذا العنوان موجود بالفعل في حسابك'
+        }
+      });
+    }
+    
+    if (addressLine1) address.addressLine1 = updatedAddressLine1;
+    if (addressLine2 !== undefined) address.addressLine2 = updatedAddressLine2;
+    if (city) address.city = updatedCity;
+    if (state) address.state = updatedState;
+    if (postalCode !== undefined) address.postalCode = updatedPostalCode;
+    if (country) address.country = updatedCountry;
     
     address.updatedAt = new Date();
     await address.save();

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const UserController = require('../controllers/user-controller');
+const UserController = require('../../controllers/v0/user-controller');
 const verifyToken = require('../middleware/auth-middleware');
 const { requireAdminOrEmployee, requireAdminEmployeeOrBusiness, requireCustomer } = require('../middleware/role-middleware');
 const { validateUpdateProfile, validateBusinessApproval } = require('../middleware/validation-middleware');
