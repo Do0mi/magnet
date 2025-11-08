@@ -1,7 +1,14 @@
 const nodemailer = require('nodemailer');
 
+const EMAIL_SEND_TIMEOUT_MS = parseInt(process.env.EMAIL_SEND_TIMEOUT_MS || '10000', 10);
+const EMAIL_TRANSPORT_DISABLED = process.env.EMAIL_TRANSPORT_DISABLED === 'true';
+
 // Create a transporter
 const createTransporter = () => {
+  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+    throw new Error('Email credentials are not configured');
+  }
+
   // For production, use actual email service configuration from environment variables
   return nodemailer.createTransport({
     service: 'gmail',
@@ -15,8 +22,35 @@ const createTransporter = () => {
     tls: {
       // Do not fail on invalid certs
       rejectUnauthorized: false
-    }
+    },
+    connectionTimeout: EMAIL_SEND_TIMEOUT_MS,
+    socketTimeout: EMAIL_SEND_TIMEOUT_MS
   });
+};
+
+const sendMailWithTimeout = async (transporter, mailOptions) => {
+  let timeoutId;
+
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error('Email send timeout'));
+    }, EMAIL_SEND_TIMEOUT_MS);
+  });
+
+  try {
+    const result = await Promise.race([transporter.sendMail(mailOptions), timeoutPromise]);
+    clearTimeout(timeoutId);
+    return result;
+  } catch (error) {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+    throw error;
+  }
+};
+
+const logOtpInDevelopment = (channel, identifier, otp) => {
+  console.warn(`[OTP][${channel}] Email transport disabled or misconfigured. OTP for ${identifier}: ${otp}`);
 };
 
 // Generate a random OTP code
@@ -27,6 +61,11 @@ const generateOTP = () => {
 // Function to send OTP email
 const sendOTPEmail = async (to, otp) => {
   try {
+    if (EMAIL_TRANSPORT_DISABLED || !process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+      logOtpInDevelopment('email', to, otp);
+      return { success: true, simulated: true };
+    }
+
     const transporter = createTransporter();
     
     const mailOptions = {
@@ -47,7 +86,7 @@ const sendOTPEmail = async (to, otp) => {
       `
     };
     
-    const info = await transporter.sendMail(mailOptions);
+    const info = await sendMailWithTimeout(transporter, mailOptions);
     console.log('OTP Email sent:', info.messageId);
     return { success: true, messageId: info.messageId };
   } catch (error) {
