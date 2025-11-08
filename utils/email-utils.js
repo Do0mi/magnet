@@ -61,7 +61,7 @@ const generateOTP = () => {
 // Function to send OTP email
 const sendOTPEmail = async (to, otp) => {
   try {
-    if (EMAIL_TRANSPORT_DISABLED || !process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
       logOtpInDevelopment('email', to, otp);
       return { success: true, simulated: true };
     }
