@@ -2,6 +2,12 @@ const nodemailer = require('nodemailer');
 
 const EMAIL_SEND_TIMEOUT_MS = parseInt(process.env.EMAIL_SEND_TIMEOUT_MS || '10000', 10);
 const EMAIL_TRANSPORT_DISABLED = process.env.EMAIL_TRANSPORT_DISABLED === 'true';
+const parseBoolean = (value, defaultValue = false) => {
+  if (value === undefined || value === null) {
+    return defaultValue;
+  }
+  return ['true', '1', 'yes', 'on'].includes(String(value).toLowerCase());
+};
 
 // Create a transporter
 const createTransporter = () => {
@@ -9,23 +15,36 @@ const createTransporter = () => {
     throw new Error('Email credentials are not configured');
   }
 
-  // For production, use actual email service configuration from environment variables
-  return nodemailer.createTransport({
-    service: 'gmail',
-    host: 'smtp.gmail.com',
-    port: 587,
-    secure: true,
+  const host = process.env.EMAIL_HOST || 'smtp.gmail.com';
+  const port = parseInt(process.env.EMAIL_PORT || '465', 10);
+  const secure = parseBoolean(process.env.EMAIL_SECURE, port === 465);
+  const requireTLS = parseBoolean(process.env.EMAIL_REQUIRE_TLS, !secure);
+  const service = process.env.EMAIL_SERVICE || undefined;
+
+  const transportOptions = {
+    host,
+    port,
+    secure,
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS  // Make sure to use Gmail App Password
     },
-    tls: {
-      // Do not fail on invalid certs
-      rejectUnauthorized: false
-    },
     connectionTimeout: EMAIL_SEND_TIMEOUT_MS,
-    socketTimeout: EMAIL_SEND_TIMEOUT_MS
-  });
+    socketTimeout: EMAIL_SEND_TIMEOUT_MS,
+    tls: {
+      rejectUnauthorized: false
+    }
+  };
+
+  if (service) {
+    transportOptions.service = service;
+  }
+
+  if (!secure && requireTLS) {
+    transportOptions.requireTLS = true;
+  }
+
+  return nodemailer.createTransport(transportOptions);
 };
 
 const sendMailWithTimeout = async (transporter, mailOptions) => {
@@ -61,7 +80,7 @@ const generateOTP = () => {
 // Function to send OTP email
 const sendOTPEmail = async (to, otp) => {
   try {
-    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+    if (EMAIL_TRANSPORT_DISABLED || !process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
       logOtpInDevelopment('email', to, otp);
       return { success: true, simulated: true };
     }
