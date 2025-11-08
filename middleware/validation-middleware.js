@@ -1,4 +1,17 @@
 const { body, validationResult } = require('express-validator');
+const { getBilingualMessage } = require('../utils/messages');
+
+const toBilingualMessage = (message) => {
+  if (!message) {
+    return getBilingualMessage('unknown_error');
+  }
+
+  if (typeof message === 'object' && message.en && message.ar) {
+    return message;
+  }
+
+  return getBilingualMessage(message);
+};
 
 // Validation helper
 const handleValidationErrors = (req, res, next) => {
@@ -6,10 +19,10 @@ const handleValidationErrors = (req, res, next) => {
   if (!errors.isEmpty()) {
     return res.status(400).json({
       status: 'error',
-      message: 'Validation failed',
+      message: getBilingualMessage('validation_failed'),
       errors: errors.array().map(err => ({
         field: err.path,
-        message: err.msg
+        message: toBilingualMessage(err.msg)
       }))
     });
   }
@@ -21,31 +34,31 @@ const validateRegister = [
   body('firstname')
     .trim()
     .isLength({ min: 2, max: 50 })
-    .withMessage('First name must be between 2 and 50 characters'),
+    .withMessage('firstname_length_range'),
   body('lastname')
     .trim()
     .isLength({ min: 2, max: 50 })
-    .withMessage('Last name must be between 2 and 50 characters'),
+    .withMessage('lastname_length_range'),
   body('email')
     .matches(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/)
-    .withMessage('Please provide a valid email address'),
+    .withMessage('email_valid_required'),
   body('phone')
     .optional()
     .matches(/^\+?[1-9]\d{1,14}$/)
-    .withMessage('Please provide a valid phone number'),
+    .withMessage('phone_valid_required'),
   body('password')
     .isLength({ min: 8 })
-    .withMessage('Password must be at least 8 characters long')
+    .withMessage('password_min_length')
     .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
-    .withMessage('Password must contain at least one uppercase letter, one lowercase letter, and one number'),
+    .withMessage('password_complexity_requirement'),
   body('country')
     .trim()
     .isLength({ min: 2, max: 50 })
-    .withMessage('Country must be between 2 and 50 characters'),
+    .withMessage('country_length_range'),
   body('language')
     .optional()
     .isIn(['en', 'ar'])
-    .withMessage('Language must be either "en" or "ar"'),
+    .withMessage('language_allowed_values'),
   handleValidationErrors
 ];
 
@@ -54,54 +67,54 @@ const validateBusinessRegister = [
   body('firstname')
     .trim()
     .isLength({ min: 2, max: 50 })
-    .withMessage('First name must be between 2 and 50 characters'),
+    .withMessage('firstname_length_range'),
   body('lastname')
     .trim()
     .isLength({ min: 2, max: 50 })
-    .withMessage('Last name must be between 2 and 50 characters'),
+    .withMessage('lastname_length_range'),
   body('email')
     .matches(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/)
-    .withMessage('Please provide a valid email address'),
+    .withMessage('email_valid_required'),
   body('password')
     .isLength({ min: 8 })
-    .withMessage('Password must be at least 8 characters long')
+    .withMessage('password_min_length')
     .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
-    .withMessage('Password must contain at least one uppercase letter, one lowercase letter, and one number'),
+    .withMessage('password_complexity_requirement'),
   body('crNumber')
     .trim()
     .isLength({ min: 1, max: 50 })
-    .withMessage('CR number is required and must be between 1 and 50 characters'),
+    .withMessage('cr_number_required_range'),
   body('vatNumber')
     .trim()
     .isLength({ min: 1, max: 50 })
-    .withMessage('VAT number is required and must be between 1 and 50 characters'),
+    .withMessage('vat_number_required_range'),
   body('companyName')
     .trim()
     .isLength({ min: 2, max: 100 })
-    .withMessage('Company name must be between 2 and 100 characters'),
+    .withMessage('company_name_length_range'),
   body('companyType')
     .trim()
     .isLength({ min: 2, max: 100 })
-    .withMessage('Company type must be between 2 and 100 characters'),
+    .withMessage('company_type_length_range'),
   body('country')
     .trim()
     .isLength({ min: 2, max: 50 })
-    .withMessage('Country must be between 2 and 50 characters'),
+    .withMessage('country_length_range'),
   body('city')
     .trim()
     .isLength({ min: 2, max: 50 })
-    .withMessage('City must be between 2 and 50 characters'),
+    .withMessage('city_length_range'),
   body('district')
     .trim()
     .isLength({ min: 2, max: 50 })
-    .withMessage('District must be between 2 and 50 characters'),
+    .withMessage('district_length_range'),
   body('streetName')
     .trim()
     .isLength({ min: 2, max: 100 })
-    .withMessage('Street name must be between 2 and 100 characters'),
+    .withMessage('street_name_length_range'),
   body('phone')
     .matches(/^\+?[1-9]\d{1,14}$/)
-    .withMessage('Please provide a valid phone number'),
+    .withMessage('phone_valid_required'),
   handleValidationErrors
 ];
 
@@ -109,7 +122,7 @@ const validateBusinessRegister = [
 const validateSendEmailOTP = [
   body('email')
     .matches(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/)
-    .withMessage('Please provide a valid email address'),
+    .withMessage('email_valid_required'),
   handleValidationErrors
 ];
 
@@ -117,7 +130,7 @@ const validateSendEmailOTP = [
 const validateSendPhoneOTP = [
   body('phone')
     .matches(/^\+?[1-9]\d{1,14}$/)
-    .withMessage('Please provide a valid phone number'),
+    .withMessage('phone_valid_required'),
   handleValidationErrors
 ];
 
@@ -125,11 +138,11 @@ const validateSendPhoneOTP = [
 const validateConfirmOTP = [
   body('identifier')
     .notEmpty()
-    .withMessage('Email or phone is required'),
+    .withMessage('identifier_required'),
   body('otp')
     .isLength({ min: 6, max: 6 })
     .isNumeric()
-    .withMessage('OTP must be a 6-digit number'),
+    .withMessage('otp_six_digits'),
   handleValidationErrors
 ];
 
@@ -137,10 +150,10 @@ const validateConfirmOTP = [
 const validateLogin = [
   body('identifier')
     .notEmpty()
-    .withMessage('Email or phone is required'),
+    .withMessage('identifier_required'),
   body('password')
     .notEmpty()
-    .withMessage('Password is required'),
+    .withMessage('password_required'),
   handleValidationErrors
 ];
 
@@ -148,7 +161,7 @@ const validateLogin = [
 const validateLoginWithOTP = [
   body('identifier')
     .notEmpty()
-    .withMessage('Email or phone is required'),
+    .withMessage('identifier_required'),
   handleValidationErrors
 ];
 
@@ -156,9 +169,9 @@ const validateLoginWithOTP = [
 const validateForgotPassword = [
   body('newPassword')
     .isLength({ min: 8 })
-    .withMessage('Password must be at least 8 characters long')
+    .withMessage('password_min_length')
     .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
-    .withMessage('Password must contain at least one uppercase letter, one lowercase letter, and one number'),
+    .withMessage('password_complexity_requirement'),
   handleValidationErrors
 ];
 
@@ -168,30 +181,30 @@ const validateUpdateProfile = [
     .optional()
     .trim()
     .isLength({ min: 2, max: 50 })
-    .withMessage('First name must be between 2 and 50 characters'),
+    .withMessage('firstname_length_range'),
   body('lastname')
     .optional()
     .trim()
     .isLength({ min: 2, max: 50 })
-    .withMessage('Last name must be between 2 and 50 characters'),
+    .withMessage('lastname_length_range'),
   body('phone')
     .optional()
     .trim()
     .isMobilePhone()
-    .withMessage('Please provide a valid phone number'),
+    .withMessage('phone_valid_required'),
   body('country')
     .optional()
     .trim()
     .isLength({ min: 2, max: 50 })
-    .withMessage('Country must be between 2 and 50 characters'),
+    .withMessage('country_length_range'),
   body('language')
     .optional()
     .isIn(['en', 'ar'])
-    .withMessage('Language must be either "en" or "ar"'),
+    .withMessage('language_allowed_values'),
   body('imageUrl')
     .optional()
     .isURL()
-    .withMessage('Please provide a valid image URL'),
+    .withMessage('image_url_invalid'),
   handleValidationErrors
 ];
 
@@ -199,15 +212,15 @@ const validateUpdateProfile = [
 const validateBusinessApproval = [
   body('businessId')
     .isMongoId()
-    .withMessage('Valid business ID is required'),
+    .withMessage('business_id_required'),
   body('status')
     .isIn(['approved', 'rejected'])
-    .withMessage('Status must be either "approved" or "rejected"'),
+    .withMessage('status_allowed_values'),
   body('reason')
     .optional()
     .trim()
     .isLength({ min: 1, max: 500 })
-    .withMessage('Reason must be between 1 and 500 characters'),
+    .withMessage('reason_length_range'),
   handleValidationErrors
 ];
 

@@ -959,6 +959,98 @@ const messages = {
     en: 'Failed to create customer user',
     ar: 'فشل في إنشاء مستخدم العميل'
   },
+  'validation_failed': {
+    en: 'Validation failed',
+    ar: 'فشل التحقق'
+  },
+  'unknown_error': {
+    en: 'Unknown error',
+    ar: 'خطأ غير معروف'
+  },
+  'firstname_length_range': {
+    en: 'First name must be between 2 and 50 characters',
+    ar: 'يجب أن يكون الاسم الأول بين 2 و50 حرفًا'
+  },
+  'lastname_length_range': {
+    en: 'Last name must be between 2 and 50 characters',
+    ar: 'يجب أن يكون اسم العائلة بين 2 و50 حرفًا'
+  },
+  'email_valid_required': {
+    en: 'Please provide a valid email address',
+    ar: 'يرجى تقديم بريد إلكتروني صالح'
+  },
+  'phone_valid_required': {
+    en: 'Please provide a valid phone number',
+    ar: 'يرجى تقديم رقم هاتف صالح'
+  },
+  'password_min_length': {
+    en: 'Password must be at least 8 characters long',
+    ar: 'يجب أن تكون كلمة المرور 8 أحرف على الأقل'
+  },
+  'password_complexity_requirement': {
+    en: 'Password must contain at least one uppercase letter, one lowercase letter, and one number',
+    ar: 'يجب أن تحتوي كلمة المرور على حرف كبير واحد على الأقل وحرف صغير واحد ورقم واحد'
+  },
+  'country_length_range': {
+    en: 'Country must be between 2 and 50 characters',
+    ar: 'يجب أن يكون اسم الدولة بين 2 و50 حرفًا'
+  },
+  'language_allowed_values': {
+    en: 'Language must be either "en" or "ar"',
+    ar: 'يجب أن تكون اللغة "en" أو "ar"'
+  },
+  'cr_number_required_range': {
+    en: 'CR number is required and must be between 1 and 50 characters',
+    ar: 'رقم السجل التجاري مطلوب ويجب أن يكون بين 1 و50 حرفًا'
+  },
+  'vat_number_required_range': {
+    en: 'VAT number is required and must be between 1 and 50 characters',
+    ar: 'رقم ضريبة القيمة المضافة مطلوب ويجب أن يكون بين 1 و50 حرفًا'
+  },
+  'company_name_length_range': {
+    en: 'Company name must be between 2 and 100 characters',
+    ar: 'يجب أن يكون اسم الشركة بين 2 و100 حرف'
+  },
+  'company_type_length_range': {
+    en: 'Company type must be between 2 and 100 characters',
+    ar: 'يجب أن يكون نوع الشركة بين 2 و100 حرف'
+  },
+  'city_length_range': {
+    en: 'City must be between 2 and 50 characters',
+    ar: 'يجب أن يكون اسم المدينة بين 2 و50 حرفًا'
+  },
+  'district_length_range': {
+    en: 'District must be between 2 and 50 characters',
+    ar: 'يجب أن يكون اسم الحي بين 2 و50 حرفًا'
+  },
+  'street_name_length_range': {
+    en: 'Street name must be between 2 and 100 characters',
+    ar: 'يجب أن يكون اسم الشارع بين 2 و100 حرف'
+  },
+  'identifier_required': {
+    en: 'Email or phone is required',
+    ar: 'البريد الإلكتروني أو رقم الهاتف مطلوب'
+  },
+  'otp_six_digits': {
+    en: 'OTP must be a 6-digit number',
+    ar: 'يجب أن يكون رمز التحقق مكونًا من 6 أرقام'
+  },
+  'image_url_invalid': {
+    en: 'Please provide a valid image URL',
+    ar: 'يرجى تقديم رابط صورة صالح'
+  },
+  'business_id_required': {
+    en: 'Valid business ID is required',
+    ar: 'مطلوب معرف أعمال صالح'
+  },
+  'status_allowed_values': {
+    en: 'Status must be either "approved" or "rejected"',
+    ar: 'يجب أن تكون الحالة إما "approved" أو "rejected"'
+  },
+  'reason_length_range': {
+    en: 'Reason must be between 1 and 500 characters',
+    ar: 'يجب أن يكون السبب بين 1 و500 حرف'
+  },
   'password_required': {
     en: 'Password is required',
     ar: 'كلمة المرور مطلوبة'
