@@ -3,6 +3,7 @@ const Product = require('../../../models/product-model');
 const Category = require('../../../models/category-model');
 const { getBilingualMessage } = require('../../../utils/messages');
 const { createResponse, formatProduct } = require('../../../utils/response-formatters');
+const { attachReviewCountsToProducts } = require('../../../utils/review-helpers');
 
 // Helper function to validate business permissions
 const validateBusinessPermissions = (req, res) => {
@@ -49,6 +50,7 @@ exports.getProducts = async (req, res) => {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
+    await attachReviewCountsToProducts(products);
 
     const total = await Product.countDocuments(filter);
 
@@ -98,6 +100,7 @@ exports.getProductById = async (req, res) => {
     await product.populate('category', 'name');
     await product.populate('owner', 'firstname lastname email role businessInfo.companyName');
     await product.populate('approvedBy', 'firstname lastname email role');
+    await attachReviewCountsToProducts([product]);
 
     const formattedProduct = formatProduct(product);
 
@@ -259,19 +262,53 @@ exports.updateProduct = async (req, res) => {
       });
     }
 
-    const { category, name, images, description, unit, minOrder, pricePerUnit, stock, customFields, attachments } = req.body;
+    const { category, name, images, description, unit, minOrder, pricePerUnit, stock, customFields, attachments, isAllowed } = req.body;
     const updateFields = { updatedAt: Date.now() };
+    let requiresReapproval = false;
 
-    if (category) updateFields.category = category;
-    if (name) updateFields.name = name;
-    if (images) updateFields.images = images;
-    if (description) updateFields.description = description;
-    if (unit) updateFields.unit = unit;
-    if (minOrder !== undefined) updateFields.minOrder = minOrder;
-    if (pricePerUnit) updateFields.pricePerUnit = pricePerUnit;
-    if (stock !== undefined) updateFields.stock = stock;
-    if (customFields && Array.isArray(customFields) && customFields.length >= 3 && customFields.length <= 10) updateFields.customFields = customFields;
-    if (attachments) updateFields.attachments = attachments;
+    if (category) {
+      updateFields.category = category;
+      requiresReapproval = true;
+    }
+    if (name) {
+      updateFields.name = name;
+      requiresReapproval = true;
+    }
+    if (images) {
+      updateFields.images = images;
+      requiresReapproval = true;
+    }
+    if (description) {
+      updateFields.description = description;
+      requiresReapproval = true;
+    }
+    if (unit) {
+      updateFields.unit = unit;
+      requiresReapproval = true;
+    }
+    if (minOrder !== undefined) {
+      updateFields.minOrder = minOrder;
+      requiresReapproval = true;
+    }
+    if (pricePerUnit) {
+      updateFields.pricePerUnit = pricePerUnit;
+      requiresReapproval = true;
+    }
+    if (stock !== undefined) {
+      updateFields.stock = stock;
+      requiresReapproval = true;
+    }
+    if (customFields && Array.isArray(customFields) && customFields.length >= 3 && customFields.length <= 10) {
+      updateFields.customFields = customFields;
+      requiresReapproval = true;
+    }
+    if (attachments) {
+      updateFields.attachments = attachments;
+      requiresReapproval = true;
+    }
+    if (isAllowed !== undefined) {
+      updateFields.isAllowed = Boolean(isAllowed);
+    }
 
     // If updating category, check if it exists and is active
     if (category) {
@@ -313,7 +350,7 @@ exports.updateProduct = async (req, res) => {
     }
 
     // Reset status to pending if product is being updated (needs re-approval)
-    if (product.status === 'approved') {
+    if (product.status === 'approved' && requiresReapproval) {
       updateFields.status = 'pending';
       updateFields.approvedBy = undefined;
     }

@@ -17,7 +17,9 @@
 7. [Addresses Endpoints / نقاط نهاية العناوين](#addresses-endpoints)
 8. [Wishlists Endpoints / نقاط نهاية قوائم الرغبات](#wishlists-endpoints)
 9. [Reviews Endpoints / نقاط نهاية التقييمات](#reviews-endpoints)
-10. [Summary / الملخص](#summary)
+10. [Cart Endpoints / نقاط نهاية السلة](#cart-endpoints)
+11. [Categories Endpoints / نقاط نهاية التصنيفات](#categories-endpoints)
+12. [Summary / الملخص](#summary)
 
 ---
 
@@ -37,10 +39,12 @@ This document provides a comprehensive scan and documentation of all user-relate
 ├── /orders        - Order management (5 endpoints)
 ├── /addresses     - Address management (5 endpoints)
 ├── /wishlists     - Wishlist management (2 endpoints)
-└── /reviews       - Review management (3 endpoints)
+├── /reviews       - Review management (3 endpoints)
+├── /cart          - Cart management (2 endpoints)
+└── /categories    - Category browsing (1 endpoint)
 ```
 
-**Total Endpoints / إجمالي النقاط:** 27 endpoints
+**Total Endpoints / إجمالي النقاط:** 30 endpoints
 
 ---
 
@@ -1402,20 +1406,192 @@ Deletes a review. Only the review owner can delete it. Updates product rating au
 
 ---
 
+## Cart Endpoints / نقاط نهاية السلة
+
+**Base Path / المسار الأساسي:** `/api/v1/user/cart`
+
+Cart routes use `verifyToken` together with `requireCustomer` to ensure only authenticated customers can access their shopping carts.
+
+### 1. Get Cart
+**GET** `/api/v1/user/cart`
+
+**Description / الوصف:**  
+Returns the authenticated customer's cart (creates an empty cart on first access) with computed totals.
+
+**Authentication:** Required (Customer role)
+
+**Response / الاستجابة:**
+```json
+{
+  "status": "success",
+  "message": {
+    "en": "Cart retrieved successfully",
+    "ar": "تم جلب السلة بنجاح"
+  },
+  "data": {
+    "cart": {
+      "id": "cart_id",
+      "subtotal": 150,
+      "totalItems": 3,
+      "currency": "SAR",
+      "items": [
+        {
+          "id": "item_id",
+          "quantity": 2,
+          "unitPrice": 50,
+          "totalPrice": 100,
+          "notes": "Extra cold",
+          "product": {
+            "id": "product_id",
+            "name": {
+              "en": "Fresh Juice",
+              "ar": "عصير طازج"
+            },
+            "pricePerUnit": "50.00",
+            "stock": 20,
+            "status": "approved"
+          }
+        }
+      ]
+    }
+  }
+}
+```
+
+**Features / الميزات:**
+- Auto-creates an empty cart on first access
+- Populates product snapshots for each item
+- Calculates subtotal and total quantity automatically
+
+**Controller Function:** `CartController.getCart`  
+**File Location:** `controllers/user/cart/cart-controller.js` (lines 66-84)
+
+---
+
+### 2. Update Cart
+**PUT** `/api/v1/user/cart`
+
+**Description / الوصف:**  
+Replaces the customer's cart items with the provided list, validating inventory, approval status, and pricing.
+
+**Authentication:** Required (Customer role)
+
+**Request Body / جسم الطلب:**
+```json
+{
+  "items": [
+    {
+      "productId": "664a1d1a5b8c12001c111111",
+      "quantity": 3,
+      "notes": "Deliver chilled"
+    },
+    {
+      "productId": "664a1d1a5b8c12001c222222",
+      "quantity": 1
+    }
+  ]
+}
+```
+
+**Validation Rules / قواعد التحقق:**
+- `items` must be an array (empty array clears the cart)
+- `productId` must be a valid MongoDB ObjectId and exist in the catalog
+- `quantity` must be an integer ≥ 1; duplicates are merged server-side
+- Products must be approved, allowed, and have sufficient stock
+- Uses the latest `pricePerUnit` to calculate totals
+
+**Response / الاستجابة:**
+```json
+{
+  "status": "success",
+  "message": {
+    "en": "Cart updated",
+    "ar": "تم تحديث السلة"
+  },
+  "data": {
+    "cart": {
+      // Updated cart snapshot with totals
+    }
+  }
+}
+```
+
+**Controller Function:** `CartController.updateCart`  
+**File Location:** `controllers/user/cart/cart-controller.js` (lines 86-195)
+
+---
+
+## Categories Endpoints / نقاط نهاية التصنيفات
+
+**Base Path / المسار الأساسي:** `/api/v1/user/categories`
+
+Category routes are public and do not require authentication. They return only the categories that are currently approved/active (allowed) for end users.
+
+### 1. Get Allowed Categories
+**GET** `/api/v1/user/categories`
+
+**Description / الوصف:**  
+Returns all active categories with bilingual names and descriptions, ordered alphabetically.
+
+**Authentication:** Not required (public)
+
+**Query Parameters / معاملات الاستعلام:** None
+
+**Response / الاستجابة:**
+```json
+{
+  "status": "success",
+  "message": {
+    "en": "Categories retrieved successfully",
+    "ar": "تم جلب التصنيفات بنجاح"
+  },
+  "data": {
+    "categories": [
+      {
+        "id": "category_id",
+        "name": {
+          "en": "Beverages",
+          "ar": "مشروبات"
+        },
+        "description": {
+          "en": "All kinds of drinks",
+          "ar": "جميع أنواع المشروبات"
+        },
+        "status": "active",
+        "createdAt": "2024-01-01T00:00:00.000Z",
+        "updatedAt": "2024-01-05T00:00:00.000Z"
+      }
+    ]
+  }
+}
+```
+
+**Features / الميزات:**
+- Filters out inactive categories automatically
+- Returns bilingual fields for UI display
+- Sorted alphabetically by English name for consistent ordering
+
+**Controller Function:** `CategoriesController.getAllowedCategories`  
+**File Location:** `controllers/user/categories/categories-controller.js`
+
+---
+
 ## Summary / الملخص
 
 ### Endpoint Count / عدد النقاط
 
 | Category / الفئة | Count / العدد |
 |------------------|---------------|
-| Auth / المصادقة | 9 endpoints |
+| Auth / المصادقة | 8 endpoints |
 | Profile / الملف الشخصي | 2 endpoints |
 | Products / المنتجات | 2 endpoints |
 | Orders / الطلبات | 5 endpoints |
 | Addresses / العناوين | 5 endpoints |
 | Wishlists / قوائم الرغبات | 2 endpoints |
 | Reviews / التقييمات | 3 endpoints |
-| **Total / المجموع** | **27 endpoints** |
+| Cart / السلة | 2 endpoints |
+| Categories / التصنيفات | 1 endpoint |
+| **Total / المجموع** | **30 endpoints** |
 
 ### Authentication Summary / ملخص المصادقة
 

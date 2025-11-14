@@ -2,6 +2,7 @@
 const Product = require('../../../models/product-model');
 const { getBilingualMessage } = require('../../../utils/messages');
 const { createResponse, formatProduct } = require('../../../utils/response-formatters');
+const { attachReviewCountsToProducts } = require('../../../utils/review-helpers');
 
 // GET /api/v1/user/products - Get all approved and allowed products
 exports.getProducts = async (req, res) => {
@@ -116,6 +117,7 @@ exports.getProducts = async (req, res) => {
 
       // Execute aggregation
       const products = await Product.aggregate(pipeline);
+      await attachReviewCountsToProducts(products);
 
       // Get total count for pagination
       const countPipeline = [
@@ -174,6 +176,7 @@ exports.getProducts = async (req, res) => {
         .sort(sort)
         .skip(skip)
         .limit(parseInt(limit));
+      await attachReviewCountsToProducts(products);
 
       const total = await Product.countDocuments(filter);
 
@@ -209,6 +212,9 @@ exports.getProductById = async (req, res) => {
       .populate('owner', 'firstname lastname businessInfo.companyName businessInfo.companyType')
       .populate('approvedBy', 'firstname lastname email role')
       .populate('category', 'name');
+    if (product) {
+      await attachReviewCountsToProducts([product]);
+    }
 
     if (!product) {
       return res.status(404).json({

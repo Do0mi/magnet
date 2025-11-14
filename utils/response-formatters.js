@@ -220,7 +220,8 @@ const formatProduct = (product, options = {}) => {
     isAllowed: product.isAllowed,
     declinedReason: product.declinedReason,
     createdAt: product.createdAt,
-    updatedAt: product.updatedAt
+    updatedAt: product.updatedAt,
+    reviewCount: typeof product.reviewCount === 'number' ? product.reviewCount : 0
   };
 
   // Handle bilingual fields - always return both languages by default
@@ -234,18 +235,28 @@ const formatProduct = (product, options = {}) => {
 
   if (includeOwner && product.owner) {
     if (typeof product.owner === 'object') {
+      const companyName =
+        product.owner.businessInfo?.companyName ??
+        product.owner.companyName ??
+        null;
+
       formatted.owner = {
         id: product.owner._id,
         firstname: product.owner.firstname,
         lastname: product.owner.lastname,
         email: product.owner.email,
-        role: product.owner.role
+        role: product.owner.role,
+        companyName
       };
-      
-      // Include businessInfo for business role users
+
+      // Include businessInfo details for business role users
       if (product.owner.role === 'business') {
         formatted.owner.businessInfo = {
-          companyName: product.owner.businessInfo?.companyName || null
+          companyName,
+          companyType:
+            product.owner.businessInfo?.companyType ??
+            product.owner.companyType ??
+            null
         };
       }
     } else {

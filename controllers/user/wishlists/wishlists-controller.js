@@ -2,7 +2,39 @@
 const Wishlist = require('../../../models/wishlist-model');
 const Product = require('../../../models/product-model');
 const { getBilingualMessage } = require('../../../utils/messages');
-const { createResponse } = require('../../../utils/response-formatters');
+const { createResponse, formatProduct } = require('../../../utils/response-formatters');
+
+const PRODUCT_POPULATE_OPTIONS = {
+  path: 'products',
+  populate: [
+    {
+      path: 'owner',
+      select: 'firstname lastname email role businessInfo.companyName businessInfo.companyType'
+    },
+    {
+      path: 'approvedBy',
+      select: 'firstname lastname email role'
+    },
+    {
+      path: 'category',
+      select: 'name description'
+    }
+  ]
+};
+
+const isProductAvailable = (product) => {
+  if (!product) return false;
+  const hasStock = typeof product.stock === 'number' ? product.stock > 0 : true;
+  const isAllowed = product.isAllowed !== false;
+  return product.status === 'approved' && hasStock && isAllowed;
+};
+
+const formatWishlistResponse = (wishlistDoc, products) => ({
+  id: wishlistDoc._id,
+  products: products
+    .filter(Boolean)
+    .map(product => formatProduct(product))
+});
 
 // Helper function to validate customer or business permissions
 const validateCustomerPermissions = (req, res) => {
@@ -22,7 +54,7 @@ exports.getWishlist = async (req, res) => {
     if (permissionError) return;
 
     let wishlist = await Wishlist.findOne({ user: req.user.id })
-      .populate('products', 'name price images description stock status');
+      .populate(PRODUCT_POPULATE_OPTIONS);
 
     if (!wishlist) {
       // Create empty wishlist if it doesn't exist
@@ -34,9 +66,7 @@ exports.getWishlist = async (req, res) => {
     }
 
     // Filter out products that are no longer available
-    const availableProducts = wishlist.products.filter(product => 
-      product.status === 'approved' && product.stock > 0
-    );
+    const availableProducts = wishlist.products.filter(isProductAvailable);
 
     // Update wishlist if some products were filtered out
     if (availableProducts.length !== wishlist.products.length) {
@@ -44,12 +74,9 @@ exports.getWishlist = async (req, res) => {
       await wishlist.save();
     }
 
-    res.status(200).json(createResponse('success', { 
-      wishlist: {
-        _id: wishlist._id,
-        products: availableProducts
-      }
-    }));
+    const formattedWishlist = formatWishlistResponse(wishlist, availableProducts);
+
+    res.status(200).json(createResponse('success', { wishlist: formattedWishlist }));
 
   } catch (error) {
     console.error('Get wishlist error:', error);
@@ -107,22 +134,25 @@ exports.toggleWishlist = async (req, res) => {
       // Product exists in wishlist, remove it
       wishlist.products.splice(productIndex, 1);
       await wishlist.save();
-      
-      await wishlist.populate('products', 'name price images description stock status');
-      
+      await wishlist.populate(PRODUCT_POPULATE_OPTIONS);
+
+      const formattedWishlist = formatWishlistResponse(wishlist, wishlist.products);
+
       res.status(200).json(createResponse('success', {
-        wishlist,
+        wishlist: formattedWishlist,
         action: 'removed'
       }, getBilingualMessage('product_removed_from_wishlist_success')));
     } else {
       // Product doesn't exist in wishlist, add it
       wishlist.products.push(productId);
       await wishlist.save();
-      
-      await wishlist.populate('products', 'name price images description stock status');
-      
+
+      await wishlist.populate(PRODUCT_POPULATE_OPTIONS);
+
+      const formattedWishlist = formatWishlistResponse(wishlist, wishlist.products);
+
       res.status(200).json(createResponse('success', {
-        wishlist,
+        wishlist: formattedWishlist,
         action: 'added'
       }, getBilingualMessage('product_added_to_wishlist_success')));
     }

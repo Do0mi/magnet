@@ -4,6 +4,7 @@ const Category = require('../../../models/category-model');
 const User = require('../../../models/user-model');
 const { getBilingualMessage } = require('../../../utils/messages');
 const { createResponse, formatProduct, formatReview } = require('../../../utils/response-formatters');
+const { attachReviewCountsToProducts } = require('../../../utils/review-helpers');
 const { 
   sendProductApprovalNotification, 
   sendProductDeclineNotification, 
@@ -115,6 +116,7 @@ exports.getProducts = async (req, res) => {
 
       // Execute aggregation
       const products = await Product.aggregate(pipeline);
+      await attachReviewCountsToProducts(products);
 
       // Get total count for pagination
       const countPipeline = [
@@ -168,6 +170,7 @@ exports.getProducts = async (req, res) => {
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(parseInt(limit));
+      await attachReviewCountsToProducts(products);
 
       const total = await Product.countDocuments(filter);
 
@@ -210,6 +213,7 @@ exports.getProductById = async (req, res) => {
       });
     }
 
+    await attachReviewCountsToProducts([product]);
     const formattedProduct = formatProduct(product);
 
     res.status(200).json(createResponse('success', { product: formattedProduct }));
@@ -365,6 +369,7 @@ exports.createProduct = async (req, res) => {
     await product.save();
     await product.populate('owner', 'firstname lastname email role businessInfo.companyName');
     await product.populate('approvedBy', 'firstname lastname email role');
+    await attachReviewCountsToProducts([product]);
 
     const formattedProduct = formatProduct(product);
 
@@ -439,6 +444,7 @@ exports.updateProduct = async (req, res) => {
       });
     }
 
+    await attachReviewCountsToProducts([product]);
     const formattedProduct = formatProduct(product);
 
     // Send email notification if status changed
@@ -543,6 +549,7 @@ exports.approveProduct = async (req, res) => {
       });
     }
 
+    await attachReviewCountsToProducts([product]);
     const formattedProduct = formatProduct(product);
 
     // Send approval email notification
@@ -607,6 +614,7 @@ exports.declineProduct = async (req, res) => {
       });
     }
 
+  await attachReviewCountsToProducts([product]);
     const formattedProduct = formatProduct(product);
 
     // Send decline email notification
@@ -665,6 +673,7 @@ exports.toggleProduct = async (req, res) => {
     )
       .populate('owner', 'firstname lastname email businessInfo.companyName')
       .populate('approvedBy', 'firstname lastname email role');
+    await attachReviewCountsToProducts([updatedProduct]);
 
     const formattedProduct = formatProduct(updatedProduct);
 

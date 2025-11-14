@@ -295,6 +295,18 @@ const messages = {
     en: 'Failed to get cart',
     ar: 'فشل في الحصول على السلة'
   },
+  'invalid_cart_product': {
+    en: 'Invalid product identifier',
+    ar: 'معرّف المنتج غير صالح'
+  },
+  'invalid_cart_quantity': {
+    en: 'Quantity must be an integer of at least 1',
+    ar: 'يجب أن تكون الكمية عددًا صحيحًا لا يقل عن 1'
+  },
+  'cart_retrieved': {
+    en: 'Cart retrieved successfully',
+    ar: 'تم جلب السلة بنجاح'
+  },
 
   // Product messages
   'failed_get_products': {
@@ -452,6 +464,10 @@ const messages = {
   'failed_get_categories': {
     en: 'Failed to get categories',
     ar: 'فشل في الحصول على التصنيفات'
+  },
+  'categories_retrieved': {
+    en: 'Categories retrieved successfully',
+    ar: 'تم جلب التصنيفات بنجاح'
   },
   'category_created': {
     en: 'Category created successfully',
