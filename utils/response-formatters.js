@@ -245,11 +245,10 @@ const formatProduct = (product, options = {}) => {
         firstname: product.owner.firstname,
         lastname: product.owner.lastname,
         email: product.owner.email,
-        role: product.owner.role,
-        companyName
+        role: product.owner.role
       };
 
-      // Include businessInfo details for business role users
+      // Include business-specific info or fallback company name
       if (product.owner.role === 'business') {
         formatted.owner.businessInfo = {
           companyName,
@@ -258,6 +257,8 @@ const formatProduct = (product, options = {}) => {
             product.owner.companyType ??
             null
         };
+      } else if (companyName) {
+        formatted.owner.companyName = companyName;
       }
     } else {
       formatted.owner = product.owner;

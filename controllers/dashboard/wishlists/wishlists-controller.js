@@ -4,6 +4,7 @@ const User = require('../../../models/user-model');
 const Product = require('../../../models/product-model');
 const { getBilingualMessage } = require('../../../utils/messages');
 const { createResponse, formatUser, formatProduct } = require('../../../utils/response-formatters');
+const { attachReviewCountsToProducts } = require('../../../utils/review-helpers');
 
 // Helper function to validate admin or magnet employee permissions
 const validateAdminOrEmployeePermissions = (req, res) => {
@@ -44,6 +45,8 @@ exports.getWishlists = async (req, res) => {
       .limit(parseInt(limit));
 
     const total = await Wishlist.countDocuments(filter);
+    const allProducts = wishlists.flatMap(wishlist => wishlist.products || []);
+    await attachReviewCountsToProducts(allProducts);
 
     const formattedWishlists = wishlists.map(wishlist => ({
       id: wishlist._id,
@@ -95,6 +98,7 @@ exports.getWishlistById = async (req, res) => {
       });
     }
 
+    await attachReviewCountsToProducts(wishlist.products || []);
     // Format the wishlist response
     const formattedWishlist = {
       id: wishlist._id,
@@ -175,6 +179,7 @@ exports.createWishlist = async (req, res) => {
 
     await wishlist.populate('user', 'firstname lastname email phone role');
     await wishlist.populate('products', 'name pricePerUnit images description');
+    await attachReviewCountsToProducts(wishlist.products || []);
 
     // Format the wishlist response
     const formattedWishlist = {
@@ -240,6 +245,7 @@ exports.updateWishlist = async (req, res) => {
       });
     }
 
+    await attachReviewCountsToProducts(wishlist.products || []);
     // Format the wishlist response
     const formattedWishlist = {
       id: wishlist._id,

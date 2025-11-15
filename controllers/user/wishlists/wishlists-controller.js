@@ -3,6 +3,7 @@ const Wishlist = require('../../../models/wishlist-model');
 const Product = require('../../../models/product-model');
 const { getBilingualMessage } = require('../../../utils/messages');
 const { createResponse, formatProduct } = require('../../../utils/response-formatters');
+const { attachReviewCountsToProducts } = require('../../../utils/review-helpers');
 
 const PRODUCT_POPULATE_OPTIONS = {
   path: 'products',
@@ -74,6 +75,7 @@ exports.getWishlist = async (req, res) => {
       await wishlist.save();
     }
 
+    await attachReviewCountsToProducts(availableProducts);
     const formattedWishlist = formatWishlistResponse(wishlist, availableProducts);
 
     res.status(200).json(createResponse('success', { wishlist: formattedWishlist }));
@@ -136,6 +138,7 @@ exports.toggleWishlist = async (req, res) => {
       await wishlist.save();
       await wishlist.populate(PRODUCT_POPULATE_OPTIONS);
 
+      await attachReviewCountsToProducts(wishlist.products);
       const formattedWishlist = formatWishlistResponse(wishlist, wishlist.products);
 
       res.status(200).json(createResponse('success', {
@@ -149,6 +152,7 @@ exports.toggleWishlist = async (req, res) => {
 
       await wishlist.populate(PRODUCT_POPULATE_OPTIONS);
 
+      await attachReviewCountsToProducts(wishlist.products);
       const formattedWishlist = formatWishlistResponse(wishlist, wishlist.products);
 
       res.status(200).json(createResponse('success', {

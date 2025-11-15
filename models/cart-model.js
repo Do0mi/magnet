@@ -21,11 +21,6 @@ const cartItemSchema = new mongoose.Schema({
     required: true,
     min: 0
   },
-  notes: {
-    type: String,
-    trim: true,
-    maxlength: 500
-  },
   addedAt: {
     type: Date,
     default: Date.now

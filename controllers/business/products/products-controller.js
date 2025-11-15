@@ -224,6 +224,7 @@ exports.createProduct = async (req, res) => {
     await product.save();
     await product.populate('owner', 'firstname lastname email role businessInfo.companyName');
     await product.populate('approvedBy', 'firstname lastname email role');
+    await attachReviewCountsToProducts([product]);
 
     const formattedProduct = formatProduct(product);
 
@@ -371,6 +372,7 @@ exports.updateProduct = async (req, res) => {
       });
     }
 
+    await attachReviewCountsToProducts([updatedProduct]);
     const formattedProduct = formatProduct(updatedProduct);
 
     res.status(200).json(createResponse('success', {
@@ -458,6 +460,7 @@ exports.toggleProduct = async (req, res) => {
       .populate('owner', 'firstname lastname email role businessInfo.companyName')
       .populate('approvedBy', 'firstname lastname email role');
 
+    await attachReviewCountsToProducts([updatedProduct]);
     const formattedProduct = formatProduct(updatedProduct);
     res.status(200).json(createResponse('success', {
       product: formattedProduct

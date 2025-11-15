@@ -3,16 +3,54 @@ const mongoose = require('mongoose');
 const Cart = require('../../../models/cart-model');
 const Product = require('../../../models/product-model');
 const { getBilingualMessage } = require('../../../utils/messages');
-const { createResponse } = require('../../../utils/response-formatters');
+const { createResponse, formatProduct } = require('../../../utils/response-formatters');
+const { attachReviewCountsToProducts } = require('../../../utils/review-helpers');
 
-const CART_PRODUCT_FIELDS = 'name images pricePerUnit stock status minOrder unit description owner';
+const CART_PRODUCT_FIELDS = [
+  'code',
+  'name',
+  'description',
+  'images',
+  'pricePerUnit',
+  'stock',
+  'status',
+  'minOrder',
+  'unit',
+  'category',
+  'customFields',
+  'attachments',
+  'isAllowed',
+  'declinedReason',
+  'owner',
+  'approvedBy',
+  'rating',
+  'createdAt',
+  'updatedAt'
+].join(' ');
 
 const populateCartProducts = async (cart) => {
   if (!cart) return cart;
-  return cart.populate({
+  await cart.populate({
     path: 'items.product',
-    select: CART_PRODUCT_FIELDS
+    select: CART_PRODUCT_FIELDS,
+    populate: [
+      {
+        path: 'owner',
+        select: 'firstname lastname email role businessInfo.companyName businessInfo.companyType'
+      },
+      {
+        path: 'approvedBy',
+        select: 'firstname lastname email role'
+      }
+    ]
   });
+  const products = cart.items
+    .map((item) => item.product)
+    .filter((product) => product && typeof product === 'object');
+  if (products.length > 0) {
+    await attachReviewCountsToProducts(products);
+  }
+  return cart;
 };
 
 const formatCartResponse = (cart) => {
@@ -31,21 +69,9 @@ const formatCartResponse = (cart) => {
       quantity: item.quantity,
       unitPrice: item.unitPrice,
       totalPrice: item.totalPrice,
-      notes: item.notes || null,
       product:
         item.product && typeof item.product === 'object'
-          ? {
-              id: item.product._id,
-              name: item.product.name,
-              images: item.product.images,
-              pricePerUnit: item.product.pricePerUnit,
-              stock: item.product.stock,
-              status: item.product.status,
-              minOrder: item.product.minOrder,
-              unit: item.product.unit,
-              description: item.product.description,
-              owner: item.product.owner
-            }
+          ? formatProduct(item.product)
           : item.product
     }))
   };
@@ -97,7 +123,7 @@ exports.updateCart = async (req, res) => {
     const aggregatedItems = new Map();
 
     for (const rawItem of items) {
-      const { productId, quantity, notes } = rawItem || {};
+      const { productId, quantity } = rawItem || {};
 
       if (!productId || !isValidObjectId(productId)) {
         return res.status(400).json({
@@ -116,14 +142,11 @@ exports.updateCart = async (req, res) => {
       }
 
       if (!aggregatedItems.has(productId)) {
-        aggregatedItems.set(productId, { quantity: 0, notes: notes?.trim?.() || null });
+        aggregatedItems.set(productId, { quantity: 0 });
       }
 
       const current = aggregatedItems.get(productId);
       current.quantity += parsedQuantity;
-      if (notes) {
-        current.notes = notes.trim();
-      }
     }
 
     const validatedItems = [];
@@ -164,8 +187,7 @@ exports.updateCart = async (req, res) => {
         product: product._id,
         quantity: payload.quantity,
         unitPrice,
-        totalPrice: unitPrice * payload.quantity,
-        notes: payload.notes
+        totalPrice: unitPrice * payload.quantity
       });
     }
 
