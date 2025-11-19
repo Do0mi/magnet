@@ -1,6 +1,8 @@
 // User Orders Controller - User Order Management
+const mongoose = require('mongoose');
 const Order = require('../../../models/order-model');
 const Product = require('../../../models/product-model');
+const Address = require('../../../models/address-model');
 const { getBilingualMessage } = require('../../../utils/messages');
 const { createResponse } = require('../../../utils/response-formatters');
 
@@ -36,6 +38,29 @@ exports.createOrder = async (req, res) => {
       return res.status(400).json({
         status: 'error',
         message: getBilingualMessage('shipping_address_required')
+      });
+    }
+
+    // Validate shipping address exists and belongs to user
+    if (!mongoose.Types.ObjectId.isValid(shippingAddress)) {
+      return res.status(400).json({
+        status: 'error',
+        message: getBilingualMessage('invalid_address_id')
+      });
+    }
+
+    const address = await Address.findById(shippingAddress);
+    if (!address) {
+      return res.status(404).json({
+        status: 'error',
+        message: getBilingualMessage('address_not_found')
+      });
+    }
+
+    if (address.user.toString() !== req.user.id) {
+      return res.status(403).json({
+        status: 'error',
+        message: getBilingualMessage('address_not_belongs_to_user')
       });
     }
 
@@ -137,15 +162,17 @@ exports.createOrder = async (req, res) => {
       subtotal: order.subtotal,
       shippingCost: order.shippingCost || 0,
       total: order.total,
-      shippingAddress: {
-        id: order.shippingAddress._id,
-        addressLine1: order.shippingAddress.addressLine1,
-        addressLine2: order.shippingAddress.addressLine2,
-        city: order.shippingAddress.city,
-        state: order.shippingAddress.state,
-        postalCode: order.shippingAddress.postalCode,
-        country: order.shippingAddress.country
-      },
+      shippingAddress: order.shippingAddress && typeof order.shippingAddress === 'object'
+        ? {
+            id: order.shippingAddress._id || order.shippingAddress,
+            addressLine1: order.shippingAddress.addressLine1,
+            addressLine2: order.shippingAddress.addressLine2,
+            city: order.shippingAddress.city,
+            state: order.shippingAddress.state,
+            postalCode: order.shippingAddress.postalCode,
+            country: order.shippingAddress.country
+          }
+        : (order.shippingAddress || null),
       status: order.status,
       paymentMethod: order.paymentMethod,
       notes: order.notes,
@@ -220,15 +247,17 @@ exports.getOrders = async (req, res) => {
       subtotal: order.subtotal,
       shippingCost: order.shippingCost || 0,
       total: order.total,
-      shippingAddress: {
-        id: order.shippingAddress._id,
-        addressLine1: order.shippingAddress.addressLine1,
-        addressLine2: order.shippingAddress.addressLine2,
-        city: order.shippingAddress.city,
-        state: order.shippingAddress.state,
-        postalCode: order.shippingAddress.postalCode,
-        country: order.shippingAddress.country
-      },
+      shippingAddress: order.shippingAddress && typeof order.shippingAddress === 'object'
+        ? {
+            id: order.shippingAddress._id || order.shippingAddress,
+            addressLine1: order.shippingAddress.addressLine1,
+            addressLine2: order.shippingAddress.addressLine2,
+            city: order.shippingAddress.city,
+            state: order.shippingAddress.state,
+            postalCode: order.shippingAddress.postalCode,
+            country: order.shippingAddress.country
+          }
+        : (order.shippingAddress || null),
       status: order.status,
       paymentMethod: order.paymentMethod,
       notes: order.notes,
@@ -303,15 +332,17 @@ exports.getOrderById = async (req, res) => {
       subtotal: order.subtotal,
       shippingCost: order.shippingCost || 0,
       total: order.total,
-      shippingAddress: {
-        id: order.shippingAddress._id,
-        addressLine1: order.shippingAddress.addressLine1,
-        addressLine2: order.shippingAddress.addressLine2,
-        city: order.shippingAddress.city,
-        state: order.shippingAddress.state,
-        postalCode: order.shippingAddress.postalCode,
-        country: order.shippingAddress.country
-      },
+      shippingAddress: order.shippingAddress && typeof order.shippingAddress === 'object'
+        ? {
+            id: order.shippingAddress._id || order.shippingAddress,
+            addressLine1: order.shippingAddress.addressLine1,
+            addressLine2: order.shippingAddress.addressLine2,
+            city: order.shippingAddress.city,
+            state: order.shippingAddress.state,
+            postalCode: order.shippingAddress.postalCode,
+            country: order.shippingAddress.country
+          }
+        : (order.shippingAddress || null),
       status: order.status,
       paymentMethod: order.paymentMethod,
       notes: order.notes,
@@ -362,6 +393,14 @@ exports.updateOrder = async (req, res) => {
     const updateFields = { updatedAt: Date.now() };
 
     if (items && Array.isArray(items)) {
+      // Restore stock from old items first
+      for (const oldItem of existingOrder.items) {
+        await Product.findByIdAndUpdate(
+          oldItem.product,
+          { $inc: { stock: oldItem.quantity } }
+        );
+      }
+
       // Recalculate total if items are updated
       let totalAmount = 0;
       const validatedItems = [];
@@ -379,6 +418,14 @@ exports.updateOrder = async (req, res) => {
           return res.status(400).json({
             status: 'error',
             message: getBilingualMessage('product_not_available')
+          });
+        }
+
+        // Check stock availability
+        if (typeof product.stock === 'number' && product.stock < item.quantity) {
+          return res.status(400).json({
+            status: 'error',
+            message: getBilingualMessage('insufficient_stock')
           });
         }
 
@@ -402,12 +449,45 @@ exports.updateOrder = async (req, res) => {
         });
       }
 
+      // Deduct stock for new items
+      for (const item of validatedItems) {
+        await Product.findByIdAndUpdate(
+          item.product,
+          { $inc: { stock: -item.quantity } }
+        );
+      }
+
       updateFields.items = validatedItems;
       updateFields.subtotal = totalAmount;
       updateFields.total = totalAmount;
     }
 
-    if (shippingAddress) updateFields.shippingAddress = shippingAddress;
+    if (shippingAddress) {
+      // Validate shipping address exists and belongs to user
+      if (!mongoose.Types.ObjectId.isValid(shippingAddress)) {
+        return res.status(400).json({
+          status: 'error',
+          message: getBilingualMessage('invalid_address_id')
+        });
+      }
+
+      const address = await Address.findById(shippingAddress);
+      if (!address) {
+        return res.status(404).json({
+          status: 'error',
+          message: getBilingualMessage('address_not_found')
+        });
+      }
+
+      if (address.user.toString() !== req.user.id) {
+        return res.status(403).json({
+          status: 'error',
+          message: getBilingualMessage('address_not_belongs_to_user')
+        });
+      }
+
+      updateFields.shippingAddress = shippingAddress;
+    }
     if (notes) updateFields.notes = notes;
 
     const order = await Order.findByIdAndUpdate(
@@ -418,6 +498,13 @@ exports.updateOrder = async (req, res) => {
       .populate('customer', 'firstname lastname email')
       .populate('items.product', 'name pricePerUnit images')
       .populate('shippingAddress', 'addressLine1 addressLine2 city state postalCode country');
+
+    if (!order) {
+      return res.status(404).json({
+        status: 'error',
+        message: getBilingualMessage('order_not_found')
+      });
+    }
 
     // Format the order response
     const formattedOrder = {
@@ -445,15 +532,17 @@ exports.updateOrder = async (req, res) => {
       subtotal: order.subtotal,
       shippingCost: order.shippingCost || 0,
       total: order.total,
-      shippingAddress: {
-        id: order.shippingAddress._id,
-        addressLine1: order.shippingAddress.addressLine1,
-        addressLine2: order.shippingAddress.addressLine2,
-        city: order.shippingAddress.city,
-        state: order.shippingAddress.state,
-        postalCode: order.shippingAddress.postalCode,
-        country: order.shippingAddress.country
-      },
+      shippingAddress: order.shippingAddress && typeof order.shippingAddress === 'object'
+        ? {
+            id: order.shippingAddress._id || order.shippingAddress,
+            addressLine1: order.shippingAddress.addressLine1,
+            addressLine2: order.shippingAddress.addressLine2,
+            city: order.shippingAddress.city,
+            state: order.shippingAddress.state,
+            postalCode: order.shippingAddress.postalCode,
+            country: order.shippingAddress.country
+          }
+        : (order.shippingAddress || null),
       status: order.status,
       paymentMethod: order.paymentMethod,
       notes: order.notes,
@@ -513,6 +602,13 @@ exports.cancelOrder = async (req, res) => {
       .populate('items.product', 'name pricePerUnit images')
       .populate('shippingAddress', 'addressLine1 addressLine2 city state postalCode country');
 
+    if (!updatedOrder) {
+      return res.status(404).json({
+        status: 'error',
+        message: getBilingualMessage('order_not_found')
+      });
+    }
+
     // Restore product stock
     for (const item of updatedOrder.items) {
       await Product.findByIdAndUpdate(
@@ -547,15 +643,17 @@ exports.cancelOrder = async (req, res) => {
       subtotal: updatedOrder.subtotal,
       shippingCost: updatedOrder.shippingCost || 0,
       total: updatedOrder.total,
-      shippingAddress: {
-        id: updatedOrder.shippingAddress._id,
-        addressLine1: updatedOrder.shippingAddress.addressLine1,
-        addressLine2: updatedOrder.shippingAddress.addressLine2,
-        city: updatedOrder.shippingAddress.city,
-        state: updatedOrder.shippingAddress.state,
-        postalCode: updatedOrder.shippingAddress.postalCode,
-        country: updatedOrder.shippingAddress.country
-      },
+      shippingAddress: updatedOrder.shippingAddress && typeof updatedOrder.shippingAddress === 'object'
+        ? {
+            id: updatedOrder.shippingAddress._id || updatedOrder.shippingAddress,
+            addressLine1: updatedOrder.shippingAddress.addressLine1,
+            addressLine2: updatedOrder.shippingAddress.addressLine2,
+            city: updatedOrder.shippingAddress.city,
+            state: updatedOrder.shippingAddress.state,
+            postalCode: updatedOrder.shippingAddress.postalCode,
+            country: updatedOrder.shippingAddress.country
+          }
+        : (updatedOrder.shippingAddress || null),
       status: updatedOrder.status,
       paymentMethod: updatedOrder.paymentMethod,
       notes: updatedOrder.notes,
