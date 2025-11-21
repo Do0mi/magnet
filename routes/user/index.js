@@ -11,6 +11,7 @@ const wishlistsRoutes = require('./wishlists/wishlists-routes');
 const reviewsRoutes = require('./reviews/reviews-routes');
 const cartRoutes = require('./cart/cart-routes');
 const categoriesRoutes = require('./categories/categories-routes');
+const applicantsRoutes = require('./applicants/applicants-routes');
 
 // Mount all user sub-routes
 router.use('/auth', authRoutes);
@@ -22,5 +23,6 @@ router.use('/wishlists', wishlistsRoutes);
 router.use('/reviews', reviewsRoutes);
 router.use('/cart', cartRoutes);
 router.use('/categories', categoriesRoutes);
+router.use('/applicants', applicantsRoutes);
 
 module.exports = router;

@@ -8,6 +8,7 @@ const wishlistsController = require('./wishlists/wishlists-controller');
 const reviewsController = require('./reviews/reviews-controller');
 const cartController = require('./cart/cart-controller');
 const categoriesController = require('./categories/categories-controller');
+const applicantsController = require('./applicants/applicants-controller');
 
 module.exports = {
   authController,
@@ -18,5 +19,6 @@ module.exports = {
   wishlistsController,
   reviewsController,
   cartController,
-  categoriesController
+  categoriesController,
+  applicantsController
 };

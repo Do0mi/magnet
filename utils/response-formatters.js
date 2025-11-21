@@ -544,6 +544,66 @@ const formatAddress = (address) => {
 };
 
 /**
+ * Format applicant data
+ * @param {Object} applicant - Applicant object from database
+ * @param {Object} options - Formatting options
+ * @returns {Object} Formatted applicant object
+ */
+const formatApplicant = (applicant, options = {}) => {
+  if (!applicant) return null;
+  
+  const {
+    includeCV = false
+  } = options;
+
+  const formatted = {
+    id: applicant._id,
+    name: applicant.name,
+    email: applicant.email,
+    age: applicant.age,
+    gender: applicant.gender,
+    status: applicant.status,
+    createdAt: applicant.createdAt,
+    updatedAt: applicant.updatedAt
+  };
+
+  // Include CV only if explicitly requested (usually excluded to reduce payload)
+  if (includeCV && applicant.cv) {
+    formatted.cv = applicant.cv;
+    formatted.cvContentType = applicant.cvContentType;
+  } else {
+    // Just indicate CV exists
+    formatted.hasCV = !!applicant.cv;
+  }
+
+  // Add rejection details if applicant is rejected
+  if (applicant.status === 'rejected') {
+    formatted.rejectionReason = applicant.rejectionReason;
+    formatted.reviewedAt = applicant.reviewedAt;
+  }
+
+  // Add reviewed details if status is accepted or rejected
+  if (applicant.status === 'accepted' || applicant.status === 'rejected') {
+    formatted.reviewedAt = applicant.reviewedAt;
+  }
+
+  // If reviewedBy is populated, include reviewer details
+  if (applicant.reviewedBy && typeof applicant.reviewedBy === 'object') {
+    formatted.reviewedBy = {
+      id: applicant.reviewedBy._id,
+      firstname: applicant.reviewedBy.firstname,
+      lastname: applicant.reviewedBy.lastname,
+      email: applicant.reviewedBy.email,
+      role: applicant.reviewedBy.role
+    };
+  } else if (applicant.reviewedBy) {
+    formatted.reviewedBy = applicant.reviewedBy;
+  }
+
+  return formatted;
+};
+
+/**
  * Create standardized API response
  * @param {string} status - Response status ('success' or 'error')
  * @param {Object} data - Response data
@@ -576,6 +636,7 @@ module.exports = {
   formatCategory,
   formatReview,
   formatAddress,
+  formatApplicant,
   createResponse
 };
 

@@ -523,6 +523,141 @@ const sendProductDisallowNotification = async (to, userName, productName, disall
   }
 };
 
+// Function to send applicant application submitted notification
+const sendApplicantSubmissionNotification = async (to, applicantName) => {
+  try {
+    if (EMAIL_TRANSPORT_DISABLED || !process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+      console.warn(`[Email] Application submitted notification to ${to} (simulated)`);
+      return { success: true, simulated: true };
+    }
+
+    const transporter = createTransporter();
+    
+    const mailOptions = {
+      from: process.env.EMAIL_USER || '"Magnet" <noreply@magnetproject.com>',
+      to: to,
+      subject: 'Application Received - Under Review',
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #333;">Application Received</h2>
+          <p>Dear ${applicantName},</p>
+          <p>Thank you for submitting your application to Magnet.</p>
+          <p>We have successfully received your application and CV. Our team will review your application and get back to you in a short time.</p>
+          <p>We appreciate your interest in joining our team and will contact you soon with an update.</p>
+          <p>If you have any questions, please feel free to contact us.</p>
+          <p>Best regards,<br>The Magnet Team</p>
+        </div>
+      `
+    };
+    
+    const info = await sendMailWithTimeout(transporter, mailOptions);
+    console.log('Applicant submission notification sent:', info.messageId);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error('Applicant submission notification failed:', {
+      error: error.message,
+      to,
+      time: new Date().toISOString()
+    });
+    return { 
+      success: false, 
+      error: 'Failed to send applicant submission notification',
+      details: error.response || error.message 
+    };
+  }
+};
+
+// Function to send applicant acceptance notification
+const sendApplicantAcceptanceNotification = async (to, applicantName) => {
+  try {
+    if (EMAIL_TRANSPORT_DISABLED || !process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+      console.warn(`[Email] Application accepted notification to ${to} (simulated)`);
+      return { success: true, simulated: true };
+    }
+
+    const transporter = createTransporter();
+    
+    const mailOptions = {
+      from: process.env.EMAIL_USER || '"Magnet" <noreply@magnetproject.com>',
+      to: to,
+      subject: 'Application Accepted - Next Steps',
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #28a745;">Congratulations! Your Application Has Been Accepted</h2>
+          <p>Dear ${applicantName},</p>
+          <p>We are pleased to inform you that your application has been reviewed and accepted by our team.</p>
+          <p>Our team will contact you soon to discuss the next steps and provide you with further details.</p>
+          <p>We look forward to working with you and welcome you to the Magnet family!</p>
+          <p>If you have any questions in the meantime, please don't hesitate to reach out to us.</p>
+          <p>Best regards,<br>The Magnet Team</p>
+        </div>
+      `
+    };
+    
+    const info = await sendMailWithTimeout(transporter, mailOptions);
+    console.log('Applicant acceptance notification sent:', info.messageId);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error('Applicant acceptance notification failed:', {
+      error: error.message,
+      to,
+      time: new Date().toISOString()
+    });
+    return { 
+      success: false, 
+      error: 'Failed to send applicant acceptance notification',
+      details: error.response || error.message 
+    };
+  }
+};
+
+// Function to send applicant rejection notification
+const sendApplicantRejectionNotification = async (to, applicantName, rejectionReason) => {
+  try {
+    if (EMAIL_TRANSPORT_DISABLED || !process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+      console.warn(`[Email] Application rejected notification to ${to} (simulated)`);
+      return { success: true, simulated: true };
+    }
+
+    const transporter = createTransporter();
+    
+    const mailOptions = {
+      from: process.env.EMAIL_USER || '"Magnet" <noreply@magnetproject.com>',
+      to: to,
+      subject: 'Application Update',
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #dc3545;">Application Update</h2>
+          <p>Dear ${applicantName},</p>
+          <p>Thank you for your interest in joining Magnet and for taking the time to submit your application.</p>
+          <p>After careful consideration, we regret to inform you that we are unable to proceed with your application at this time.</p>
+          ${rejectionReason ? `<div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <p><strong>Reason:</strong> ${rejectionReason}</p>
+          </div>` : ''}
+          <p>We sincerely apologize for any inconvenience and appreciate your understanding. We encourage you to apply again in the future as our needs may change.</p>
+          <p>We wish you the best of luck in your career endeavors.</p>
+          <p>Best regards,<br>The Magnet Team</p>
+        </div>
+      `
+    };
+    
+    const info = await sendMailWithTimeout(transporter, mailOptions);
+    console.log('Applicant rejection notification sent:', info.messageId);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error('Applicant rejection notification failed:', {
+      error: error.message,
+      to,
+      time: new Date().toISOString()
+    });
+    return { 
+      success: false, 
+      error: 'Failed to send applicant rejection notification',
+      details: error.response || error.message 
+    };
+  }
+};
+
 
 module.exports = {
   generateOTP,
@@ -536,5 +671,8 @@ module.exports = {
   sendProductApprovalNotification,
   sendProductDeclineNotification,
   sendProductAllowNotification,
-  sendProductDisallowNotification
+  sendProductDisallowNotification,
+  sendApplicantSubmissionNotification,
+  sendApplicantAcceptanceNotification,
+  sendApplicantRejectionNotification
 };

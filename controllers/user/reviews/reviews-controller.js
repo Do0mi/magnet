@@ -122,6 +122,64 @@ exports.addReview = async (req, res) => {
   }
 };
 
+// GET /api/v1/user/reviews - Get all accepted reviews for all products
+exports.getAllAcceptedReviews = async (req, res) => {
+  try {
+    const { page = 1, limit = 10 } = req.query;
+    const skip = (page - 1) * limit;
+
+    // Get only approved product IDs to ensure we only show reviews for approved products
+    const approvedProducts = await Product.find({ status: 'approved' }).select('_id');
+    const approvedProductIds = approvedProducts.map(p => p._id);
+
+    // Get only accepted reviews for approved products
+    const filter = { 
+      status: 'accept',
+      product: { $in: approvedProductIds }
+    };
+
+    const reviews = await Review.find(filter)
+      .populate('user', 'firstname lastname email role')
+      .populate('rejectedBy', 'firstname lastname email role')
+      .populate({
+        path: 'product',
+        populate: {
+          path: 'owner',
+          select: 'firstname lastname email businessInfo.companyName'
+        }
+      })
+      .populate({
+        path: 'product',
+        populate: {
+          path: 'approvedBy',
+          select: 'firstname lastname email role'
+        }
+      })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+    
+    const total = await Review.countDocuments(filter);
+    const formattedReviews = reviews.map(review => formatReview(review));
+    
+    res.status(200).json(createResponse('success', { 
+      reviews: formattedReviews,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages: Math.ceil(total / limit),
+        totalReviews: total,
+        limit: parseInt(limit)
+      }
+    }));
+  } catch (err) {
+    console.error('Get all accepted reviews error:', err);
+    res.status(500).json({ 
+      status: 'error', 
+      message: getBilingualMessage('failed_get_reviews') 
+    });
+  }
+};
+
 // GET /api/v1/user/products/:id/reviews - Get all reviews for a product
 exports.getProductReviews = async (req, res) => {
   try {

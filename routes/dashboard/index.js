@@ -11,6 +11,7 @@ const reviewsRoutes = require('./reviews/reviews-routes');
 const addressesRoutes = require('./addresses/addresses-routes');
 const wishlistsRoutes = require('./wishlists/wishlists-routes');
 const statsRoutes = require('./stats/stats-routes');
+const applicantsRoutes = require('./applicants/applicants-routes');
 
 // Mount all dashboard sub-routes
 router.use('/users', usersRoutes);
@@ -22,5 +23,6 @@ router.use('/reviews', reviewsRoutes);
 router.use('/addresses', addressesRoutes);
 router.use('/wishlists', wishlistsRoutes);
 router.use('/stats', statsRoutes);
+router.use('/applicants', applicantsRoutes);
 
 module.exports = router;

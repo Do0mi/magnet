@@ -1417,6 +1417,95 @@ const messages = {
   'order_cancelled_success': {
     en: 'Order cancelled successfully',
     ar: 'تم إلغاء الطلب بنجاح'
+  },
+  // Applicant messages
+  'name_required': {
+    en: 'Name is required',
+    ar: 'الاسم مطلوب'
+  },
+  'invalid_age': {
+    en: 'Invalid age. Age must be between 1 and 150',
+    ar: 'عمر غير صحيح. يجب أن يكون العمر بين 1 و 150'
+  },
+  'invalid_gender': {
+    en: 'Invalid gender. Must be male or female',
+    ar: 'جنس غير صحيح. يجب أن يكون ذكر أو أنثى'
+  },
+  'email_required': {
+    en: 'Email is required',
+    ar: 'البريد الإلكتروني مطلوب'
+  },
+  'invalid_email': {
+    en: 'Invalid email format',
+    ar: 'صيغة البريد الإلكتروني غير صحيحة'
+  },
+  'cv_required': {
+    en: 'CV file is required',
+    ar: 'ملف السيرة الذاتية مطلوب'
+  },
+  'cv_must_be_pdf': {
+    en: 'CV must be a PDF file',
+    ar: 'يجب أن يكون ملف السيرة الذاتية بصيغة PDF'
+  },
+  'application_submitted_success': {
+    en: 'Application submitted successfully',
+    ar: 'تم تقديم الطلب بنجاح'
+  },
+  'failed_submit_application': {
+    en: 'Failed to submit application',
+    ar: 'فشل في تقديم الطلب'
+  },
+  'failed_get_applicants': {
+    en: 'Failed to get applicants',
+    ar: 'فشل في الحصول على المتقدمين'
+  },
+  'applicant_not_found': {
+    en: 'Applicant not found',
+    ar: 'المتقدم غير موجود'
+  },
+  'failed_get_applicant': {
+    en: 'Failed to get applicant',
+    ar: 'فشل في الحصول على المتقدم'
+  },
+  'cv_not_found': {
+    en: 'CV not found',
+    ar: 'ملف السيرة الذاتية غير موجود'
+  },
+  'failed_get_cv': {
+    en: 'Failed to get CV',
+    ar: 'فشل في الحصول على ملف السيرة الذاتية'
+  },
+  'invalid_status': {
+    en: 'Invalid status. Must be pending, accepted, or rejected',
+    ar: 'حالة غير صحيحة. يجب أن تكون pending أو accepted أو rejected'
+  },
+  'applicant_status_updated': {
+    en: 'Applicant status updated successfully',
+    ar: 'تم تحديث حالة المتقدم بنجاح'
+  },
+  'failed_update_applicant_status': {
+    en: 'Failed to update applicant status',
+    ar: 'فشل في تحديث حالة المتقدم'
+  },
+  'applicant_deleted': {
+    en: 'Applicant deleted successfully',
+    ar: 'تم حذف المتقدم بنجاح'
+  },
+  'failed_delete_applicant': {
+    en: 'Failed to delete applicant',
+    ar: 'فشل في حذف المتقدم'
+  },
+  'already_applied': {
+    en: 'You have already submitted an application with this email address',
+    ar: 'لقد قمت بالفعل بتقديم طلب باستخدام هذا البريد الإلكتروني'
+  },
+  'file_too_large': {
+    en: 'File is too large. Maximum size is 10MB',
+    ar: 'الملف كبير جداً. الحد الأقصى للحجم هو 10 ميجابايت'
+  },
+  'upload_failed': {
+    en: 'File upload failed',
+    ar: 'فشل في رفع الملف'
   }
 };
 

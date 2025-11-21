@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { addReview, getProductReviews, deleteReview } = require('../../../controllers/user/reviews/reviews-controller');
+const { addReview, getProductReviews, deleteReview, getAllAcceptedReviews } = require('../../../controllers/user/reviews/reviews-controller');
 const authenticateToken = require('../../../middleware/auth-middleware');
 const { requireCustomer } = require('../../../middleware/role-middleware');
 
@@ -9,6 +9,9 @@ router.use(authenticateToken);
 
 // Apply customer role validation to all routes
 router.use(requireCustomer);
+
+// GET /api/v1/user/reviews - Get all accepted reviews for all products
+router.get('/', getAllAcceptedReviews);
 
 // POST /api/v1/user/reviews/products/:id/reviews - Add a review to a product
 router.post('/products/:id/reviews', addReview);
