@@ -3,6 +3,10 @@ const router = express.Router();
 const WishlistController = require('../../../controllers/user/wishlists/wishlists-controller');
 const verifyToken = require('../../../middleware/auth-middleware');
 const { requireCustomer } = require('../../../middleware/role-middleware');
+const detectCountry = require('../../../middleware/detect-country-middleware');
+
+// Detect user country from IP (must be before auth to set req.userCurrency)
+router.use(detectCountry);
 
 // All user wishlist routes require authentication
 router.use(verifyToken);

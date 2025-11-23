@@ -4,7 +4,8 @@ const Order = require('../../../models/order-model');
 const Product = require('../../../models/product-model');
 const Address = require('../../../models/address-model');
 const { getBilingualMessage } = require('../../../utils/messages');
-const { createResponse } = require('../../../utils/response-formatters');
+const { createResponse, formatProduct } = require('../../../utils/response-formatters');
+const { convertCurrency, BASE_CURRENCY } = require('../../../services/currency-service');
 
 // Helper function to validate customer or business permissions
 const validateCustomerPermissions = (req, res) => {
@@ -15,6 +16,94 @@ const validateCustomerPermissions = (req, res) => {
     });
   }
   return null;
+};
+
+/**
+ * Format order with currency conversion
+ * Converts all prices (product prices, unitPrice, itemTotal, subtotal, total, shippingCost)
+ * 
+ * @param {Object} order - Order document
+ * @param {string} userCurrency - Target currency code
+ * @returns {Promise<Object>} Formatted order with converted prices
+ */
+const formatOrderWithCurrency = async (order, userCurrency) => {
+  // Convert items with product prices
+  const convertedItems = await Promise.all(
+    order.items.map(async (item) => {
+      let product = item.product;
+      
+      // Format and convert product if it's an object
+      if (product && typeof product === 'object') {
+        const formatted = formatProduct(product, {
+          includeOwner: false,
+          includeApproval: false
+        });
+        
+        // Convert pricePerUnit if it exists
+        if (formatted.pricePerUnit) {
+          const basePrice = parseFloat(formatted.pricePerUnit);
+          if (!isNaN(basePrice)) {
+            const convertedPrice = await convertCurrency(basePrice, userCurrency);
+            formatted.pricePerUnit = convertedPrice.toString();
+          }
+        }
+        
+        // Add currency code to product
+        formatted.currency = userCurrency;
+        product = formatted;
+      }
+
+      // Convert unitPrice and itemTotal
+      const convertedUnitPrice = await convertCurrency(item.unitPrice || 0, userCurrency);
+      const convertedItemTotal = await convertCurrency(item.itemTotal || 0, userCurrency);
+
+      return {
+        id: item._id,
+        product,
+        quantity: item.quantity,
+        unitPrice: convertedUnitPrice,
+        itemTotal: convertedItemTotal
+      };
+    })
+  );
+
+  // Convert totals
+  const convertedSubtotal = await convertCurrency(order.subtotal || 0, userCurrency);
+  const convertedShippingCost = await convertCurrency(order.shippingCost || 0, userCurrency);
+  const convertedTotal = await convertCurrency(order.total || 0, userCurrency);
+
+  return {
+    id: order._id,
+    orderNumber: `ORD-${order._id.toString().slice(-8).toUpperCase()}`,
+    customer: {
+      id: order.customer._id || order.customer,
+      name: (order.customer.firstname && order.customer.lastname) 
+        ? `${order.customer.firstname} ${order.customer.lastname}`.trim()
+        : (order.customer.fullName || 'Unknown User'),
+      email: order.customer.email
+    },
+    items: convertedItems,
+    subtotal: convertedSubtotal,
+    shippingCost: convertedShippingCost,
+    total: convertedTotal,
+    shippingAddress: order.shippingAddress && typeof order.shippingAddress === 'object'
+      ? {
+          id: order.shippingAddress._id || order.shippingAddress,
+          addressLine1: order.shippingAddress.addressLine1,
+          addressLine2: order.shippingAddress.addressLine2,
+          city: order.shippingAddress.city,
+          state: order.shippingAddress.state,
+          postalCode: order.shippingAddress.postalCode,
+          country: order.shippingAddress.country
+        }
+      : (order.shippingAddress || null),
+    status: order.status,
+    paymentMethod: order.paymentMethod,
+    notes: order.notes,
+    createdAt: order.createdAt,
+    updatedAt: order.updatedAt,
+    currency: userCurrency
+  };
 };
 
 
@@ -136,52 +225,15 @@ exports.createOrder = async (req, res) => {
     await order.populate('items.product', 'name pricePerUnit images');
     await order.populate('shippingAddress', 'addressLine1 addressLine2 city state postalCode country');
 
-    // Format the order response
-    const formattedOrder = {
-      id: order._id,
-      orderNumber: `ORD-${order._id.toString().slice(-8).toUpperCase()}`,
-      customer: {
-        id: order.customer._id || order.customer,
-        name: (order.customer.firstname && order.customer.lastname) 
-          ? `${order.customer.firstname} ${order.customer.lastname}`.trim()
-          : (order.customer.fullName || `${req.user.firstname || ''} ${req.user.lastname || ''}`.trim() || 'Unknown User'),
-        email: order.customer.email || req.user.email
-      },
-      items: order.items.map(item => ({
-        id: item._id,
-        product: {
-          id: item.product._id,
-          name: item.product.name,
-          images: item.product.images,
-          pricePerUnit: item.product.pricePerUnit
-        },
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        itemTotal: item.itemTotal
-      })),
-      subtotal: order.subtotal,
-      shippingCost: order.shippingCost || 0,
-      total: order.total,
-      shippingAddress: order.shippingAddress && typeof order.shippingAddress === 'object'
-        ? {
-            id: order.shippingAddress._id || order.shippingAddress,
-            addressLine1: order.shippingAddress.addressLine1,
-            addressLine2: order.shippingAddress.addressLine2,
-            city: order.shippingAddress.city,
-            state: order.shippingAddress.state,
-            postalCode: order.shippingAddress.postalCode,
-            country: order.shippingAddress.country
-          }
-        : (order.shippingAddress || null),
-      status: order.status,
-      paymentMethod: order.paymentMethod,
-      notes: order.notes,
-      createdAt: order.createdAt,
-      updatedAt: order.updatedAt
-    };
+    // Get user currency from middleware (defaults to USD if not set)
+    const userCurrency = req.userCurrency || BASE_CURRENCY;
+
+    // Format the order response with currency conversion
+    const formattedOrder = await formatOrderWithCurrency(order, userCurrency);
 
     res.status(201).json(createResponse('success', {
-      order: formattedOrder
+      order: formattedOrder,
+      currency: userCurrency
     }, getBilingualMessage('order_created_success')));
 
   } catch (error) {
@@ -221,52 +273,17 @@ exports.getOrders = async (req, res) => {
 
     const total = await Order.countDocuments(filter);
 
-    // Format orders response
-    const formattedOrders = orders.map(order => ({
-      id: order._id,
-      orderNumber: `ORD-${order._id.toString().slice(-8).toUpperCase()}`,
-      customer: {
-        id: order.customer._id || order.customer,
-        name: (order.customer.firstname && order.customer.lastname) 
-          ? `${order.customer.firstname} ${order.customer.lastname}`.trim()
-          : (order.customer.fullName || `${req.user.firstname || ''} ${req.user.lastname || ''}`.trim() || 'Unknown User'),
-        email: order.customer.email || req.user.email
-      },
-      items: order.items.map(item => ({
-        id: item._id,
-        product: {
-          id: item.product._id,
-          name: item.product.name,
-          images: item.product.images,
-          pricePerUnit: item.product.pricePerUnit
-        },
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        itemTotal: item.itemTotal
-      })),
-      subtotal: order.subtotal,
-      shippingCost: order.shippingCost || 0,
-      total: order.total,
-      shippingAddress: order.shippingAddress && typeof order.shippingAddress === 'object'
-        ? {
-            id: order.shippingAddress._id || order.shippingAddress,
-            addressLine1: order.shippingAddress.addressLine1,
-            addressLine2: order.shippingAddress.addressLine2,
-            city: order.shippingAddress.city,
-            state: order.shippingAddress.state,
-            postalCode: order.shippingAddress.postalCode,
-            country: order.shippingAddress.country
-          }
-        : (order.shippingAddress || null),
-      status: order.status,
-      paymentMethod: order.paymentMethod,
-      notes: order.notes,
-      createdAt: order.createdAt,
-      updatedAt: order.updatedAt
-    }));
+    // Get user currency from middleware (defaults to USD if not set)
+    const userCurrency = req.userCurrency || BASE_CURRENCY;
+
+    // Format orders response with currency conversion
+    const formattedOrders = await Promise.all(
+      orders.map(order => formatOrderWithCurrency(order, userCurrency))
+    );
 
     res.status(200).json(createResponse('success', {
       orders: formattedOrders,
+      currency: userCurrency,
       pagination: {
         currentPage: parseInt(page),
         totalPages: Math.ceil(total / limit),
@@ -305,52 +322,16 @@ exports.getOrderById = async (req, res) => {
       });
     }
 
-    // Format the order response
-    const formattedOrder = {
-      id: order._id,
-      orderNumber: `ORD-${order._id.toString().slice(-8).toUpperCase()}`,
-      customer: {
-        id: order.customer._id || order.customer,
-        name: (order.customer.firstname && order.customer.lastname) 
-          ? `${order.customer.firstname} ${order.customer.lastname}`.trim()
-          : (order.customer.fullName || `${req.user.firstname || ''} ${req.user.lastname || ''}`.trim() || 'Unknown User'),
-        email: order.customer.email || req.user.email
-      },
-      items: order.items.map(item => ({
-        id: item._id,
-        product: {
-          id: item.product._id,
-          name: item.product.name,
-          images: item.product.images,
-          pricePerUnit: item.product.pricePerUnit,
-          description: item.product.description
-        },
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        itemTotal: item.itemTotal
-      })),
-      subtotal: order.subtotal,
-      shippingCost: order.shippingCost || 0,
-      total: order.total,
-      shippingAddress: order.shippingAddress && typeof order.shippingAddress === 'object'
-        ? {
-            id: order.shippingAddress._id || order.shippingAddress,
-            addressLine1: order.shippingAddress.addressLine1,
-            addressLine2: order.shippingAddress.addressLine2,
-            city: order.shippingAddress.city,
-            state: order.shippingAddress.state,
-            postalCode: order.shippingAddress.postalCode,
-            country: order.shippingAddress.country
-          }
-        : (order.shippingAddress || null),
-      status: order.status,
-      paymentMethod: order.paymentMethod,
-      notes: order.notes,
-      createdAt: order.createdAt,
-      updatedAt: order.updatedAt
-    };
+    // Get user currency from middleware (defaults to USD if not set)
+    const userCurrency = req.userCurrency || BASE_CURRENCY;
 
-    res.status(200).json(createResponse('success', { order: formattedOrder }));
+    // Format the order response with currency conversion
+    const formattedOrder = await formatOrderWithCurrency(order, userCurrency);
+
+    res.status(200).json(createResponse('success', { 
+      order: formattedOrder,
+      currency: userCurrency
+    }));
 
   } catch (error) {
     console.error('Get order by ID error:', error);
@@ -506,52 +487,15 @@ exports.updateOrder = async (req, res) => {
       });
     }
 
-    // Format the order response
-    const formattedOrder = {
-      id: order._id,
-      orderNumber: `ORD-${order._id.toString().slice(-8).toUpperCase()}`,
-      customer: {
-        id: order.customer._id || order.customer,
-        name: (order.customer.firstname && order.customer.lastname) 
-          ? `${order.customer.firstname} ${order.customer.lastname}`.trim()
-          : (order.customer.fullName || `${req.user.firstname || ''} ${req.user.lastname || ''}`.trim() || 'Unknown User'),
-        email: order.customer.email || req.user.email
-      },
-      items: order.items.map(item => ({
-        id: item._id,
-        product: {
-          id: item.product._id,
-          name: item.product.name,
-          images: item.product.images,
-          pricePerUnit: item.product.pricePerUnit
-        },
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        itemTotal: item.itemTotal
-      })),
-      subtotal: order.subtotal,
-      shippingCost: order.shippingCost || 0,
-      total: order.total,
-      shippingAddress: order.shippingAddress && typeof order.shippingAddress === 'object'
-        ? {
-            id: order.shippingAddress._id || order.shippingAddress,
-            addressLine1: order.shippingAddress.addressLine1,
-            addressLine2: order.shippingAddress.addressLine2,
-            city: order.shippingAddress.city,
-            state: order.shippingAddress.state,
-            postalCode: order.shippingAddress.postalCode,
-            country: order.shippingAddress.country
-          }
-        : (order.shippingAddress || null),
-      status: order.status,
-      paymentMethod: order.paymentMethod,
-      notes: order.notes,
-      createdAt: order.createdAt,
-      updatedAt: order.updatedAt
-    };
+    // Get user currency from middleware (defaults to USD if not set)
+    const userCurrency = req.userCurrency || BASE_CURRENCY;
+
+    // Format the order response with currency conversion
+    const formattedOrder = await formatOrderWithCurrency(order, userCurrency);
 
     res.status(200).json(createResponse('success', {
-      order: formattedOrder
+      order: formattedOrder,
+      currency: userCurrency
     }, getBilingualMessage('order_updated_success')));
 
   } catch (error) {
@@ -617,52 +561,15 @@ exports.cancelOrder = async (req, res) => {
       );
     }
 
-    // Format the order response
-    const formattedOrder = {
-      id: updatedOrder._id,
-      orderNumber: `ORD-${updatedOrder._id.toString().slice(-8).toUpperCase()}`,
-      customer: {
-        id: updatedOrder.customer._id || updatedOrder.customer,
-        name: (updatedOrder.customer.firstname && updatedOrder.customer.lastname) 
-          ? `${updatedOrder.customer.firstname} ${updatedOrder.customer.lastname}`.trim()
-          : (updatedOrder.customer.fullName || `${req.user.firstname || ''} ${req.user.lastname || ''}`.trim() || 'Unknown User'),
-        email: updatedOrder.customer.email || req.user.email
-      },
-      items: updatedOrder.items.map(item => ({
-        id: item._id,
-        product: {
-          id: item.product._id,
-          name: item.product.name,
-          images: item.product.images,
-          pricePerUnit: item.product.pricePerUnit
-        },
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        itemTotal: item.itemTotal
-      })),
-      subtotal: updatedOrder.subtotal,
-      shippingCost: updatedOrder.shippingCost || 0,
-      total: updatedOrder.total,
-      shippingAddress: updatedOrder.shippingAddress && typeof updatedOrder.shippingAddress === 'object'
-        ? {
-            id: updatedOrder.shippingAddress._id || updatedOrder.shippingAddress,
-            addressLine1: updatedOrder.shippingAddress.addressLine1,
-            addressLine2: updatedOrder.shippingAddress.addressLine2,
-            city: updatedOrder.shippingAddress.city,
-            state: updatedOrder.shippingAddress.state,
-            postalCode: updatedOrder.shippingAddress.postalCode,
-            country: updatedOrder.shippingAddress.country
-          }
-        : (updatedOrder.shippingAddress || null),
-      status: updatedOrder.status,
-      paymentMethod: updatedOrder.paymentMethod,
-      notes: updatedOrder.notes,
-      createdAt: updatedOrder.createdAt,
-      updatedAt: updatedOrder.updatedAt
-    };
+    // Get user currency from middleware (defaults to USD if not set)
+    const userCurrency = req.userCurrency || BASE_CURRENCY;
+
+    // Format the order response with currency conversion
+    const formattedOrder = await formatOrderWithCurrency(updatedOrder, userCurrency);
 
     res.status(200).json(createResponse('success', {
-      order: formattedOrder
+      order: formattedOrder,
+      currency: userCurrency
     }, getBilingualMessage('order_cancelled_success')));
 
   } catch (error) {

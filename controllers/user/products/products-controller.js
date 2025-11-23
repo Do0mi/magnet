@@ -167,6 +167,9 @@ exports.getProducts = async (req, res) => {
             }
           }
           
+          // Add currency code to each product
+          formatted.currency = userCurrency;
+          
           return formatted;
         })
       );
@@ -217,6 +220,9 @@ exports.getProducts = async (req, res) => {
               formatted.pricePerUnit = convertedPrice.toString();
             }
           }
+          
+          // Add currency code to each product
+          formatted.currency = userCurrency;
           
           return formatted;
         })
@@ -277,6 +283,9 @@ exports.getProductById = async (req, res) => {
         formattedProduct.pricePerUnit = convertedPrice.toString();
       }
     }
+
+    // Add currency code to product
+    formattedProduct.currency = userCurrency;
 
     res.status(200).json(createResponse('success', { 
       product: formattedProduct,

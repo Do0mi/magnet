@@ -4,6 +4,7 @@ const Product = require('../../../models/product-model');
 const { getBilingualMessage } = require('../../../utils/messages');
 const { createResponse, formatProduct } = require('../../../utils/response-formatters');
 const { attachReviewCountsToProducts } = require('../../../utils/review-helpers');
+const { convertCurrency, BASE_CURRENCY } = require('../../../services/currency-service');
 
 const PRODUCT_POPULATE_OPTIONS = {
   path: 'products',
@@ -76,9 +77,40 @@ exports.getWishlist = async (req, res) => {
     }
 
     await attachReviewCountsToProducts(availableProducts);
-    const formattedWishlist = formatWishlistResponse(wishlist, availableProducts);
+    
+    // Get user currency from middleware (defaults to USD if not set)
+    const userCurrency = req.userCurrency || BASE_CURRENCY;
 
-    res.status(200).json(createResponse('success', { wishlist: formattedWishlist }));
+    // Convert product prices to user's currency
+    const convertedProducts = await Promise.all(
+      availableProducts.map(async (product) => {
+        const formatted = formatProduct(product);
+        
+        // Convert pricePerUnit if it exists
+        if (formatted.pricePerUnit) {
+          const basePrice = parseFloat(formatted.pricePerUnit);
+          if (!isNaN(basePrice)) {
+            const convertedPrice = await convertCurrency(basePrice, userCurrency);
+            formatted.pricePerUnit = convertedPrice.toString();
+          }
+        }
+        
+        // Add currency code to each product
+        formatted.currency = userCurrency;
+        
+        return formatted;
+      })
+    );
+
+    const formattedWishlist = {
+      id: wishlist._id,
+      products: convertedProducts
+    };
+
+    res.status(200).json(createResponse('success', { 
+      wishlist: formattedWishlist,
+      currency: userCurrency
+    }));
 
   } catch (error) {
     console.error('Get wishlist error:', error);
@@ -139,10 +171,39 @@ exports.toggleWishlist = async (req, res) => {
       await wishlist.populate(PRODUCT_POPULATE_OPTIONS);
 
       await attachReviewCountsToProducts(wishlist.products);
-      const formattedWishlist = formatWishlistResponse(wishlist, wishlist.products);
+      
+      // Get user currency from middleware (defaults to USD if not set)
+      const userCurrency = req.userCurrency || BASE_CURRENCY;
+
+      // Convert product prices to user's currency
+      const convertedProducts = await Promise.all(
+        wishlist.products.map(async (product) => {
+          const formatted = formatProduct(product);
+          
+          // Convert pricePerUnit if it exists
+          if (formatted.pricePerUnit) {
+            const basePrice = parseFloat(formatted.pricePerUnit);
+            if (!isNaN(basePrice)) {
+              const convertedPrice = await convertCurrency(basePrice, userCurrency);
+              formatted.pricePerUnit = convertedPrice.toString();
+            }
+          }
+          
+          // Add currency code to each product
+          formatted.currency = userCurrency;
+          
+          return formatted;
+        })
+      );
+
+      const formattedWishlist = {
+        id: wishlist._id,
+        products: convertedProducts
+      };
 
       res.status(200).json(createResponse('success', {
         wishlist: formattedWishlist,
+        currency: userCurrency,
         action: 'removed'
       }, getBilingualMessage('product_removed_from_wishlist_success')));
     } else {
@@ -153,10 +214,39 @@ exports.toggleWishlist = async (req, res) => {
       await wishlist.populate(PRODUCT_POPULATE_OPTIONS);
 
       await attachReviewCountsToProducts(wishlist.products);
-      const formattedWishlist = formatWishlistResponse(wishlist, wishlist.products);
+      
+      // Get user currency from middleware (defaults to USD if not set)
+      const userCurrency = req.userCurrency || BASE_CURRENCY;
+
+      // Convert product prices to user's currency
+      const convertedProducts = await Promise.all(
+        wishlist.products.map(async (product) => {
+          const formatted = formatProduct(product);
+          
+          // Convert pricePerUnit if it exists
+          if (formatted.pricePerUnit) {
+            const basePrice = parseFloat(formatted.pricePerUnit);
+            if (!isNaN(basePrice)) {
+              const convertedPrice = await convertCurrency(basePrice, userCurrency);
+              formatted.pricePerUnit = convertedPrice.toString();
+            }
+          }
+          
+          // Add currency code to each product
+          formatted.currency = userCurrency;
+          
+          return formatted;
+        })
+      );
+
+      const formattedWishlist = {
+        id: wishlist._id,
+        products: convertedProducts
+      };
 
       res.status(200).json(createResponse('success', {
         wishlist: formattedWishlist,
+        currency: userCurrency,
         action: 'added'
       }, getBilingualMessage('product_added_to_wishlist_success')));
     }

@@ -5,6 +5,7 @@ const Product = require('../../../models/product-model');
 const { getBilingualMessage } = require('../../../utils/messages');
 const { createResponse, formatProduct } = require('../../../utils/response-formatters');
 const { attachReviewCountsToProducts } = require('../../../utils/review-helpers');
+const { convertCurrency, BASE_CURRENCY } = require('../../../services/currency-service');
 
 const CART_PRODUCT_FIELDS = [
   'code',
@@ -53,27 +54,58 @@ const populateCartProducts = async (cart) => {
   return cart;
 };
 
-const formatCartResponse = (cart) => {
+const formatCartResponse = async (cart, userCurrency) => {
   if (!cart) return null;
+
+  // Convert product prices and item prices
+  const convertedItems = await Promise.all(
+    cart.items.map(async (item) => {
+      let product = item.product;
+      
+      // Format and convert product if it's an object
+      if (product && typeof product === 'object') {
+        const formatted = formatProduct(product);
+        
+        // Convert pricePerUnit if it exists
+        if (formatted.pricePerUnit) {
+          const basePrice = parseFloat(formatted.pricePerUnit);
+          if (!isNaN(basePrice)) {
+            const convertedPrice = await convertCurrency(basePrice, userCurrency);
+            formatted.pricePerUnit = convertedPrice.toString();
+          }
+        }
+        
+        // Add currency code to product
+        formatted.currency = userCurrency;
+        product = formatted;
+      }
+
+      // Convert unitPrice and totalPrice
+      const convertedUnitPrice = await convertCurrency(item.unitPrice || 0, userCurrency);
+      const convertedTotalPrice = await convertCurrency(item.totalPrice || 0, userCurrency);
+
+      return {
+        id: item._id,
+        quantity: item.quantity,
+        unitPrice: convertedUnitPrice,
+        totalPrice: convertedTotalPrice,
+        product
+      };
+    })
+  );
+
+  // Convert subtotal
+  const convertedSubtotal = await convertCurrency(cart.subtotal || 0, userCurrency);
 
   return {
     id: cart._id,
     user: cart.user,
-    currency: cart.currency,
-    subtotal: cart.subtotal,
+    currency: userCurrency,
+    subtotal: convertedSubtotal,
     totalItems: cart.totalItems,
     createdAt: cart.createdAt,
     updatedAt: cart.updatedAt,
-    items: cart.items.map((item) => ({
-      id: item._id,
-      quantity: item.quantity,
-      unitPrice: item.unitPrice,
-      totalPrice: item.totalPrice,
-      product:
-        item.product && typeof item.product === 'object'
-          ? formatProduct(item.product)
-          : item.product
-    }))
+    items: convertedItems
   };
 };
 
@@ -94,10 +126,15 @@ exports.getCart = async (req, res) => {
   try {
     const cart = await ensureCartExists(req.user.id);
 
+    // Get user currency from middleware (defaults to USD if not set)
+    const userCurrency = req.userCurrency || BASE_CURRENCY;
+
+    const formattedCart = await formatCartResponse(cart, userCurrency);
+
     return res.status(200).json(
       createResponse(
         'success',
-        { cart: formatCartResponse(cart) },
+        { cart: formattedCart, currency: userCurrency },
         getBilingualMessage('cart_retrieved')
       )
     );
@@ -201,10 +238,15 @@ exports.updateCart = async (req, res) => {
     await cart.save();
     await populateCartProducts(cart);
 
+    // Get user currency from middleware (defaults to USD if not set)
+    const userCurrency = req.userCurrency || BASE_CURRENCY;
+
+    const formattedCart = await formatCartResponse(cart, userCurrency);
+
     return res.status(200).json(
       createResponse(
         'success',
-        { cart: formatCartResponse(cart) },
+        { cart: formattedCart, currency: userCurrency },
         getBilingualMessage('cart_updated')
       )
     );
