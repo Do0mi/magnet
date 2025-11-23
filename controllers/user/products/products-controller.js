@@ -193,7 +193,7 @@ exports.getProducts = async (req, res) => {
       sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
 
       const products = await Product.find(filter)
-        .populate('owner', 'firstname lastname businessInfo.companyName businessInfo.companyType')
+        .populate('owner', 'firstname lastname email role businessInfo.companyName businessInfo.companyType')
         .populate('approvedBy', 'firstname lastname email role')
         .populate('category', 'name')
         .sort(sort)
@@ -252,7 +252,7 @@ exports.getProductById = async (req, res) => {
       _id: req.params.id, 
       status: 'approved' 
     })
-      .populate('owner', 'firstname lastname businessInfo.companyName businessInfo.companyType')
+      .populate('owner', 'firstname lastname email role businessInfo.companyName businessInfo.companyType')
       .populate('approvedBy', 'firstname lastname email role')
       .populate('category', 'name');
     if (product) {

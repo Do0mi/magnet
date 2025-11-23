@@ -40,7 +40,7 @@ exports.addReview = async (req, res) => {
 
     // Check if product exists and is approved
     const product = await Product.findById(productId)
-      .populate('owner', 'firstname lastname email businessInfo.companyName')
+      .populate('owner', 'firstname lastname email role businessInfo.companyName')
       .populate('approvedBy', 'firstname lastname email role');
     
     if (!product || product.status !== 'approved') {

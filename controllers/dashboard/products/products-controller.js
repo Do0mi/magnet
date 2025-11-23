@@ -211,7 +211,7 @@ exports.getProductById = async (req, res) => {
     if (permissionError) return;
 
     const product = await Product.findById(req.params.id)
-      .populate('owner', 'firstname lastname email businessInfo.companyName')
+      .populate('owner', 'firstname lastname email role businessInfo.companyName')
       .populate('approvedBy', 'firstname lastname email role');
 
     if (!product) {
@@ -458,7 +458,7 @@ exports.updateProduct = async (req, res) => {
       updateFields,
       { new: true, runValidators: true }
     )
-      .populate('owner', 'firstname lastname email businessInfo.companyName')
+      .populate('owner', 'firstname lastname email role businessInfo.companyName')
       .populate('approvedBy', 'firstname lastname email role');
 
     if (!product) {
@@ -564,7 +564,7 @@ exports.approveProduct = async (req, res) => {
       },
       { new: true, runValidators: true }
     )
-      .populate('owner', 'firstname lastname email businessInfo.companyName')
+      .populate('owner', 'firstname lastname email role businessInfo.companyName')
       .populate('approvedBy', 'firstname lastname email role');
 
     if (!product) {
@@ -630,7 +630,7 @@ exports.declineProduct = async (req, res) => {
       },
       { new: true, runValidators: true }
     )
-      .populate('owner', 'firstname lastname email businessInfo.companyName')
+      .populate('owner', 'firstname lastname email role businessInfo.companyName')
       .populate('approvedBy', 'firstname lastname email role');
 
     if (!product) {
@@ -698,7 +698,7 @@ exports.toggleProduct = async (req, res) => {
       { isAllowed: !product.isAllowed },
       { new: true, runValidators: true }
     )
-      .populate('owner', 'firstname lastname email businessInfo.companyName')
+      .populate('owner', 'firstname lastname email role businessInfo.companyName')
       .populate('approvedBy', 'firstname lastname email role');
     await attachReviewCountsToProducts([updatedProduct]);
 

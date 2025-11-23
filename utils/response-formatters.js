@@ -244,8 +244,8 @@ const formatProduct = (product, options = {}) => {
         id: product.owner._id,
         firstname: product.owner.firstname,
         lastname: product.owner.lastname,
-        email: product.owner.email,
-        role: product.owner.role
+        email: product.owner.email || null,
+        role: product.owner.role || null
       };
 
       // Include business-specific info for business role, admin, or magnet_employee
