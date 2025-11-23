@@ -17,6 +17,9 @@ router.use(verifyToken);
 // GET /api/v1/user/special-orders - Get all special orders for the authenticated user
 router.get('/', requireCustomer, SpecialOrderController.getAllSpecialOrders);
 
+// GET /api/v1/user/special-orders/:id - Get a specific special order by id
+router.get('/:id', requireCustomer, SpecialOrderController.getSpecialOrderById);
+
 // POST /api/v1/user/special-orders - Create a special order
 router.post('/', requireCustomer, SpecialOrderController.createSpecialOrder);
 

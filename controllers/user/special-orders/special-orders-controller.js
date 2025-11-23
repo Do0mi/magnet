@@ -133,6 +133,69 @@ exports.getAllSpecialOrders = async (req, res) => {
   }
 };
 
+// GET /api/v1/user/special-orders/:id - Get a specific special order by id
+exports.getSpecialOrderById = async (req, res) => {
+  try {
+    const permissionError = validateCustomerPermissions(req, res);
+    if (permissionError) return;
+
+    const { id } = req.params;
+
+    // Find the special order
+    const specialOrder = await SpecialOrder.findById(id)
+      .populate({
+        path: 'productId',
+        populate: [
+          {
+            path: 'owner',
+            select: 'firstname lastname email role businessInfo.companyName'
+          },
+          {
+            path: 'category',
+            select: 'name description'
+          }
+        ]
+      })
+      .populate({
+        path: 'reviewedBy',
+        select: 'firstname lastname email role'
+      });
+
+    if (!specialOrder) {
+      return res.status(404).json({
+        status: 'error',
+        message: getBilingualMessage('special_order_not_found')
+      });
+    }
+
+    // Check if the user owns this special order
+    if (specialOrder.userId.toString() !== req.user.id) {
+      return res.status(403).json({
+        status: 'error',
+        message: getBilingualMessage('insufficient_permissions')
+      });
+    }
+
+    // Get user currency from middleware (defaults to USD if not set)
+    const userCurrency = req.userCurrency || BASE_CURRENCY;
+
+    // Format special order with currency conversion
+    const formattedOrder = await formatSpecialOrderWithCurrency(specialOrder, userCurrency);
+
+    res.status(200).json(createResponse('success', {
+      specialOrder: formattedOrder,
+      currency: userCurrency
+    }));
+
+  } catch (error) {
+    console.error('Get special order by id error:', error);
+    res.status(500).json({
+      status: 'error',
+      message: getBilingualMessage('failed_get_special_order')
+    });
+  }
+};
+
 // POST /api/v1/user/special-orders - Create a special order
 exports.createSpecialOrder = async (req, res) => {
   try {
