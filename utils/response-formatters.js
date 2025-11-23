@@ -563,6 +563,7 @@ const formatApplicant = (applicant, options = {}) => {
     age: applicant.age,
     gender: applicant.gender,
     status: applicant.status,
+    links: applicant.links || [],
     createdAt: applicant.createdAt,
     updatedAt: applicant.updatedAt
   };
