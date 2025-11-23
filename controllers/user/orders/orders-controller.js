@@ -48,8 +48,6 @@ const formatOrderWithCurrency = async (order, userCurrency) => {
           }
         }
         
-        // Add currency code to product
-        formatted.currency = userCurrency;
         product = formatted;
       }
 

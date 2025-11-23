@@ -75,8 +75,6 @@ const formatCartResponse = async (cart, userCurrency) => {
           }
         }
         
-        // Add currency code to product
-        formatted.currency = userCurrency;
         product = formatted;
       }
 

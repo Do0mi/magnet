@@ -95,9 +95,6 @@ exports.getWishlist = async (req, res) => {
           }
         }
         
-        // Add currency code to each product
-        formatted.currency = userCurrency;
-        
         return formatted;
       })
     );
@@ -189,9 +186,6 @@ exports.toggleWishlist = async (req, res) => {
             }
           }
           
-          // Add currency code to each product
-          formatted.currency = userCurrency;
-          
           return formatted;
         })
       );
@@ -231,9 +225,6 @@ exports.toggleWishlist = async (req, res) => {
               formatted.pricePerUnit = convertedPrice.toString();
             }
           }
-          
-          // Add currency code to each product
-          formatted.currency = userCurrency;
           
           return formatted;
         })
