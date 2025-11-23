@@ -4,6 +4,9 @@ const Product = require('../../../models/product-model');
 const { getBilingualMessage } = require('../../../utils/messages');
 const { createResponse, formatOrder } = require('../../../utils/response-formatters');
 
+// Base currency for business (always USD)
+const BASE_CURRENCY = 'USD';
+
 // Helper function to validate business permissions
 const validateBusinessPermissions = (req, res) => {
   if (req.user.role !== 'business') {
@@ -45,6 +48,7 @@ exports.getOrders = async (req, res) => {
     if (businessProductIds.length === 0) {
       return res.status(200).json(createResponse('success', {
         orders: [],
+        currency: BASE_CURRENCY,
         pagination: {
           currentPage: parseInt(page),
           totalPages: 0,
@@ -105,6 +109,7 @@ exports.getOrders = async (req, res) => {
 
     res.status(200).json(createResponse('success', {
       orders: formattedOrders,
+      currency: BASE_CURRENCY,
       pagination: {
         currentPage: parseInt(page),
         totalPages: Math.ceil(total / limit),
@@ -230,7 +235,8 @@ exports.getOrderById = async (req, res) => {
     };
 
     res.status(200).json(createResponse('success', { 
-      order: formattedOrder 
+      order: formattedOrder,
+      currency: BASE_CURRENCY
     }));
 
   } catch (error) {

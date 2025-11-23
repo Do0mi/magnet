@@ -3,6 +3,10 @@ const router = express.Router();
 const { addReview, getProductReviews, deleteReview, getAllAcceptedReviews } = require('../../../controllers/user/reviews/reviews-controller');
 const authenticateToken = require('../../../middleware/auth-middleware');
 const { requireCustomer } = require('../../../middleware/role-middleware');
+const detectCountry = require('../../../middleware/detect-country-middleware');
+
+// Detect user country from IP (must be before auth to set req.userCurrency)
+router.use(detectCountry);
 
 // Apply authentication to all routes
 router.use(authenticateToken);

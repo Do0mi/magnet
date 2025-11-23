@@ -2,8 +2,9 @@
 const Review = require('../../../models/review-model');
 const Product = require('../../../models/product-model');
 const { getBilingualMessage } = require('../../../utils/messages');
-const { createResponse, formatReview } = require('../../../utils/response-formatters');
+const { createResponse, formatReview, formatProduct } = require('../../../utils/response-formatters');
 const { sendNewReviewNotification } = require('../../../utils/email-utils');
+const { convertCurrency, BASE_CURRENCY } = require('../../../services/currency-service');
 
 // Helper function to update product rating
 const updateProductRating = async (productId) => {
@@ -87,7 +88,20 @@ exports.addReview = async (req, res) => {
         }
       });
     
-    const formattedReview = formatReview(populatedReview);
+    // Get user currency from middleware (defaults to USD if not set)
+    const userCurrency = req.userCurrency || BASE_CURRENCY;
+
+    // Format review and convert product price if product exists
+    let formattedReview = formatReview(populatedReview);
+    
+    // Convert product price if product exists in review
+    if (formattedReview.product && formattedReview.product.pricePerUnit) {
+      const basePrice = parseFloat(formattedReview.product.pricePerUnit);
+      if (!isNaN(basePrice)) {
+        const convertedPrice = await convertCurrency(basePrice, userCurrency);
+        formattedReview.product.pricePerUnit = convertedPrice.toString();
+      }
+    }
     
     // Send email notification to the business user who owns the product
     try {
@@ -110,7 +124,10 @@ exports.addReview = async (req, res) => {
     }
     
     res.status(201).json(createResponse('success', 
-      { review: formattedReview },
+      { 
+        review: formattedReview,
+        currency: userCurrency
+      },
       getBilingualMessage('review_added')
     ));
   } catch (err) {
@@ -160,10 +177,31 @@ exports.getAllAcceptedReviews = async (req, res) => {
       .limit(parseInt(limit));
     
     const total = await Review.countDocuments(filter);
-    const formattedReviews = reviews.map(review => formatReview(review));
+    
+    // Get user currency from middleware (defaults to USD if not set)
+    const userCurrency = req.userCurrency || BASE_CURRENCY;
+
+    // Format reviews and convert product prices
+    const formattedReviews = await Promise.all(
+      reviews.map(async (review) => {
+        const formatted = formatReview(review);
+        
+        // Convert product price if product exists in review
+        if (formatted.product && formatted.product.pricePerUnit) {
+          const basePrice = parseFloat(formatted.product.pricePerUnit);
+          if (!isNaN(basePrice)) {
+            const convertedPrice = await convertCurrency(basePrice, userCurrency);
+            formatted.product.pricePerUnit = convertedPrice.toString();
+          }
+        }
+        
+        return formatted;
+      })
+    );
     
     res.status(200).json(createResponse('success', { 
       reviews: formattedReviews,
+      currency: userCurrency,
       pagination: {
         currentPage: parseInt(page),
         totalPages: Math.ceil(total / limit),
@@ -218,10 +256,31 @@ exports.getProductReviews = async (req, res) => {
       .limit(parseInt(limit));
     
     const total = await Review.countDocuments({ product: productId });
-    const formattedReviews = reviews.map(review => formatReview(review));
+    
+    // Get user currency from middleware (defaults to USD if not set)
+    const userCurrency = req.userCurrency || BASE_CURRENCY;
+
+    // Format reviews and convert product prices
+    const formattedReviews = await Promise.all(
+      reviews.map(async (review) => {
+        const formatted = formatReview(review);
+        
+        // Convert product price if product exists in review
+        if (formatted.product && formatted.product.pricePerUnit) {
+          const basePrice = parseFloat(formatted.product.pricePerUnit);
+          if (!isNaN(basePrice)) {
+            const convertedPrice = await convertCurrency(basePrice, userCurrency);
+            formatted.product.pricePerUnit = convertedPrice.toString();
+          }
+        }
+        
+        return formatted;
+      })
+    );
     
     res.status(200).json(createResponse('success', { 
       reviews: formattedReviews,
+      currency: userCurrency,
       pagination: {
         currentPage: parseInt(page),
         totalPages: Math.ceil(total / limit),

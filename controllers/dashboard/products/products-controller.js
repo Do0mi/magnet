@@ -5,6 +5,9 @@ const User = require('../../../models/user-model');
 const { getBilingualMessage } = require('../../../utils/messages');
 const { createResponse, formatProduct, formatReview } = require('../../../utils/response-formatters');
 const { attachReviewCountsToProducts } = require('../../../utils/review-helpers');
+
+// Base currency for dashboard (always USD)
+const BASE_CURRENCY = 'USD';
 const { 
   sendProductApprovalNotification, 
   sendProductDeclineNotification, 
@@ -152,6 +155,7 @@ exports.getProducts = async (req, res) => {
 
       res.status(200).json(createResponse('success', {
         products: formattedProducts,
+        currency: BASE_CURRENCY,
         pagination: {
           currentPage: parseInt(page),
           totalPages: Math.ceil(total / limit),
@@ -178,6 +182,7 @@ exports.getProducts = async (req, res) => {
 
       res.status(200).json(createResponse('success', {
         products: formattedProducts,
+        currency: BASE_CURRENCY,
         pagination: {
           currentPage: parseInt(page),
           totalPages: Math.ceil(total / limit),
@@ -216,7 +221,10 @@ exports.getProductById = async (req, res) => {
     await attachReviewCountsToProducts([product]);
     const formattedProduct = formatProduct(product);
 
-    res.status(200).json(createResponse('success', { product: formattedProduct }));
+    res.status(200).json(createResponse('success', { 
+      product: formattedProduct,
+      currency: BASE_CURRENCY
+    }));
 
   } catch (error) {
     console.error('Get product by ID error:', error);
@@ -374,7 +382,8 @@ exports.createProduct = async (req, res) => {
     const formattedProduct = formatProduct(product);
 
     res.status(201).json(createResponse('success', {
-      product: formattedProduct
+      product: formattedProduct,
+      currency: BASE_CURRENCY
     }, getBilingualMessage('product_created_success')));
 
   } catch (error) {
@@ -485,7 +494,8 @@ exports.updateProduct = async (req, res) => {
     }
 
     res.status(200).json(createResponse('success', {
-      product: formattedProduct
+      product: formattedProduct,
+      currency: BASE_CURRENCY
     }, getBilingualMessage('product_updated_success')));
 
   } catch (error) {
@@ -573,7 +583,8 @@ exports.approveProduct = async (req, res) => {
     }
 
     res.status(200).json(createResponse('success', {
-      product: formattedProduct
+      product: formattedProduct,
+      currency: BASE_CURRENCY
     }, getBilingualMessage('product_approved_success')));
 
   } catch (error) {
@@ -639,7 +650,8 @@ exports.declineProduct = async (req, res) => {
     }
 
     res.status(200).json(createResponse('success', {
-      product: formattedProduct
+      product: formattedProduct,
+      currency: BASE_CURRENCY
     }, getBilingualMessage('product_declined_success')));
 
   } catch (error) {
@@ -711,7 +723,8 @@ exports.toggleProduct = async (req, res) => {
     }
 
     res.status(200).json(createResponse('success', {
-      product: formattedProduct
+      product: formattedProduct,
+      currency: BASE_CURRENCY
     }, getBilingualMessage('product_toggled_success')));
 
   } catch (error) {

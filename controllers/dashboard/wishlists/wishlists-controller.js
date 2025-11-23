@@ -6,6 +6,9 @@ const { getBilingualMessage } = require('../../../utils/messages');
 const { createResponse, formatUser, formatProduct } = require('../../../utils/response-formatters');
 const { attachReviewCountsToProducts } = require('../../../utils/review-helpers');
 
+// Base currency for dashboard (always USD)
+const BASE_CURRENCY = 'USD';
+
 // Helper function to validate admin or magnet employee permissions
 const validateAdminOrEmployeePermissions = (req, res) => {
   if (req.user.role !== 'admin' && req.user.role !== 'magnet_employee') {
@@ -64,6 +67,7 @@ exports.getWishlists = async (req, res) => {
 
     res.status(200).json(createResponse('success', {
       wishlists: formattedWishlists,
+      currency: BASE_CURRENCY,
       pagination: {
         currentPage: parseInt(page),
         totalPages: Math.ceil(total / limit),
@@ -114,7 +118,10 @@ exports.getWishlistById = async (req, res) => {
       updatedAt: wishlist.updatedAt
     };
 
-    res.status(200).json(createResponse('success', { wishlist: formattedWishlist }));
+    res.status(200).json(createResponse('success', { 
+      wishlist: formattedWishlist,
+      currency: BASE_CURRENCY
+    }));
 
   } catch (error) {
     console.error('Get wishlist by ID error:', error);
@@ -197,7 +204,8 @@ exports.createWishlist = async (req, res) => {
     };
 
     res.status(201).json(createResponse('success', {
-      wishlist: formattedWishlist
+      wishlist: formattedWishlist,
+      currency: BASE_CURRENCY
     }, getBilingualMessage('wishlist_created_success')));
 
   } catch (error) {
@@ -262,7 +270,8 @@ exports.updateWishlist = async (req, res) => {
     };
 
     res.status(200).json(createResponse('success', {
-      wishlist: formattedWishlist
+      wishlist: formattedWishlist,
+      currency: BASE_CURRENCY
     }, getBilingualMessage('wishlist_updated_success')));
 
   } catch (error) {

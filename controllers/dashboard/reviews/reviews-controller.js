@@ -6,6 +6,9 @@ const { getBilingualMessage } = require('../../../utils/messages');
 const { createResponse, formatReview } = require('../../../utils/response-formatters');
 const { sendReviewRejectionNotification } = require('../../../utils/email-utils');
 
+// Base currency for dashboard (always USD)
+const BASE_CURRENCY = 'USD';
+
 // Helper function to validate admin or magnet employee permissions
 const validateAdminOrEmployeePermissions = (req, res) => {
   if (req.user.role !== 'admin' && req.user.role !== 'magnet_employee') {
@@ -64,6 +67,7 @@ exports.getReviews = async (req, res) => {
 
     res.status(200).json(createResponse('success', {
       reviews: formattedReviews,
+      currency: BASE_CURRENCY,
       pagination: {
         currentPage: parseInt(page),
         totalPages: Math.ceil(total / limit),
@@ -112,7 +116,10 @@ exports.getReviewById = async (req, res) => {
     }
 
     const formattedReview = formatReview(review);
-    res.status(200).json(createResponse('success', { review: formattedReview }));
+    res.status(200).json(createResponse('success', { 
+      review: formattedReview,
+      currency: BASE_CURRENCY
+    }));
 
   } catch (error) {
     console.error('Get review by ID error:', error);
@@ -198,7 +205,8 @@ exports.rejectReview = async (req, res) => {
     }
     
     res.status(200).json(createResponse('success', {
-      review: formattedReview
+      review: formattedReview,
+      currency: BASE_CURRENCY
     }, getBilingualMessage('review_rejected_success')));
 
   } catch (error) {

@@ -4,6 +4,9 @@ const Product = require('../../../models/product-model');
 const { getBilingualMessage } = require('../../../utils/messages');
 const { createResponse, formatReview } = require('../../../utils/response-formatters');
 
+// Base currency for business (always USD)
+const BASE_CURRENCY = 'USD';
+
 // Helper function to validate business permissions
 const validateBusinessPermissions = (req, res) => {
   if (req.user.role !== 'business') {
@@ -59,6 +62,7 @@ exports.getReviews = async (req, res) => {
 
     res.status(200).json(createResponse('success', {
       reviews: formattedReviews,
+      currency: BASE_CURRENCY,
       pagination: {
         currentPage: parseInt(page),
         totalPages: Math.ceil(total / limit),
@@ -108,7 +112,10 @@ exports.getReviewById = async (req, res) => {
 
     const formattedReview = formatReview(review);
 
-    res.status(200).json(createResponse('success', { review: formattedReview }, getBilingualMessage('review_retrieved')));
+    res.status(200).json(createResponse('success', { 
+      review: formattedReview,
+      currency: BASE_CURRENCY
+    }, getBilingualMessage('review_retrieved')));
   } catch (err) {
     console.error('Get review by ID error:', err);
     res.status(500).json({

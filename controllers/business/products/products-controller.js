@@ -5,6 +5,9 @@ const { getBilingualMessage } = require('../../../utils/messages');
 const { createResponse, formatProduct } = require('../../../utils/response-formatters');
 const { attachReviewCountsToProducts } = require('../../../utils/review-helpers');
 
+// Base currency for business (always USD)
+const BASE_CURRENCY = 'USD';
+
 // Helper function to validate business permissions
 const validateBusinessPermissions = (req, res) => {
   if (req.user.role !== 'business') {
@@ -58,6 +61,7 @@ exports.getProducts = async (req, res) => {
 
     res.status(200).json(createResponse('success', {
       products: formattedProducts,
+      currency: BASE_CURRENCY,
       pagination: {
         currentPage: parseInt(page),
         totalPages: Math.ceil(total / limit),
@@ -104,7 +108,10 @@ exports.getProductById = async (req, res) => {
 
     const formattedProduct = formatProduct(product);
 
-    res.status(200).json(createResponse('success', { product: formattedProduct }));
+    res.status(200).json(createResponse('success', { 
+      product: formattedProduct,
+      currency: BASE_CURRENCY
+    }));
 
   } catch (error) {
     console.error('Get business product by ID error:', error);
@@ -229,7 +236,8 @@ exports.createProduct = async (req, res) => {
     const formattedProduct = formatProduct(product);
 
     res.status(201).json(createResponse('success', {
-      product: formattedProduct
+      product: formattedProduct,
+      currency: BASE_CURRENCY
     }, getBilingualMessage('product_created_success')));
 
   } catch (error) {
@@ -376,7 +384,8 @@ exports.updateProduct = async (req, res) => {
     const formattedProduct = formatProduct(updatedProduct);
 
     res.status(200).json(createResponse('success', {
-      product: formattedProduct
+      product: formattedProduct,
+      currency: BASE_CURRENCY
     }, getBilingualMessage('product_updated_success')));
 
   } catch (error) {
@@ -463,7 +472,8 @@ exports.toggleProduct = async (req, res) => {
     await attachReviewCountsToProducts([updatedProduct]);
     const formattedProduct = formatProduct(updatedProduct);
     res.status(200).json(createResponse('success', {
-      product: formattedProduct
+      product: formattedProduct,
+      currency: BASE_CURRENCY
     }, getBilingualMessage('product_toggled_success')));
 
   } catch (error) {

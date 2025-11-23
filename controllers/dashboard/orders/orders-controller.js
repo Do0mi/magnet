@@ -5,6 +5,9 @@ const User = require('../../../models/user-model');
 const { getBilingualMessage } = require('../../../utils/messages');
 const { createResponse, formatOrder } = require('../../../utils/response-formatters');
 
+// Base currency for dashboard (always USD)
+const BASE_CURRENCY = 'USD';
+
 // Helper function to validate admin or magnet employee permissions
 const validateAdminOrEmployeePermissions = (req, res) => {
   if (req.user.role !== 'admin' && req.user.role !== 'magnet_employee') {
@@ -56,6 +59,7 @@ exports.getOrders = async (req, res) => {
 
     res.status(200).json(createResponse('success', {
       orders: formattedOrders,
+      currency: BASE_CURRENCY,
       pagination: {
         currentPage: parseInt(page),
         totalPages: Math.ceil(total / limit),
@@ -93,7 +97,10 @@ exports.getOrderById = async (req, res) => {
 
     const formattedOrder = formatOrder(order);
 
-    res.status(200).json(createResponse('success', { order: formattedOrder }));
+    res.status(200).json(createResponse('success', { 
+      order: formattedOrder,
+      currency: BASE_CURRENCY
+    }));
 
   } catch (error) {
     console.error('Get order by ID error:', error);
@@ -287,7 +294,8 @@ exports.createOrder = async (req, res) => {
     };
 
     res.status(201).json(createResponse('success', {
-      order: formattedOrder
+      order: formattedOrder,
+      currency: BASE_CURRENCY
     }, getBilingualMessage('order_created_success')));
 
   } catch (error) {
@@ -454,7 +462,8 @@ exports.updateOrder = async (req, res) => {
     };
 
     res.status(200).json(createResponse('success', {
-      order: formattedOrder
+      order: formattedOrder,
+      currency: BASE_CURRENCY
     }, getBilingualMessage('order_updated_success')));
 
   } catch (error) {
