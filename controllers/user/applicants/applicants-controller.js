@@ -7,7 +7,7 @@ const { sendApplicantSubmissionNotification } = require('../../../utils/email-ut
 // POST /api/v1/user/applicants - Submit an application
 exports.submitApplication = async (req, res) => {
   try {
-    const { name, email, age, gender } = req.body;
+    const { name, email, age, gender, links } = req.body;
     const cvFile = req.file;
 
     // Validate required fields
@@ -63,6 +63,26 @@ exports.submitApplication = async (req, res) => {
       });
     }
 
+    // Validate links if provided
+    let processedLinks = [];
+    if (links !== undefined && links !== null) {
+      // Handle both array and string (single link) inputs
+      const linksArray = Array.isArray(links) ? links : (typeof links === 'string' ? [links] : []);
+      
+      // Filter out empty strings and trim
+      processedLinks = linksArray
+        .filter(link => link && typeof link === 'string' && link.trim())
+        .map(link => link.trim())
+        .slice(0, 5); // Limit to 5 links
+      
+      if (linksArray.length > 5) {
+        return res.status(400).json({
+          status: 'error',
+          message: getBilingualMessage('max_links_exceeded') || 'Maximum 5 links allowed'
+        });
+      }
+    }
+
     // Check if applicant with this email already exists (case-insensitive check)
     const trimmedEmail = email.trim();
     const existingApplicant = await Applicant.findOne({ 
@@ -84,6 +104,7 @@ exports.submitApplication = async (req, res) => {
       gender,
       cv: cvFile.buffer,
       cvContentType: cvFile.mimetype,
+      links: processedLinks,
       status: 'pending'
     });
 

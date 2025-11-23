@@ -47,6 +47,16 @@ const applicantSchema = new mongoose.Schema({
   rejectionReason: {
     type: String
   },
+  links: {
+    type: [String],
+    default: [],
+    validate: {
+      validator: function(links) {
+        return links.length <= 5;
+      },
+      message: 'Links array cannot contain more than 5 items'
+    }
+  },
   createdAt: {
     type: Date,
     default: Date.now

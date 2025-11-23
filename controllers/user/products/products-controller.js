@@ -3,6 +3,7 @@ const Product = require('../../../models/product-model');
 const { getBilingualMessage } = require('../../../utils/messages');
 const { createResponse, formatProduct } = require('../../../utils/response-formatters');
 const { attachReviewCountsToProducts } = require('../../../utils/review-helpers');
+const { convertCurrency, BASE_CURRENCY } = require('../../../services/currency-service');
 
 // GET /api/v1/user/products - Get all approved and allowed products
 exports.getProducts = async (req, res) => {
@@ -149,10 +150,30 @@ exports.getProducts = async (req, res) => {
       const countResult = await Product.aggregate(countPipeline);
       const total = countResult.length > 0 ? countResult[0].total : 0;
 
-      const formattedProducts = products.map(product => formatProduct(product));
+      // Get user currency from middleware (defaults to USD if not set)
+      const userCurrency = req.userCurrency || BASE_CURRENCY;
+
+      // Convert product prices to user's currency
+      const formattedProducts = await Promise.all(
+        products.map(async (product) => {
+          const formatted = formatProduct(product);
+          
+          // Convert pricePerUnit if it exists
+          if (formatted.pricePerUnit) {
+            const basePrice = parseFloat(formatted.pricePerUnit);
+            if (!isNaN(basePrice)) {
+              const convertedPrice = await convertCurrency(basePrice, userCurrency);
+              formatted.pricePerUnit = convertedPrice.toString();
+            }
+          }
+          
+          return formatted;
+        })
+      );
 
       res.status(200).json(createResponse('success', {
         products: formattedProducts,
+        currency: userCurrency,
         pagination: {
           currentPage: parseInt(page),
           totalPages: Math.ceil(total / limit),
@@ -180,10 +201,30 @@ exports.getProducts = async (req, res) => {
 
       const total = await Product.countDocuments(filter);
 
-      const formattedProducts = products.map(product => formatProduct(product));
+      // Get user currency from middleware (defaults to USD if not set)
+      const userCurrency = req.userCurrency || BASE_CURRENCY;
+
+      // Convert product prices to user's currency
+      const formattedProducts = await Promise.all(
+        products.map(async (product) => {
+          const formatted = formatProduct(product);
+          
+          // Convert pricePerUnit if it exists
+          if (formatted.pricePerUnit) {
+            const basePrice = parseFloat(formatted.pricePerUnit);
+            if (!isNaN(basePrice)) {
+              const convertedPrice = await convertCurrency(basePrice, userCurrency);
+              formatted.pricePerUnit = convertedPrice.toString();
+            }
+          }
+          
+          return formatted;
+        })
+      );
 
       res.status(200).json(createResponse('success', {
         products: formattedProducts,
+        currency: userCurrency,
         pagination: {
           currentPage: parseInt(page),
           totalPages: Math.ceil(total / limit),
@@ -223,9 +264,24 @@ exports.getProductById = async (req, res) => {
       });
     }
 
+    // Get user currency from middleware (defaults to USD if not set)
+    const userCurrency = req.userCurrency || BASE_CURRENCY;
+
     const formattedProduct = formatProduct(product);
 
-    res.status(200).json(createResponse('success', { product: formattedProduct }));
+    // Convert pricePerUnit if it exists
+    if (formattedProduct.pricePerUnit) {
+      const basePrice = parseFloat(formattedProduct.pricePerUnit);
+      if (!isNaN(basePrice)) {
+        const convertedPrice = await convertCurrency(basePrice, userCurrency);
+        formattedProduct.pricePerUnit = convertedPrice.toString();
+      }
+    }
+
+    res.status(200).json(createResponse('success', { 
+      product: formattedProduct,
+      currency: userCurrency
+    }));
 
   } catch (error) {
     console.error('Get public product by ID error:', error);

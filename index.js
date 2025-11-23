@@ -16,6 +16,10 @@ const dashboardRoutes = require('./routes/dashboard');
 const businessRoutes = require('./routes/business');
 const userRoutes = require('./routes/user');
 
+// Currency service and cron job
+const { initializeRates } = require('./services/currency-service');
+const { startCurrencyUpdateJob } = require('./jobs/currency-update-job');
+
 // Config
 require('./config/passport-setup');
 
@@ -63,6 +67,19 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/magnet-pr
     } catch (error) {
       console.log('Index cleanup completed (or no problematic index found)');
     }
+
+    // Initialize currency exchange rates on startup
+    console.log('Initializing currency exchange rates...');
+    try {
+      await initializeRates();
+      console.log('Currency exchange rates initialized successfully');
+    } catch (error) {
+      console.error('Failed to initialize currency rates:', error.message);
+      console.log('Server will continue with default rates (USD only)');
+    }
+
+    // Start hourly currency update cron job
+    startCurrencyUpdateJob();
   })
   .catch(err => {
     console.error('Could not connect to MongoDB', err);
