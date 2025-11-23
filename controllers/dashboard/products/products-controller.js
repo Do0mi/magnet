@@ -8,6 +8,8 @@ const { attachReviewCountsToProducts } = require('../../../utils/review-helpers'
 
 // Base currency for dashboard (always USD)
 const BASE_CURRENCY = 'USD';
+// Magnet company name constant
+const MAGNET_COMPANY_NAME = 'Magnet';
 const { 
   sendProductApprovalNotification, 
   sendProductDeclineNotification, 
@@ -252,7 +254,7 @@ exports.createProduct = async (req, res) => {
       });
     }
 
-    // Check if business user exists and is a business user
+    // Check if user exists
     const businessUser = await User.findById(businessUserId);
     if (!businessUser) {
       return res.status(404).json({
@@ -261,26 +263,30 @@ exports.createProduct = async (req, res) => {
       });
     }
 
-    if (businessUser.role !== 'business') {
+    // Allow business, admin, or magnet_employee roles
+    const allowedRoles = ['business', 'admin', 'magnet_employee'];
+    if (!allowedRoles.includes(businessUser.role)) {
       return res.status(400).json({
         status: 'error',
         message: getBilingualMessage('user_not_business')
       });
     }
 
-    // Check if business user is approved and allowed
-    if (businessUser.businessInfo?.approvalStatus !== 'approved') {
-      return res.status(400).json({
-        status: 'error',
-        message: getBilingualMessage('business_not_approved')
-      });
-    }
+    // For business users, check if they are approved and allowed
+    if (businessUser.role === 'business') {
+      if (businessUser.businessInfo?.approvalStatus !== 'approved') {
+        return res.status(400).json({
+          status: 'error',
+          message: getBilingualMessage('business_not_approved')
+        });
+      }
 
-    if (!businessUser.isAllowed) {
-      return res.status(400).json({
-        status: 'error',
-        message: getBilingualMessage('business_not_allowed')
-      });
+      if (!businessUser.isAllowed) {
+        return res.status(400).json({
+          status: 'error',
+          message: getBilingualMessage('business_not_allowed')
+        });
+      }
     }
 
     // Validate custom fields
@@ -378,6 +384,14 @@ exports.createProduct = async (req, res) => {
     await product.populate('owner', 'firstname lastname email role businessInfo.companyName');
     await product.populate('approvedBy', 'firstname lastname email role');
     await attachReviewCountsToProducts([product]);
+
+    // If owner is admin or magnet_employee, set magnet company name in businessInfo
+    if (product.owner && (product.owner.role === 'admin' || product.owner.role === 'magnet_employee')) {
+      if (!product.owner.businessInfo) {
+        product.owner.businessInfo = {};
+      }
+      product.owner.businessInfo.companyName = MAGNET_COMPANY_NAME;
+    }
 
     const formattedProduct = formatProduct(product);
 

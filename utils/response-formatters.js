@@ -248,14 +248,15 @@ const formatProduct = (product, options = {}) => {
         role: product.owner.role
       };
 
-      // Include business-specific info or fallback company name
+      // Include business-specific info for business role, admin, or magnet_employee
       if (product.owner.role === 'business') {
         formatted.owner.businessInfo = {
-          companyName,
-          companyType:
-            product.owner.businessInfo?.companyType ??
-            product.owner.companyType ??
-            null
+          companyName
+        };
+      } else if (product.owner.role === 'admin' || product.owner.role === 'magnet_employee') {
+        // For admin or magnet_employee, always include businessInfo with Magnet company name
+        formatted.owner.businessInfo = {
+          companyName: companyName || 'Magnet'
         };
       } else if (companyName) {
         formatted.owner.companyName = companyName;

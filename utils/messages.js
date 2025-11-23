@@ -1506,6 +1506,52 @@ const messages = {
   'upload_failed': {
     en: 'File upload failed',
     ar: 'فشل في رفع الملف'
+  },
+
+  // Special Order messages
+  'special_order_not_found': {
+    en: 'Special order not found',
+    ar: 'الطلب الخاص غير موجود'
+  },
+  'failed_get_special_orders': {
+    en: 'Failed to get special orders',
+    ar: 'فشل في الحصول على الطلبات الخاصة'
+  },
+  'failed_get_special_order': {
+    en: 'Failed to get special order',
+    ar: 'فشل في الحصول على الطلب الخاص'
+  },
+  'failed_create_special_order': {
+    en: 'Failed to create special order',
+    ar: 'فشل في إنشاء الطلب الخاص'
+  },
+  'failed_update_special_order': {
+    en: 'Failed to update special order',
+    ar: 'فشل في تحديث الطلب الخاص'
+  },
+  'failed_delete_special_order': {
+    en: 'Failed to delete special order',
+    ar: 'فشل في حذف الطلب الخاص'
+  },
+  'failed_cancel_special_order': {
+    en: 'Failed to cancel special order',
+    ar: 'فشل في إلغاء الطلب الخاص'
+  },
+  'max_special_orders_reached': {
+    en: 'You have reached the maximum limit of 5 active special orders. Please wait until one of your orders is completed.',
+    ar: 'لقد وصلت إلى الحد الأقصى وهو 5 طلبات خاصة نشطة. يرجى الانتظار حتى يكتمل أحد طلباتك.'
+  },
+  'special_order_already_exists': {
+    en: 'You already have a pending special order for this product. Please wait until the current order is completed.',
+    ar: 'لديك بالفعل طلب خاص قيد الانتظار لهذا المنتج. يرجى الانتظار حتى يكتمل الطلب الحالي.'
+  },
+  'cannot_cancel_reviewed_order': {
+    en: 'Cannot cancel special order that has been reviewed',
+    ar: 'لا يمكن إلغاء الطلب الخاص الذي تمت مراجعته'
+  },
+  'invalid_special_order_status': {
+    en: 'Invalid status',
+    ar: 'حالة غير صالحة'
   }
 };
 

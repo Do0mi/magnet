@@ -9,6 +9,7 @@ const reviewsController = require('./reviews/reviews-controller');
 const cartController = require('./cart/cart-controller');
 const categoriesController = require('./categories/categories-controller');
 const applicantsController = require('./applicants/applicants-controller');
+const specialOrdersController = require('./special-orders/special-orders-controller');
 
 module.exports = {
   authController,
@@ -20,5 +21,6 @@ module.exports = {
   reviewsController,
   cartController,
   categoriesController,
-  applicantsController
+  applicantsController,
+  specialOrdersController
 };
