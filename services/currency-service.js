@@ -23,8 +23,10 @@ const axios = require('axios');
 // Base currency (all product prices are stored in this currency)
 const BASE_CURRENCY = 'USD';
 
-// Exchange rate API endpoint
-const EXCHANGE_RATE_API = 'https://api.exchangerate.host/latest';
+// Exchange rate API endpoints (with fallback)
+// Using exchangerate-api.com which is more reliable and supports all currencies including EGP
+const EXCHANGE_RATE_API = 'https://api.exchangerate-api.com/v4/latest/USD';
+const FALLBACK_API = 'https://api.exchangerate.host/latest'; // Fallback to exchangerate.host
 
 // Cache configuration
 const CACHE_DURATION_MS = 60 * 60 * 1000; // 1 hour in milliseconds
@@ -155,36 +157,122 @@ const isCacheValid = (lastUpdated) => {
  * @returns {Promise<Object>} Object with rates and timestamp
  * @throws {Error} If API request fails
  */
+/**
+ * Fetch exchange rates from primary API (exchangerate-api.com)
+ * This API supports all currencies including EGP
+ * 
+ * @returns {Promise<Object>} Object with rates
+ * @throws {Error} If API request fails
+ */
+const fetchFromPrimaryAPI = async () => {
+  console.log('[Currency Service] Trying primary API: exchangerate-api.com');
+  
+  const response = await axios.get(EXCHANGE_RATE_API, {
+    timeout: 10000
+  });
+
+  if (!response.data || !response.data.rates) {
+    throw new Error('Invalid response from primary API');
+  }
+
+  return response.data.rates;
+};
+
+/**
+ * Fetch exchange rates from fallback API (exchangerate.host)
+ * 
+ * @returns {Promise<Object>} Object with rates
+ * @throws {Error} If API request fails
+ */
+const fetchFromFallbackAPI = async () => {
+  console.log('[Currency Service] Trying fallback API: exchangerate.host');
+  
+  const response = await axios.get(FALLBACK_API, {
+    params: {
+      base: BASE_CURRENCY
+    },
+    timeout: 10000
+  });
+
+  if (!response.data || !response.data.rates) {
+    throw new Error('Invalid response from fallback API');
+  }
+
+  return response.data.rates;
+};
+
+/**
+ * Fetch exchange rates from API
+ * Tries primary API first, then fallback if primary fails
+ * 
+ * @returns {Promise<Object>} Object with rates and timestamp
+ * @throws {Error} If both APIs fail
+ */
 const fetchExchangeRates = async () => {
   try {
     console.log('[Currency Service] Fetching exchange rates from API...');
     
-    const response = await axios.get(EXCHANGE_RATE_API, {
-      params: {
-        base: BASE_CURRENCY
-      },
-      timeout: 10000 // 10 second timeout
-    });
+    let rates = {};
+    let apiUsed = 'unknown';
 
-    if (!response.data || !response.data.rates) {
-      throw new Error('Invalid API response structure');
+    // Try primary API first
+    try {
+      rates = await fetchFromPrimaryAPI();
+      apiUsed = 'exchangerate.host';
+    } catch (primaryError) {
+      console.warn('[Currency Service] Primary API failed:', primaryError.message);
+      console.log('[Currency Service] Attempting fallback API...');
+      
+      // Try fallback API
+      try {
+        rates = await fetchFromFallbackAPI();
+        apiUsed = 'frankfurter.app';
+      } catch (fallbackError) {
+        console.error('[Currency Service] Fallback API also failed:', fallbackError.message);
+        throw new Error('Both APIs failed');
+      }
+    }
+
+    // Log available currencies for debugging
+    const availableCurrencies = Object.keys(rates);
+    console.log(`[Currency Service] Fetched ${availableCurrencies.length} exchange rates from ${apiUsed}`);
+    console.log(`[Currency Service] Sample currencies: ${availableCurrencies.slice(0, 10).join(', ')}`);
+    
+    // Check if EGP is in the response
+    if (rates.EGP) {
+      console.log(`[Currency Service] ✓ EGP rate found: ${rates.EGP}`);
+    } else {
+      console.warn('[Currency Service] ⚠ WARNING: EGP rate NOT found in API response');
+      console.log(`[Currency Service] Available currencies (${availableCurrencies.length}): ${availableCurrencies.slice(0, 30).join(', ')}...`);
+      
+      // Try to manually add common Middle Eastern currencies if missing
+      // This is a temporary fix - ideally the API should include all currencies
+      if (!rates.EGP && availableCurrencies.length > 0) {
+        console.warn('[Currency Service] EGP not available from API. Prices will not be converted for EGP.');
+      }
     }
 
     // Add USD rate (base currency, always 1)
-    const rates = {
+    const finalRates = {
       [BASE_CURRENCY]: 1,
-      ...response.data.rates
+      ...rates
     };
 
     const result = {
-      rates,
-      lastUpdated: Date.now()
+      rates: finalRates,
+      lastUpdated: Date.now(),
+      apiSource: apiUsed
     };
 
-    console.log('[Currency Service] Successfully fetched exchange rates');
+    console.log(`[Currency Service] ✓ Successfully fetched exchange rates from ${apiUsed}`);
+    console.log(`[Currency Service] Total rates in cache: ${Object.keys(finalRates).length}`);
     return result;
   } catch (error) {
-    console.error('[Currency Service] Error fetching exchange rates:', error.message);
+    console.error('[Currency Service] ✗ Error fetching exchange rates:', error.message);
+    if (error.response) {
+      console.error('[Currency Service] API Response Status:', error.response.status);
+      console.error('[Currency Service] API Response Data:', JSON.stringify(error.response.data).substring(0, 200));
+    }
     throw error;
   }
 };
@@ -340,12 +428,21 @@ const convertCurrency = async (amount, targetCurrency) => {
   // Get exchange rates
   const { rates } = await getExchangeRates();
 
+  // Debug: Log available currencies if rate is missing
+  if (!rates[targetCurrency]) {
+    const availableCurrencies = Object.keys(rates);
+    console.warn(`[Currency Service] Rate not found for ${targetCurrency}`);
+    console.warn(`[Currency Service] Available currencies (${availableCurrencies.length}): ${availableCurrencies.slice(0, 20).join(', ')}...`);
+    console.warn(`[Currency Service] Using rate = 1 (no conversion) for ${targetCurrency}`);
+    return amount;
+  }
+
   // Get rate for target currency
   const rate = rates[targetCurrency];
 
-  // If rate is missing, return original amount (fallback)
-  if (!rate || rate === 0) {
-    console.warn(`[Currency Service] Rate not found for ${targetCurrency}, using 1 (no conversion)`);
+  // If rate is invalid, return original amount (fallback)
+  if (!rate || rate === 0 || isNaN(rate)) {
+    console.warn(`[Currency Service] Invalid rate for ${targetCurrency}: ${rate}, using 1 (no conversion)`);
     return amount;
   }
 
@@ -396,12 +493,32 @@ const getCountryCurrencyMap = () => {
   return { ...COUNTRY_TO_CURRENCY };
 };
 
+/**
+ * Force refresh exchange rates (manual update)
+ * Useful for testing or when cache needs immediate update
+ * 
+ * @returns {Promise<Object>} Updated rates
+ */
+const forceRefreshRates = async () => {
+  console.log('[Currency Service] Force refreshing exchange rates...');
+  try {
+    const cacheData = await fetchExchangeRates();
+    await saveToCache(cacheData);
+    console.log('[Currency Service] Force refresh completed successfully');
+    return cacheData;
+  } catch (error) {
+    console.error('[Currency Service] Force refresh failed:', error.message);
+    throw error;
+  }
+};
+
 module.exports = {
   // Main functions
   convertCurrency,
   getCurrencyFromCountry,
   initializeRates,
   getExchangeRates,
+  forceRefreshRates,
   
   // Configuration
   setRedisClient,
