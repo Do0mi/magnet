@@ -254,9 +254,9 @@ const formatProduct = (product, options = {}) => {
           companyName
         };
       } else if (product.owner.role === 'admin' || product.owner.role === 'magnet_employee') {
-        // For admin or magnet_employee, always include businessInfo with Magnet company name
+        // For admin or magnet_employee, always set company name to "Magnet"
         formatted.owner.businessInfo = {
-          companyName: companyName || 'Magnet'
+          companyName: 'Magnet'
         };
       } else if (companyName) {
         formatted.owner.companyName = companyName;

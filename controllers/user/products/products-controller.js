@@ -88,6 +88,8 @@ exports.getProducts = async (req, res) => {
             _id: { $arrayElemAt: ['$ownerInfo._id', 0] },
             firstname: { $arrayElemAt: ['$ownerInfo.firstname', 0] },
             lastname: { $arrayElemAt: ['$ownerInfo.lastname', 0] },
+            email: { $arrayElemAt: ['$ownerInfo.email', 0] },
+            role: { $arrayElemAt: ['$ownerInfo.role', 0] },
             businessInfo: {
               companyName: { $arrayElemAt: ['$ownerInfo.businessInfo.companyName', 0] },
               companyType: { $arrayElemAt: ['$ownerInfo.businessInfo.companyType', 0] }

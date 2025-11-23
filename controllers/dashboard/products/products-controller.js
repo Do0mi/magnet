@@ -103,6 +103,7 @@ exports.getProducts = async (req, res) => {
             firstname: { $arrayElemAt: ['$ownerInfo.firstname', 0] },
             lastname: { $arrayElemAt: ['$ownerInfo.lastname', 0] },
             email: { $arrayElemAt: ['$ownerInfo.email', 0] },
+            role: { $arrayElemAt: ['$ownerInfo.role', 0] },
             businessInfo: { $arrayElemAt: ['$ownerInfo.businessInfo', 0] }
           },
           approvedBy: 1,
