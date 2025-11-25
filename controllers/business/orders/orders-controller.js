@@ -210,6 +210,8 @@ exports.getOrderById = async (req, res) => {
       createdAt: order.createdAt,
       updatedAt: order.updatedAt,
       status: order.status,
+      paymentMethod: order.paymentMethod || null,
+      notes: order.notes || null,
       customer: order.customer ? {
         id: order.customer._id,
         firstname: order.customer.firstname,

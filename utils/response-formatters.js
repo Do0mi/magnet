@@ -322,6 +322,10 @@ const formatOrder = (order, options = {}) => {
 
   // Handle status localization - always return both languages by default
   formatted.status = order.status;
+  
+  // Include payment method and notes
+  formatted.paymentMethod = order.paymentMethod || null;
+  formatted.notes = order.notes || null;
 
   if (includeCustomer && order.customer) {
     if (typeof order.customer === 'object') {

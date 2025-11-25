@@ -203,7 +203,8 @@ exports.login = async (req, res) => {
     if (identifierType === 'phone' && !isSaudiPhone(identifier)) {
       return res.status(400).json({ status: 'error', message: getBilingualMessage('phone_login_saudi_only') });
     }
-    const user = await User.findOne(query);
+    const user = await User.findOne(query)
+      .populate('businessInfo.approvedBy', 'firstname lastname email role');
     if (!user) {
       return res.status(401).json({ status: 'error', message: getBilingualMessage('invalid_credentials') });
     }
@@ -292,7 +293,8 @@ exports.confirmLoginOTP = async (req, res) => {
     const { identifier, otp } = req.body;
     const identifierType = getIdentifierType(identifier);
     const query = identifierType === 'email' ? { email: identifier } : { phone: identifier };
-    const user = await User.findOne(query);
+    const user = await User.findOne(query)
+      .populate('businessInfo.approvedBy', 'firstname lastname email role');
     if (!user) {
       return res.status(404).json({ status: 'error', message: getBilingualMessage('user_not_found') });
     }
@@ -310,6 +312,7 @@ exports.confirmLoginOTP = async (req, res) => {
     user[verificationField] = true;
     user[otpField] = null;
     await user.save();
+    await user.populate('businessInfo.approvedBy', 'firstname lastname email role');
     const token = generateToken(user);
     res.status(200).json(createResponse('success', {
       user: formatUser(user, { includeBusinessInfo: true }),
