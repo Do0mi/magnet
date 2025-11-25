@@ -232,7 +232,7 @@ exports.createSpecialOrder = async (req, res) => {
     // Check if user has reached the maximum limit of 5 active special orders
     const activeSpecialOrdersCount = await SpecialOrder.countDocuments({
       userId: req.user.id,
-      status: { $ne: SPECIAL_ORDER_STATUS.COMPLETED }
+      status: { $ne: SPECIAL_ORDER_STATUS.COMPLETED, $ne: SPECIAL_ORDER_STATUS.CANCELLED }
     });
 
     if (activeSpecialOrdersCount >= 5) {
@@ -246,7 +246,7 @@ exports.createSpecialOrder = async (req, res) => {
     const existingSpecialOrder = await SpecialOrder.findOne({
       userId: req.user.id,
       productId: productId,
-      status: { $ne: SPECIAL_ORDER_STATUS.COMPLETED }
+      status: { $ne: SPECIAL_ORDER_STATUS.COMPLETED, $ne: SPECIAL_ORDER_STATUS.CANCELLED }
     });
 
     if (existingSpecialOrder) {
