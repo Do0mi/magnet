@@ -577,10 +577,10 @@ const formatApplicant = (applicant, options = {}) => {
   if (includeCV && applicant.cv) {
     formatted.cv = applicant.cv;
     formatted.cvContentType = applicant.cvContentType;
-  } else {
-    // Just indicate CV exists
-    formatted.hasCV = !!applicant.cv;
   }
+  
+  // Use has_cv field from database, fallback to checking cv buffer for backward compatibility
+  formatted.hasCV = applicant.has_cv !== undefined ? applicant.has_cv : !!applicant.cv;
 
   // Add rejection details if applicant is rejected
   if (applicant.status === 'rejected') {
