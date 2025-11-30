@@ -267,15 +267,8 @@ exports.addApplicant = async (req, res) => {
       });
     }
 
-    // Validate CV file
-    if (!cvFile) {
-      return res.status(400).json({
-        status: 'error',
-        message: getBilingualMessage('cv_required')
-      });
-    }
-
-    if (cvFile.mimetype !== 'application/pdf') {
+    // Validate CV file if provided
+    if (cvFile && cvFile.mimetype !== 'application/pdf') {
       return res.status(400).json({
         status: 'error',
         message: getBilingualMessage('cv_must_be_pdf')
@@ -316,16 +309,23 @@ exports.addApplicant = async (req, res) => {
     }
 
     // Create applicant
-    const applicant = new Applicant({
+    const applicantData = {
       name: name.trim(),
       email: trimmedEmail,
       age: parseInt(age),
       gender,
-      cv: cvFile.buffer,
-      cvContentType: cvFile.mimetype,
       links: processedLinks,
-      status: 'pending'
-    });
+      status: 'pending',
+      has_cv: !!cvFile
+    };
+
+    // Only add CV data if CV file is uploaded
+    if (cvFile) {
+      applicantData.cv = cvFile.buffer;
+      applicantData.cvContentType = cvFile.mimetype;
+    }
+
+    const applicant = new Applicant(applicantData);
 
     await applicant.save();
 

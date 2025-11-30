@@ -25,12 +25,15 @@ const applicantSchema = new mongoose.Schema({
     trim: true
   },
   cv: {
-    type: Buffer,
-    required: true
+    type: Buffer
   },
   cvContentType: {
     type: String,
     default: 'application/pdf'
+  },
+  has_cv: {
+    type: Boolean,
+    default: false
   },
   status: {
     type: String,

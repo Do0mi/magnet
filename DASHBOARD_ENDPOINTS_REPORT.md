@@ -1,7 +1,7 @@
 # Dashboard Endpoints Documentation Report
 # تقرير توثيق نقاط نهاية لوحة التحكم
 
-**Generated Date / تاريخ الإنشاء:** {{ Current Date }}
+**Generated Date / تاريخ الإنشاء:** January 2025
 **Base URL / الرابط الأساسي:** `/api/v1/dashboard`
 
 ---
@@ -19,7 +19,9 @@
 9. [Addresses Endpoints / نقاط نهاية العناوين](#addresses-endpoints)
 10. [Wishlists Endpoints / نقاط نهاية قوائم الرغبات](#wishlists-endpoints)
 11. [Stats Endpoints / نقاط نهاية الإحصائيات](#stats-endpoints)
-12. [Summary / الملخص](#summary)
+12. [Applicants Endpoints / نقاط نهاية المتقدمين](#applicants-endpoints)
+13. [Special Orders Endpoints / نقاط نهاية الطلبات الخاصة](#special-orders-endpoints)
+14. [Summary / الملخص](#summary)
 
 ---
 
@@ -34,17 +36,19 @@ This document provides a comprehensive scan and documentation of all dashboard-r
 ```
 /api/v1/dashboard
 ├── /users          - User management (9 endpoints)
-├── /products       - Product management (11 endpoints)
+├── /products       - Product management (12 endpoints)
 ├── /categories     - Category management (6 endpoints)
 ├── /profile        - Admin/Employee profile (2 endpoints)
-├── /orders         - Order management (4 endpoints)
+├── /orders         - Order management (5 endpoints)
 ├── /reviews        - Review management (4 endpoints)
 ├── /addresses      - Address management (5 endpoints)
 ├── /wishlists      - Wishlist management (5 endpoints)
-└── /stats          - Statistics (5 endpoints)
+├── /stats          - Statistics (5 endpoints)
+├── /applicants     - Applicant management (6 endpoints)
+└── /special-orders - Special order management (5 endpoints)
 ```
 
-**Total Endpoints / إجمالي النقاط:** 51 endpoints
+**Total Endpoints / إجمالي النقاط:** 62 endpoints
 
 ---
 
@@ -1002,7 +1006,11 @@ Retrieves all orders containing a specific product.
 ```
 
 **Controller Function:** `ProductController.getProductOrders`  
-**File Location:** `controllers/dashboard/products/products-controller.js` (lines 772-851)
+**File Location:** `controllers/dashboard/products/products-controller.js` (lines 809-888)
+
+**Note:** All orders returned include `paymentMethod` and `notes` fields.
+
+**ملاحظة:** جميع الطلبات المُرجعة تتضمن حقول `paymentMethod` و `notes`.
 
 ---
 
@@ -1034,7 +1042,7 @@ Retrieves a specific review for a specific product.
 - `404` - Review not found or review doesn't belong to the product
 
 **Controller Function:** `ProductController.getProductReviewById`  
-**File Location:** `controllers/dashboard/products/products-controller.js` (lines 854-899)
+**File Location:** `controllers/dashboard/products/products-controller.js` (lines 891-936)
 
 ---
 
@@ -1056,7 +1064,36 @@ Retrieves a specific order containing a specific product.
   "status": "success",
   "data": {
     "order": {
-      // Complete order object
+      "id": "order_id",
+      "orderNumber": "ORD-12345678",
+      "customer": {
+        "id": "customer_id",
+        "name": "John Doe",
+        "email": "john@example.com"
+      },
+      "items": [
+        {
+          "id": "item_id",
+          "product": {
+            "id": "product_id",
+            "name": { "en": "Product Name", "ar": "اسم المنتج" },
+            "images": ["url1"],
+            "pricePerUnit": 100
+          },
+          "quantity": 10,
+          "unitPrice": 100,
+          "itemTotal": 1000
+        }
+      ],
+      "subtotal": 1000,
+      "shippingCost": 50,
+      "total": 1050,
+      "shippingAddress": { /* address object */ },
+      "status": "confirmed",
+      "paymentMethod": "cash_on_delivery",
+      "notes": null,
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
     }
   }
 }
@@ -1065,8 +1102,12 @@ Retrieves a specific order containing a specific product.
 **Error Responses / استجابات الخطأ:**
 - `404` - Order not found or order doesn't contain the product
 
+**Note:** The order response includes `paymentMethod` and `notes` fields.
+
+**ملاحظة:** استجابة الطلب تتضمن حقول `paymentMethod` و `notes`.
+
 **Controller Function:** `ProductController.getProductOrderById`  
-**File Location:** `controllers/dashboard/products/products-controller.js` (lines 902-975)
+**File Location:** `controllers/dashboard/products/products-controller.js` (lines 939-1003)
 
 ---
 
@@ -1437,7 +1478,24 @@ Retrieves all orders with pagination and filtering support.
   "data": {
     "orders": [
       {
-        // Complete order object
+        "id": "order_id",
+        "status": "confirmed",
+        "paymentMethod": "cash_on_delivery",
+        "notes": "Special delivery instructions",
+        "customer": {
+          // Customer object
+        },
+        "items": [
+          // Order items array
+        ],
+        "subtotal": 1000,
+        "shippingCost": 50,
+        "total": 1050,
+        "shippingAddress": {
+          // Address object
+        },
+        "createdAt": "2024-01-01T00:00:00.000Z",
+        "updatedAt": "2024-01-01T00:00:00.000Z"
       }
     ],
     "pagination": {
@@ -1445,13 +1503,18 @@ Retrieves all orders with pagination and filtering support.
       "totalPages": 5,
       "totalOrders": 50,
       "limit": 10
-    }
+    },
+    "currency": "USD"
   }
 }
 ```
 
+**Note:** All order endpoints return `paymentMethod` and `notes` fields in the response.
+
+**ملاحظة:** جميع نقاط نهاية الطلبات ترجع حقول `paymentMethod` و `notes` في الاستجابة.
+
 **Controller Function:** `OrderController.getOrders`  
-**File Location:** `controllers/dashboard/orders/orders-controller.js` (lines 20-74)
+**File Location:** `controllers/dashboard/orders/orders-controller.js` (lines 23-78)
 
 ---
 
@@ -1472,14 +1535,40 @@ Retrieves a specific order by its ID.
   "status": "success",
   "data": {
     "order": {
-      // Complete order object
-    }
+      "id": "order_id",
+      "status": "confirmed",
+      "paymentMethod": "cash_on_delivery",
+      "notes": "Special delivery instructions",
+      "customer": {
+        // Customer object
+      },
+      "items": [
+        // Order items array
+      ],
+      "subtotal": 1000,
+      "shippingCost": 50,
+      "total": 1050,
+      "shippingAddress": {
+        // Address object
+      },
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
+    },
+    "currency": "USD"
   }
 }
 ```
 
+**Note:** The order response includes `paymentMethod` and `notes` fields.
+
+**ملاحظة:** استجابة الطلب تتضمن حقول `paymentMethod` و `notes`.
+
 **Controller Function:** `OrderController.getOrderById`  
-**File Location:** `controllers/dashboard/orders/orders-controller.js` (lines 77-105)
+**File Location:** `controllers/dashboard/orders/orders-controller.js` (lines 81-112)
+
+**Note:** The order response includes `paymentMethod` and `notes` fields (via formatOrder function).
+
+**ملاحظة:** استجابة الطلب تتضمن حقول `paymentMethod` و `notes` (عبر دالة formatOrder).
 
 ---
 
@@ -1543,7 +1632,11 @@ Creates a new order for a specific customer. Validates products, stock, and calc
 - Records order creation in status log
 
 **Controller Function:** `OrderController.createOrder`  
-**File Location:** `controllers/dashboard/orders/orders-controller.js` (lines 108-300)
+**File Location:** `controllers/dashboard/orders/orders-controller.js` (lines 115-308)
+
+**Note:** The response includes `paymentMethod` and `notes` fields.
+
+**ملاحظة:** الاستجابة تتضمن حقول `paymentMethod` و `notes`.
 
 ---
 
@@ -1599,7 +1692,15 @@ Updates an existing order. Can update items, shipping address, status, and other
 ```
 
 **Controller Function:** `OrderController.updateOrder`  
-**File Location:** `controllers/dashboard/orders/orders-controller.js` (lines 303-467)
+**File Location:** `controllers/dashboard/orders/orders-controller.js` (lines 311-476)
+
+**Note:** The response includes `paymentMethod` and `notes` fields in the manually formatted response.
+
+**ملاحظة:** الاستجابة تتضمن حقول `paymentMethod` و `notes` في الاستجابة المنسقة يدوياً.
+
+**Note:** The response includes `paymentMethod` and `notes` fields.
+
+**ملاحظة:** الاستجابة تتضمن حقول `paymentMethod` و `notes`.
 
 ---
 
@@ -1627,7 +1728,9 @@ Permanently deletes an order.
 ```
 
 **Controller Function:** `OrderController.deleteOrder`  
-**File Location:** `controllers/dashboard/orders/orders-controller.js` (lines 470-493)
+**File Location:** `controllers/dashboard/orders/orders-controller.js` (lines 479-502)
+
+---
 
 ---
 
@@ -2427,6 +2530,512 @@ Retrieves general platform statistics including overview and recent activity.
 
 ---
 
+## Applicants Endpoints / نقاط نهاية المتقدمين
+
+**Base Path / المسار الأساسي:** `/api/v1/dashboard/applicants`
+
+All applicant routes use `verifyToken` and `requireAdminOrEmployee` middleware.
+
+### 1. Get All Applicants
+**GET** `/api/v1/dashboard/applicants`
+
+**Description / الوصف:**  
+Retrieves all job applicants with pagination and filtering support.
+
+**Authentication:** Required (Admin/Employee)
+
+**Query Parameters / معاملات الاستعلام:**
+- `page` (optional, default: 1) - Page number for pagination
+- `limit` (optional, default: 10) - Number of items per page
+- `status` (optional) - Filter by applicant status (pending, accepted, rejected)
+- `search` (optional) - Search in applicant name
+
+**Response / الاستجابة:**
+```json
+{
+  "status": "success",
+  "data": {
+    "applicants": [
+      {
+        "id": "applicant_id",
+        "name": "John Doe",
+        "email": "john@example.com",
+        "age": 28,
+        "gender": "male",
+        "status": "pending",
+        "links": ["https://linkedin.com/in/johndoe"],
+        "hasCV": true,
+        "reviewedBy": null,
+        "reviewedAt": null,
+        "rejectionReason": null,
+        "createdAt": "2024-01-01T00:00:00.000Z",
+        "updatedAt": "2024-01-01T00:00:00.000Z"
+      }
+    ],
+    "pagination": {
+      "currentPage": 1,
+      "totalPages": 5,
+      "totalApplicants": 50,
+      "limit": 10
+    }
+  }
+}
+```
+
+**Note:** CV buffer is excluded from list response to reduce payload size. Use the `/applicants/:id/cv` endpoint to download the CV.
+
+**Controller Function:** `ApplicantController.getApplicants`  
+**File Location:** `controllers/dashboard/applicants/applicants-controller.js` (lines 23-68)
+
+---
+
+### 2. Get Applicant by ID
+**GET** `/api/v1/dashboard/applicants/:id`
+
+**Description / الوصف:**  
+Retrieves a specific applicant by their ID (without CV buffer).
+
+**Authentication:** Required (Admin/Employee)
+
+**Path Parameters / معاملات المسار:**
+- `id` (required) - Applicant ID
+
+**Response / الاستجابة:**
+```json
+{
+  "status": "success",
+  "data": {
+    "applicant": {
+      "id": "applicant_id",
+      "name": "John Doe",
+      "email": "john@example.com",
+      "age": 28,
+      "gender": "male",
+      "status": "pending",
+      "links": ["https://linkedin.com/in/johndoe"],
+      "hasCV": true,
+      "reviewedBy": null,
+      "reviewedAt": null,
+      "rejectionReason": null,
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
+    }
+  }
+}
+```
+
+**Note:** CV buffer is excluded. Use `/applicants/:id/cv` to download the CV.
+
+**Controller Function:** `ApplicantController.getApplicantById`  
+**File Location:** `controllers/dashboard/applicants/applicants-controller.js` (lines 71-96)
+
+---
+
+### 3. Get Applicant CV
+**GET** `/api/v1/dashboard/applicants/:id/cv`
+
+**Description / الوصف:**  
+Downloads the CV file for a specific applicant.
+
+**Authentication:** Required (Admin/Employee)
+
+**Path Parameters / معاملات المسار:**
+- `id` (required) - Applicant ID
+
+**Response / الاستجابة:**
+- Returns PDF file as binary download
+- Content-Type: `application/pdf`
+- Content-Disposition: `attachment; filename="{applicant_name}_CV.pdf"`
+
+**Error Responses / استجابات الخطأ:**
+- `404` - Applicant not found or CV not available
+
+**Controller Function:** `ApplicantController.getApplicantCV`  
+**File Location:** `controllers/dashboard/applicants/applicants-controller.js` (lines 99-130)
+
+---
+
+### 4. Update Applicant Status
+**PUT** `/api/v1/dashboard/applicants/:id/status`
+
+**Description / الوصف:**  
+Updates the status of an applicant (pending, accepted, rejected). Sets reviewer information automatically.
+
+**Authentication:** Required (Admin/Employee)
+
+**Path Parameters / معاملات المسار:**
+- `id` (required) - Applicant ID
+
+**Request Body / جسم الطلب:**
+```json
+{
+  "status": "accepted",
+  "rejectionReason": null
+}
+```
+
+For rejected status:
+```json
+{
+  "status": "rejected",
+  "rejectionReason": "Reason for rejection"
+}
+```
+
+**Required Fields / الحقول المطلوبة:**
+- `status` - Must be one of: `pending`, `accepted`, `rejected`
+- `rejectionReason` - Required if status is `rejected`
+
+**Response / الاستجابة:**
+```json
+{
+  "status": "success",
+  "message": {
+    "en": "Applicant status updated successfully",
+    "ar": "تم تحديث حالة المتقدم بنجاح"
+  },
+  "data": {
+    "applicant": {
+      // Updated applicant object
+    }
+  }
+}
+```
+
+**Features / الميزات:**
+- Automatically sets `reviewedBy` to current admin/employee
+- Automatically sets `reviewedAt` timestamp
+- Sends email notification to applicant when status changes to accepted/rejected
+- Stores rejection reason if status is rejected
+
+**Controller Function:** `ApplicantController.updateApplicantStatus`  
+**File Location:** `controllers/dashboard/applicants/applicants-controller.js` (lines 133-224)
+
+---
+
+### 5. Add/Submit Applicant
+**POST** `/api/v1/dashboard/applicants`
+
+**Description / الوصف:**  
+Allows admin/employee to submit an application on behalf of a candidate (with file upload).
+
+**Authentication:** Required (Admin/Employee)
+
+**Request Body / جسم الطلب:**
+- Multipart form data with file upload
+
+**Fields:**
+- `name` (required) - Applicant name
+- `email` (required) - Applicant email
+- `age` (required) - Applicant age (1-150)
+- `gender` (required) - Must be 'male' or 'female'
+- `links` (optional) - Array of links (up to 5 links) or single link string
+- `cv` (required) - PDF file (multipart/form-data)
+
+**Validation Rules / قواعد التحقق:**
+- Email must be unique (case-insensitive)
+- CV must be PDF format
+- CV file size limit enforced by upload middleware
+- Age must be between 1-150
+- Gender must be 'male' or 'female'
+- Maximum 5 links allowed
+
+**Response / الاستجابة:**
+```json
+{
+  "status": "success",
+  "message": {
+    "en": "Application submitted successfully",
+    "ar": "تم تقديم الطلب بنجاح"
+  },
+  "data": {
+    "applicant": {
+      // Created applicant object (CV buffer excluded)
+    }
+  }
+}
+```
+
+**Features / الميزات:**
+- Sends submission confirmation email to applicant
+- Stores CV as binary buffer in database
+- Validates PDF format and file size
+
+**Controller Function:** `ApplicantController.addApplicant`  
+**File Location:** `controllers/dashboard/applicants/applicants-controller.js` (lines 227-367)
+
+---
+
+### 6. Delete Applicant
+**DELETE** `/api/v1/dashboard/applicants/:id`
+
+**Description / الوصف:**  
+Permanently deletes an applicant and their CV.
+
+**Authentication:** Required (Admin/Employee)
+
+**Path Parameters / معاملات المسار:**
+- `id` (required) - Applicant ID
+
+**Response / الاستجابة:**
+```json
+{
+  "status": "success",
+  "message": {
+    "en": "Applicant deleted successfully",
+    "ar": "تم حذف المتقدم بنجاح"
+  },
+  "data": null
+}
+```
+
+**Error Responses / استجابات الخطأ:**
+- `404` - Applicant not found
+
+**Controller Function:** `ApplicantController.deleteApplicant`  
+**File Location:** `controllers/dashboard/applicants/applicants-controller.js` (lines 370-394)
+
+---
+
+## Special Orders Endpoints / نقاط نهاية الطلبات الخاصة
+
+**Base Path / المسار الأساسي:** `/api/v1/dashboard/special-orders`
+
+All special order routes use `verifyToken` and `requireAdminOrEmployee` middleware.
+
+### 1. Get All Special Orders
+**GET** `/api/v1/dashboard/special-orders`
+
+**Description / الوصف:**  
+Retrieves all special orders with pagination and filtering support.
+
+**Authentication:** Required (Admin/Employee)
+
+**Query Parameters / معاملات الاستعلام:**
+- `page` (optional, default: 1) - Page number for pagination
+- `limit` (optional, default: 10) - Number of items per page
+- `status` (optional) - Filter by status (pending, reviewed, contacted)
+- `userId` (optional) - Filter by user ID
+- `productId` (optional) - Filter by product ID
+- `search` (optional) - Search in needs, reason, or notes
+
+**Response / الاستجابة:**
+```json
+{
+  "status": "success",
+  "data": {
+    "specialOrders": [
+      {
+        "id": "special_order_id",
+        "user": {
+          // User object with business info
+        },
+        "product": {
+          // Product object with owner and category
+        },
+        "needs": "Custom quantity request",
+        "reason": "Need bulk order for business",
+        "status": "pending",
+        "reviewedBy": null,
+        "reviewedAt": null,
+        "notes": null,
+        "createdAt": "2024-01-01T00:00:00.000Z",
+        "updatedAt": "2024-01-01T00:00:00.000Z"
+      }
+    ],
+    "pagination": {
+      "page": 1,
+      "limit": 10,
+      "total": 50,
+      "pages": 5
+    }
+  }
+}
+```
+
+**Controller Function:** `SpecialOrderController.getSpecialOrders`  
+**File Location:** `controllers/dashboard/special-orders/special-orders-controller.js` (lines 59-132)
+
+---
+
+### 2. Get Special Order by ID
+**GET** `/api/v1/dashboard/special-orders/:id`
+
+**Description / الوصف:**  
+Retrieves a specific special order by its ID.
+
+**Authentication:** Required (Admin/Employee)
+
+**Path Parameters / معاملات المسار:**
+- `id` (required) - Special Order ID
+
+**Response / الاستجابة:**
+```json
+{
+  "status": "success",
+  "data": {
+    "specialOrder": {
+      "id": "special_order_id",
+      "user": {
+        // Complete user object with business info
+      },
+      "product": {
+        // Complete product object with owner and category
+      },
+      "needs": "Custom quantity request",
+      "reason": "Need bulk order for business",
+      "status": "pending",
+      "reviewedBy": null,
+      "reviewedAt": null,
+      "notes": null,
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
+    }
+  }
+}
+```
+
+**Error Responses / استجابات الخطأ:**
+- `404` - Special order not found
+
+**Controller Function:** `SpecialOrderController.getSpecialOrderById`  
+**File Location:** `controllers/dashboard/special-orders/special-orders-controller.js` (lines 135-185)
+
+---
+
+### 3. Create Special Order
+**POST** `/api/v1/dashboard/special-orders`
+
+**Description / الوصف:**  
+Creates a new special order on behalf of a user. Allows admin/employee to create special orders for customers.
+
+**Authentication:** Required (Admin/Employee)
+
+**Request Body / جسم الطلب:**
+```json
+{
+  "userId": "user_id",
+  "productId": "product_id",
+  "needs": "Custom quantity request details",
+  "reason": "Reason for special order"
+}
+```
+
+**Required Fields / الحقول المطلوبة:**
+- `userId` - ID of the user requesting the special order
+- `productId` - ID of the product
+- `needs` - Description of what the user needs
+- `reason` - Reason for the special order request
+
+**Validation Rules / قواعد التحقق:**
+- User must exist
+- Product must exist
+
+**Response / الاستجابة:**
+```json
+{
+  "status": "success",
+  "message": {
+    "en": "Special order created successfully",
+    "ar": "تم إنشاء الطلب الخاص بنجاح"
+  },
+  "data": {
+    "specialOrder": {
+      // Created special order object
+    }
+  }
+}
+```
+
+**Controller Function:** `SpecialOrderController.createSpecialOrder`  
+**File Location:** `controllers/dashboard/special-orders/special-orders-controller.js` (lines 188-266)
+
+---
+
+### 4. Update Special Order
+**PUT** `/api/v1/dashboard/special-orders/:id`
+
+**Description / الوصف:**  
+Updates an existing special order. Can update needs, reason, status, and notes.
+
+**Authentication:** Required (Admin/Employee)
+
+**Path Parameters / معاملات المسار:**
+- `id` (required) - Special Order ID
+
+**Request Body / جسم الطلب:**
+```json
+{
+  "needs": "Updated needs description",
+  "reason": "Updated reason",
+  "status": "reviewed",
+  "notes": "Admin notes about this order"
+}
+```
+
+**All fields are optional** - Only provided fields will be updated.
+
+**Status Values / قيم الحالة:**
+- `pending` - Initial status
+- `reviewed` - Order has been reviewed
+- `contacted` - User has been contacted
+
+**Response / الاستجابة:**
+```json
+{
+  "status": "success",
+  "message": {
+    "en": "Special order updated successfully",
+    "ar": "تم تحديث الطلب الخاص بنجاح"
+  },
+  "data": {
+    "specialOrder": {
+      // Updated special order object
+    }
+  }
+}
+```
+
+**Features / الميزات:**
+- When status is set to 'reviewed' or 'contacted', automatically sets `reviewedBy` and `reviewedAt`
+- Allows adding admin notes
+
+**Controller Function:** `SpecialOrderController.updateSpecialOrder`  
+**File Location:** `controllers/dashboard/special-orders/special-orders-controller.js` (lines 269-351)
+
+---
+
+### 5. Delete Special Order
+**DELETE** `/api/v1/dashboard/special-orders/:id`
+
+**Description / الوصف:**  
+Permanently deletes a special order.
+
+**Authentication:** Required (Admin/Employee)
+
+**Path Parameters / معاملات المسار:**
+- `id` (required) - Special Order ID
+
+**Response / الاستجابة:**
+```json
+{
+  "status": "success",
+  "message": {
+    "en": "Special order deleted successfully",
+    "ar": "تم حذف الطلب الخاص بنجاح"
+  },
+  "data": null
+}
+```
+
+**Error Responses / استجابات الخطأ:**
+- `404` - Special order not found
+
+**Controller Function:** `SpecialOrderController.deleteSpecialOrder`  
+**File Location:** `controllers/dashboard/special-orders/special-orders-controller.js` (lines 354-384)
+
+---
+
 ## Summary / الملخص
 
 ### Endpoint Count / عدد النقاط
@@ -2434,15 +3043,17 @@ Retrieves general platform statistics including overview and recent activity.
 | Category / الفئة | Count / العدد |
 |------------------|---------------|
 | Users / المستخدمين | 9 endpoints |
-| Products / المنتجات | 11 endpoints |
+| Products / المنتجات | 12 endpoints |
 | Categories / الفئات | 6 endpoints |
 | Profile / الملف الشخصي | 2 endpoints |
-| Orders / الطلبات | 4 endpoints |
+| Orders / الطلبات | 5 endpoints |
 | Reviews / التقييمات | 4 endpoints |
 | Addresses / العناوين | 5 endpoints |
 | Wishlists / قوائم الرغبات | 5 endpoints |
 | Stats / الإحصائيات | 5 endpoints |
-| **Total / المجموع** | **51 endpoints** |
+| Applicants / المتقدمين | 6 endpoints |
+| Special Orders / الطلبات الخاصة | 5 endpoints |
+| **Total / المجموع** | **62 endpoints** |
 
 ### Authentication Summary / ملخص المصادقة
 
@@ -2481,6 +3092,8 @@ Retrieves general platform statistics including overview and recent activity.
    - Order creation with validation
    - Stock management
    - Date range filtering
+   - Payment method tracking
+   - Order notes support
 
 6. **Review Management / إدارة التقييمات:**
    - View all reviews
@@ -2506,6 +3119,20 @@ Retrieves general platform statistics including overview and recent activity.
    - Review statistics
    - General platform overview
 
+10. **Applicant Management / إدارة المتقدمين:**
+    - Full CRUD operations
+    - CV file upload and download
+    - Status management (pending, accepted, rejected)
+    - Email notifications
+    - Review tracking
+
+11. **Special Order Management / إدارة الطلبات الخاصة:**
+    - Full CRUD operations
+    - Create orders on behalf of users
+    - Status management (pending, reviewed, contacted)
+    - Notes support
+    - Search and filtering capabilities
+
 ### Security Features / ميزات الأمان
 
 - All endpoints require authentication
@@ -2522,6 +3149,8 @@ The dashboard sends email notifications for:
 - Business user approval/rejection
 - Product approval/rejection/toggle
 - Review rejection
+- Applicant status changes (acceptance/rejection)
+- Applicant submission confirmation
 
 ### Data Flow / تدفق البيانات
 
@@ -2544,6 +3173,8 @@ Request → verifyToken → requireAdminOrEmployee → Controller → Validation
 - Addresses: `routes/dashboard/addresses/addresses-routes.js`
 - Wishlists: `routes/dashboard/wishlists/wishlists-routes.js`
 - Stats: `routes/dashboard/stats/stats-routes.js`
+- Applicants: `routes/dashboard/applicants/applicants-routes.js`
+- Special Orders: `routes/dashboard/special-orders/special-orders-routes.js`
 
 ### Controllers / المتحكمات
 - Main controller index: `controllers/dashboard/index.js`
@@ -2556,6 +3187,8 @@ Request → verifyToken → requireAdminOrEmployee → Controller → Validation
 - Addresses: `controllers/dashboard/addresses/addresses-controller.js`
 - Wishlists: `controllers/dashboard/wishlists/wishlists-controller.js`
 - Stats: `controllers/dashboard/stats/stats-controller.js`
+- Applicants: `controllers/dashboard/applicants/applicants-controller.js`
+- Special Orders: `controllers/dashboard/special-orders/special-orders-controller.js`
 
 ### Middleware / الـ Middleware
 - Authentication: `middleware/auth-middleware.js` (verifyToken)
