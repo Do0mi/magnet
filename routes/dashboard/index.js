@@ -16,7 +16,7 @@ const statsRoutes = require('./stats/stats-routes');
 const applicantsRoutes = require('./applicants/applicants-routes');
 const specialOrdersRoutes = require('./special-orders/special-orders-routes');
 const dashboardRoutes = require('./dashboard/dashboard-routes');
-const DashboardController = require('../controllers/dashboard/dashboard/dashboard-controller');
+const DashboardController = require('../../controllers/dashboard/dashboard/dashboard-controller');
 
 // Mount all dashboard sub-routes
 router.use('/dashboard', dashboardRoutes);

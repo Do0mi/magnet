@@ -553,6 +553,23 @@ exports.getAnalytics = async (req, res) => {
       { $group: { _id: '$gender', count: { $sum: 1 } } }
     ]);
 
+    // ========== GET COUNTS FOR PERFORMANCE METRICS ==========
+    const totalOrders = await Order.countDocuments();
+    const cancelledOrders = await Order.countDocuments({ status: 'cancelled' });
+    const deliveredOrders = await Order.countDocuments({ status: 'delivered' });
+    
+    const totalProducts = await Product.countDocuments();
+    const approvedProducts = await Product.countDocuments({ status: 'approved', isAllowed: true });
+    
+    const businesses = await User.countDocuments({ role: 'business' });
+    const approvedBusinesses = await User.countDocuments({ 
+      role: 'business', 
+      'businessInfo.approvalStatus': 'approved' 
+    });
+    
+    const totalReviews = await Review.countDocuments();
+    const approvedReviews = await Review.countDocuments({ status: 'approved' });
+
     // ========== PERFORMANCE METRICS ==========
     // Conversion rates
     const totalOrderAttempts = totalOrders + cancelledOrders;
