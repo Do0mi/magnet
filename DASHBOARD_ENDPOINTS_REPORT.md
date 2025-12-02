@@ -50,6 +50,10 @@ This document provides a comprehensive scan and documentation of all dashboard-r
 
 **Total Endpoints / إجمالي النقاط:** 62 endpoints
 
+**Base Currency / العملة الأساسية:**
+- All monetary values are displayed in **USD**
+- Currency field (`currency: "USD"`) is included in all relevant responses (products, orders, wishlists, reviews)
+
 ---
 
 ## Authentication / المصادقة
@@ -563,9 +567,13 @@ Retrieves all products with pagination and filtering support. Supports advanced 
 **File Location:** `controllers/dashboard/products/products-controller.js` (lines 26-194)
 
 **Features / الميزات:**
-- Advanced search using MongoDB aggregation
-- Searches across product fields and owner information
+- Advanced search using MongoDB aggregation when search parameter is provided
+- Searches across product fields (name.en, name.ar, description.en, description.ar, code) and owner information (firstname, lastname)
 - Supports pagination and filtering
+- When search is used, MongoDB aggregation pipeline is used for complex queries
+- When search is not used, standard find with populate is used for better performance
+- Review counts are automatically attached to products using `attachReviewCountsToProducts` utility
+- Products are sorted by creation date (newest first)
 
 ---
 
@@ -594,6 +602,14 @@ Retrieves a specific product by its ID.
 
 **Controller Function:** `ProductController.getProductById`  
 **File Location:** `controllers/dashboard/products/products-controller.js` (lines 197-224)
+
+**Populated Fields / الحقول المملوءة:**
+- `owner`: firstname, lastname, email, role, businessInfo.companyName
+- `approvedBy`: firstname, lastname, email, role
+- Review counts are automatically attached
+
+**Response Currency / عملة الاستجابة:**
+- All product responses include `currency: "USD"` field
 
 ---
 
@@ -649,12 +665,15 @@ Creates a new product for a specific business user. Products created by admin/em
 - `customFields` (array with 3-10 items)
 
 **Validation Rules / قواعد التحقق:**
-- Business user must exist and be approved
-- Business user must be allowed
-- Category must exist and be active
+- Business user must exist and be approved (if role is business)
+- Business user must be allowed (if role is business)
+- Business user can be admin or magnet_employee (allowed roles: business, admin, magnet_employee)
+- Category must exist and be active (checked by matching both en and ar names)
 - Custom fields must be between 3-10 items
-- All bilingual fields must have both English and Arabic
-- Attachments must be valid approved products
+- All bilingual fields must have both English and Arabic (name, description, category, unit, customFields)
+- Attachments must be valid approved products (status: 'approved', isAllowed: true)
+- Product code is auto-generated if not provided using `generateProductCode` utility
+- Products created by admin/employee are automatically approved and allowed
 
 **Response / الاستجابة:**
 ```json
@@ -674,6 +693,13 @@ Creates a new product for a specific business user. Products created by admin/em
 
 **Controller Function:** `ProductController.createProduct`  
 **File Location:** `controllers/dashboard/products/products-controller.js` (lines 227-382)
+
+**Business Logic / المنطق التجاري:**
+- Product is created with `status: 'approved'` and `isAllowed: true` automatically
+- `approvedBy` is set to the current admin/employee user ID
+- If owner is admin or magnet_employee, company name is set to 'Magnet' in businessInfo
+- Review counts are attached after creation
+- Product code is generated if not provided
 
 ---
 
@@ -726,9 +752,12 @@ Updates an existing product. Can update product fields and status.
 **All fields are optional** - Only provided fields will be updated.
 
 **Status Management / إدارة الحالة:**
-- If `status` is set to 'approved', product is automatically allowed
-- If `status` is set to 'declined', product is automatically disallowed
+- If `status` is set to 'approved', product is automatically allowed (`isAllowed: true`)
+- If `status` is set to 'declined', product is automatically disallowed (`isAllowed: false`)
 - Status changes trigger email notifications to product owner
+- When status changes to 'approved', `approvedBy` is set to current user and `declinedReason` is cleared
+- When status changes to 'declined', `declinedReason` can be provided
+- Email notifications include product name, owner name, action by, and timestamp
 
 **Response / الاستجابة:**
 ```json
@@ -809,8 +838,10 @@ Approves a pending product. Sets status to 'approved' and enables the product.
 **Features / الميزات:**
 - Sets `status` to 'approved'
 - Sets `isAllowed` to `true`
-- Records who approved the product
+- Records who approved the product (`approvedBy` field)
+- Updates `updatedAt` timestamp
 - Sends approval notification email to product owner
+- Email includes product name, owner name, approver name, and approval date
 
 **Controller Function:** `ProductController.approveProduct`  
 **File Location:** `controllers/dashboard/products/products-controller.js` (lines 521-579)
@@ -857,8 +888,11 @@ Declines a pending product. Sets status to 'declined' and disables the product.
 **Features / الميزات:**
 - Sets `status` to 'declined'
 - Sets `isAllowed` to `false`
-- Stores decline reason
+- Stores decline reason (from request body `reason` field)
+- Sets `approvedBy` to current user (for tracking)
+- Updates `updatedAt` timestamp
 - Sends decline notification email to product owner
+- Email includes product name, owner name, decliner name, decline date, and reason
 
 **Controller Function:** `ProductController.declineProduct`  
 **File Location:** `controllers/dashboard/products/products-controller.js` (lines 582-644)
@@ -894,7 +928,10 @@ Toggles the `isAllowed` status of a product (allows/disallows the product).
 
 **Features / الميزات:**
 - Toggles `isAllowed` field (true ↔ false)
-- Sends allow/disallow notification email to product owner
+- Updates `updatedAt` timestamp
+- Sends allow/disallow notification email to product owner based on new status
+- Email includes product name, owner name, action by, and action date
+- Does not change product `status` field (only `isAllowed`)
 
 **Controller Function:** `ProductController.toggleProduct`  
 **File Location:** `controllers/dashboard/products/products-controller.js` (lines 647-715)
@@ -938,6 +975,15 @@ Retrieves all reviews for a specific product.
 
 **Controller Function:** `ProductController.getProductReviews`  
 **File Location:** `controllers/dashboard/products/products-controller.js` (lines 718-769)
+
+**Populated Fields / الحقول المملوءة:**
+- `user`: firstname, lastname, email, role
+- `rejectedBy`: firstname, lastname, email, role
+- `product.owner`: firstname, lastname, email, businessInfo.companyName
+- `product.approvedBy`: firstname, lastname, email, role
+
+**Sorting / الترتيب:**
+- Reviews are sorted by creation date (newest first)
 
 ---
 
@@ -1011,6 +1057,15 @@ Retrieves all orders containing a specific product.
 **Note:** All orders returned include `paymentMethod` and `notes` fields.
 
 **ملاحظة:** جميع الطلبات المُرجعة تتضمن حقول `paymentMethod` و `notes`.
+
+**Populated Fields / الحقول المملوءة:**
+- `customer`: firstname, lastname, email
+- `items.product`: name, pricePerUnit, images
+- `shippingAddress`: addressLine1, addressLine2, city, state, postalCode, country
+
+**Order Number Format / تنسيق رقم الطلب:**
+- Format: `ORD-{last8charsofID}` (e.g., `ORD-12345678`)
+- Generated from order ID's last 8 characters, uppercase
 
 ---
 
@@ -1626,10 +1681,17 @@ Creates a new order for a specific customer. Validates products, stock, and calc
 ```
 
 **Features / الميزات:**
-- Automatically reduces product stock
-- Calculates subtotal and total
+- Automatically reduces product stock for each item (decrements by quantity)
+- Calculates subtotal (sum of all item totals) and total (subtotal + shippingCost)
 - Creates order with status 'confirmed'
-- Records order creation in status log
+- Records order creation in status log with:
+  - Status: confirmed (from status mapping)
+  - Timestamp: current date/time
+  - Updated by: current admin/employee user ID
+  - Note: "Order created by admin/employee"
+- Order number is generated as `ORD-{last8charsofID}`
+- All products are validated for existence, approval status, and sufficient stock
+- Shipping address ownership is verified
 
 **Controller Function:** `OrderController.createOrder`  
 **File Location:** `controllers/dashboard/orders/orders-controller.js` (lines 115-308)
@@ -1671,9 +1733,13 @@ Updates an existing order. Can update items, shipping address, status, and other
 **All fields are optional** - Only provided fields will be updated.
 
 **Validation Rules / قواعد التحقق:**
-- If items are updated, products are re-validated
-- Shipping address must belong to customer
+- If items are updated, products are re-validated (must exist and be approved)
+- **Note:** Stock validation is NOT performed on update (unlike create)
+- Shipping address must belong to customer (verified by matching address.user with order.customer)
 - Totals are recalculated if items or shipping cost change
+- If only shippingCost is updated, total = existing subtotal + new shippingCost
+- If items are updated, subtotal and total are recalculated from scratch
+- Product stock is NOT updated when order items are changed
 
 **Response / الاستجابة:**
 ```json
@@ -1729,6 +1795,11 @@ Permanently deletes an order.
 
 **Controller Function:** `OrderController.deleteOrder`  
 **File Location:** `controllers/dashboard/orders/orders-controller.js` (lines 479-502)
+
+**Important Notes / ملاحظات مهمة:**
+- ⚠️ **Permanent deletion** - This operation cannot be undone
+- ⚠️ **Product stock is NOT restored** - When an order is deleted, the product stock that was reduced during order creation is NOT automatically restored
+- Consider implementing soft delete or stock restoration logic if needed
 
 ---
 
@@ -1793,6 +1864,19 @@ Retrieves all reviews with pagination and filtering support.
 **Controller Function:** `ReviewController.getReviews`  
 **File Location:** `controllers/dashboard/reviews/reviews-controller.js` (lines 21-82)
 
+**Populated Fields / الحقول المملوءة:**
+- `user`: firstname, lastname, email, role
+- `product.owner`: firstname, lastname, email, businessInfo.companyName
+- `product.approvedBy`: firstname, lastname, email, role
+
+**Search Fields / حقول البحث:**
+- Comment text
+- User firstname and lastname
+- Product name (searches in populated product field)
+
+**Response Currency / عملة الاستجابة:**
+- All review responses include `currency: "USD"` field
+
 ---
 
 ### 2. Get Review by ID
@@ -1820,6 +1904,14 @@ Retrieves a specific review by its ID.
 
 **Controller Function:** `ReviewController.getReviewById`  
 **File Location:** `controllers/dashboard/reviews/reviews-controller.js` (lines 85-124)
+
+**Populated Fields / الحقول المملوءة:**
+- `user`: firstname, lastname, email, role
+- `product.owner`: firstname, lastname, email, businessInfo.companyName
+- `product.approvedBy`: firstname, lastname, email, role
+
+**Response Currency / عملة الاستجابة:**
+- Response includes `currency: "USD"` field
 
 ---
 
@@ -1862,9 +1954,11 @@ Rejects a review. Sets status to 'reject' and sends notification email to the re
 
 **Features / الميزات:**
 - Sets `status` to 'reject'
-- Stores rejection reason
-- Records who rejected and when
+- Stores rejection reason (from request body `reason` field, required and cannot be empty)
+- Records who rejected (`rejectedBy` set to current user ID) and when (`rejectedAt` timestamp)
+- Updates `updatedAt` timestamp
 - Sends rejection notification email to reviewer
+- Email includes user name, product name, and rejection reason
 
 **Controller Function:** `ReviewController.rejectReview`  
 **File Location:** `controllers/dashboard/reviews/reviews-controller.js` (lines 127-211)
@@ -2021,8 +2115,11 @@ Creates a new address for a specific user.
 
 **Validation Rules / قواعد التحقق:**
 - User must exist
-- Address must be unique for the user (no duplicates)
-- First address for a user is automatically set as default
+- Address must be unique for the user (no duplicates - checked by comparing all address fields)
+- First address for a user is automatically set as default (if user has no existing addresses)
+- If `isDefault` is true, all other default addresses for the user are unset
+- Required fields: addressLine1, city, state, country
+- Optional fields: addressLine2, postalCode
 
 **Response / الاستجابة:**
 ```json
@@ -2072,8 +2169,10 @@ Updates an existing address.
 **All fields are optional** - Only provided fields will be updated.
 
 **Validation Rules / قواعد التحقق:**
-- Updated address must be unique for the user (no duplicates)
+- Updated address must be unique for the user (no duplicates - excludes current address from check)
 - Setting address as default unsets other default addresses for the user
+- All address fields are trimmed before validation and storage
+- Address fields can be set to null/empty (addressLine2, postalCode)
 
 **Response / الاستجابة:**
 ```json
@@ -2181,6 +2280,22 @@ Retrieves all wishlists with pagination and filtering support.
 **Controller Function:** `WishlistController.getWishlists`  
 **File Location:** `controllers/dashboard/wishlists/wishlists-controller.js` (lines 20-79)
 
+**Populated Fields / الحقول المملوءة:**
+- `user`: firstname, lastname, email, phone, role
+- `products`: name, pricePerUnit, images, description
+- Review counts are automatically attached to all products using `attachReviewCountsToProducts` utility
+
+**Response Currency / عملة الاستجابة:**
+- All wishlist responses include `currency: "USD"` field
+
+**Search Fields / حقول البحث:**
+- User firstname, lastname, email
+- Product name (searches in populated products field)
+
+**Response Format / تنسيق الاستجابة:**
+- User is formatted with `includeBusinessInfo: false` and `includeVerification: false`
+- Products are formatted with `includeOwner: false` and `includeApproval: false`
+
 ---
 
 ### 2. Get Wishlist by ID
@@ -2209,6 +2324,14 @@ Retrieves a specific wishlist by its ID.
 **Controller Function:** `WishlistController.getWishlistById`  
 **File Location:** `controllers/dashboard/wishlists/wishlists-controller.js` (lines 82-122)
 
+**Populated Fields / الحقول المملوءة:**
+- `user`: firstname, lastname, email, phone, role
+- `products`: name, pricePerUnit, images, description
+- Review counts are automatically attached to products
+
+**Response Currency / عملة الاستجابة:**
+- Response includes `currency: "USD"` field
+
 ---
 
 ### 3. Create Wishlist
@@ -2235,8 +2358,9 @@ Creates a new wishlist for a specific user.
 
 **Validation Rules / قواعد التحقق:**
 - User must exist
-- User can only have one wishlist
-- All products must exist (if provided)
+- User can only have one wishlist (returns error if wishlist already exists for user)
+- All products must exist (if provided in productIds array)
+- ProductIds array can be empty (creates wishlist with no products)
 
 **Response / الاستجابة:**
 ```json
@@ -2281,7 +2405,9 @@ Updates an existing wishlist. Can update the products in the wishlist.
 - `productIds` - Array of product IDs (can be empty array)
 
 **Validation Rules / قواعد التحقق:**
-- All products must exist
+- All products must exist (validated by checking productIds against database)
+- ProductIds array can be empty (removes all products from wishlist)
+- If any product in productIds doesn't exist, returns error
 
 **Response / الاستجابة:**
 ```json
@@ -2368,6 +2494,8 @@ Retrieves user-related statistics.
 
 **Notes / ملاحظات:**
 - `recentUsers` - Users created in the last 30 days
+- All counts are real-time from database
+- Statistics include all user roles (customer, business, admin, magnet_employee)
 
 ---
 
@@ -2402,8 +2530,10 @@ Retrieves order-related statistics including revenue.
 **File Location:** `controllers/dashboard/stats/stats-controller.js` (lines 62-108)
 
 **Notes / ملاحظات:**
-- `totalRevenue` - Sum of orders with status 'delivered' or 'shipped'
+- `totalRevenue` - Sum of orders with status 'delivered' or 'shipped' (calculated from `total` field using MongoDB aggregation)
 - `recentOrders` - Orders created in the last 30 days
+- Revenue calculation uses MongoDB aggregation pipeline: `$match` for status filter, `$group` for sum
+- All order statuses are tracked separately (pending, confirmed, processing, shipped, delivered, cancelled, refunded)
 
 ---
 
@@ -2443,9 +2573,10 @@ Retrieves product-related statistics.
 **File Location:** `controllers/dashboard/stats/stats-controller.js` (lines 111-157)
 
 **Notes / ملاحظات:**
-- `averagePrice` - Average price across all products
-- `productsByCategory` - Product count grouped by category
+- `averagePrice` - Average price across all products (calculated from `pricePerUnit` field using MongoDB aggregation)
+- `productsByCategory` - Product count grouped by category (includes category name in both languages via $lookup)
 - `recentProducts` - Products created in the last 30 days
+- Category grouping uses MongoDB aggregation pipeline: `$group` by category, `$lookup` to join categories collection, `$unwind` and `$project` for formatting
 
 ---
 
@@ -2483,9 +2614,10 @@ Retrieves review-related statistics.
 **File Location:** `controllers/dashboard/stats/stats-controller.js` (lines 160-204)
 
 **Notes / ملاحظات:**
-- `averageRating` - Average rating across all reviews
-- `reviewsByRating` - Review count grouped by rating (1-5)
+- `averageRating` - Average rating across all reviews (calculated using MongoDB aggregation)
+- `reviewsByRating` - Review count grouped by rating (1-5), sorted by rating ascending
 - `recentReviews` - Reviews created in the last 30 days
+- Rating distribution shows count for each rating level
 
 ---
 
@@ -2525,8 +2657,11 @@ Retrieves general platform statistics including overview and recent activity.
 **File Location:** `controllers/dashboard/stats/stats-controller.js` (lines 207-261)
 
 **Notes / ملاحظات:**
-- `recentActivity` - Activity in the last 7 days
-- `totalRevenue` - Sum of delivered/shipped orders
+- `recentActivity` - Activity in the last 7 days (users, products, orders, reviews)
+- `totalRevenue` - Sum of delivered/shipped orders (calculated from `total` field using MongoDB aggregation)
+- Provides comprehensive platform overview in a single endpoint
+- All counts are real-time database queries
+- Revenue calculation: `$match` for status filter (delivered or shipped), `$group` for sum of total field
 
 ---
 
@@ -2733,12 +2868,16 @@ Allows admin/employee to submit an application on behalf of a candidate (with fi
 - `cv` (required) - PDF file (multipart/form-data)
 
 **Validation Rules / قواعد التحقق:**
-- Email must be unique (case-insensitive)
-- CV must be PDF format
+- Email must be unique (case-insensitive check using regex)
+- CV must be PDF format (mimetype: 'application/pdf')
 - CV file size limit enforced by upload middleware
-- Age must be between 1-150
-- Gender must be 'male' or 'female'
-- Maximum 5 links allowed
+- Age must be between 1-150 (numeric validation)
+- Gender must be 'male' or 'female' (exact match)
+- Maximum 5 links allowed (array is sliced to 5 if more provided)
+- Links can be provided as array or single string (converted to array)
+- Empty links are filtered out
+- Links are trimmed before storage
+- Name and email are trimmed before storage
 
 **Response / الاستجابة:**
 ```json
@@ -2758,8 +2897,12 @@ Allows admin/employee to submit an application on behalf of a candidate (with fi
 
 **Features / الميزات:**
 - Sends submission confirmation email to applicant
-- Stores CV as binary buffer in database
+- Stores CV as binary buffer in database (cv field)
+- Stores CV content type (cvContentType field, default: 'application/pdf')
+- Sets `has_cv` flag to true if CV is uploaded
 - Validates PDF format and file size
+- Status is set to 'pending' by default
+- CV buffer is excluded from list and detail responses (use /cv endpoint to download)
 
 **Controller Function:** `ApplicantController.addApplicant`  
 **File Location:** `controllers/dashboard/applicants/applicants-controller.js` (lines 227-367)
@@ -2856,6 +2999,20 @@ Retrieves all special orders with pagination and filtering support.
 **Controller Function:** `SpecialOrderController.getSpecialOrders`  
 **File Location:** `controllers/dashboard/special-orders/special-orders-controller.js` (lines 59-132)
 
+**Populated Fields / الحقول المملوءة:**
+- `userId`: firstname, lastname, email, phone, role, country, imageUrl, businessInfo
+- `productId.owner`: firstname, lastname, email, role, businessInfo.companyName
+- `productId.category`: name, description
+- `reviewedBy`: firstname, lastname, email, role
+
+**Search Fields / حقول البحث:**
+- needs (case-insensitive regex)
+- reason (case-insensitive regex)
+- notes (case-insensitive regex)
+
+**Sorting / الترتيب:**
+- Special orders are sorted by creation date (newest first)
+
 ---
 
 ### 2. Get Special Order by ID
@@ -2900,6 +3057,17 @@ Retrieves a specific special order by its ID.
 
 **Controller Function:** `SpecialOrderController.getSpecialOrderById`  
 **File Location:** `controllers/dashboard/special-orders/special-orders-controller.js` (lines 135-185)
+
+**Populated Fields / الحقول المملوءة:**
+- `userId`: firstname, lastname, email, phone, role, country, imageUrl, businessInfo
+- `productId.owner`: firstname, lastname, email, role, businessInfo.companyName
+- `productId.category`: name, description
+- `reviewedBy`: firstname, lastname, email, role
+
+**Response Format / تنسيق الاستجابة:**
+- User is formatted with full business info and verification details
+- Product is formatted with owner and approval information
+- ReviewedBy is formatted with basic user info (no business info, no verification)
 
 ---
 
@@ -2950,6 +3118,12 @@ Creates a new special order on behalf of a user. Allows admin/employee to create
 **Controller Function:** `SpecialOrderController.createSpecialOrder`  
 **File Location:** `controllers/dashboard/special-orders/special-orders-controller.js` (lines 188-266)
 
+**Business Logic / المنطق التجاري:**
+- All text fields (needs, reason) are trimmed before storage
+- Status defaults to 'pending' (initial status)
+- User and product existence are validated before creation
+- Special order is created with populated user and product for response
+
 ---
 
 ### 4. Update Special Order
@@ -2976,9 +3150,13 @@ Updates an existing special order. Can update needs, reason, status, and notes.
 **All fields are optional** - Only provided fields will be updated.
 
 **Status Values / قيم الحالة:**
-- `pending` - Initial status
-- `reviewed` - Order has been reviewed
-- `contacted` - User has been contacted
+- `pending` - Initial status (default when created)
+- `reviewed` - Order has been reviewed by admin/employee
+- `contacted` - User has been contacted about the order
+
+**Status Constants / ثوابت الحالة:**
+- Status values are defined in `SPECIAL_ORDER_STATUS` constant from the model
+- When status is set to 'reviewed' or 'contacted', `reviewedBy` and `reviewedAt` are automatically set
 
 **Response / الاستجابة:**
 ```json
@@ -2997,8 +3175,11 @@ Updates an existing special order. Can update needs, reason, status, and notes.
 ```
 
 **Features / الميزات:**
-- When status is set to 'reviewed' or 'contacted', automatically sets `reviewedBy` and `reviewedAt`
-- Allows adding admin notes
+- When status is set to 'reviewed' or 'contacted', automatically sets `reviewedBy` (current user ID) and `reviewedAt` (current timestamp)
+- Allows adding admin notes (notes field, can be set to null)
+- All text fields (needs, reason, notes) are trimmed before storage
+- Status validation ensures only valid status values are accepted
+- Populated fields include user (with business info), product (with owner and category), and reviewedBy
 
 **Controller Function:** `SpecialOrderController.updateSpecialOrder`  
 **File Location:** `controllers/dashboard/special-orders/special-orders-controller.js` (lines 269-351)
@@ -3145,12 +3326,21 @@ Permanently deletes a special order.
 ### Email Notifications / إشعارات البريد الإلكتروني
 
 The dashboard sends email notifications for:
-- User allow/disallow actions
-- Business user approval/rejection
-- Product approval/rejection/toggle
-- Review rejection
-- Applicant status changes (acceptance/rejection)
-- Applicant submission confirmation
+- **User Management:**
+  - User allow/disallow actions (via `sendUserAllowNotification` and `sendUserDisallowNotification`)
+  - Business user approval/rejection (via `sendBusinessApprovalNotification`)
+- **Product Management:**
+  - Product approval (via `sendProductApprovalNotification`)
+  - Product decline/rejection (via `sendProductDeclineNotification`)
+  - Product allow/disallow toggle (via `sendProductAllowNotification` and `sendProductDisallowNotification`)
+- **Review Management:**
+  - Review rejection (via `sendReviewRejectionNotification`)
+- **Applicant Management:**
+  - Applicant status changes - acceptance (via `sendApplicantAcceptanceNotification`)
+  - Applicant status changes - rejection (via `sendApplicantRejectionNotification`)
+  - Applicant submission confirmation (via `sendApplicantSubmissionNotification`)
+
+**Note:** Email failures do not cause API requests to fail - errors are logged but requests succeed
 
 ### Data Flow / تدفق البيانات
 

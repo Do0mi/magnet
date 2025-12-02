@@ -142,7 +142,9 @@ exports.createUser = async (req, res) => {
           reviews: accessPages.reviews || false,
           wishlists: accessPages.wishlists || false,
           categories: accessPages.categories || false,
-          addresses: accessPages.addresses || false
+          addresses: accessPages.addresses || false,
+          specialOrders: accessPages.specialOrders || false,
+          applicants: accessPages.applicants || false
         };
       }
     }
@@ -458,7 +460,9 @@ exports.updateUser = async (req, res) => {
           reviews: accessPages.reviews !== undefined ? accessPages.reviews : (currentUser.accessPages?.reviews || false),
           wishlists: accessPages.wishlists !== undefined ? accessPages.wishlists : (currentUser.accessPages?.wishlists || false),
           categories: accessPages.categories !== undefined ? accessPages.categories : (currentUser.accessPages?.categories || false),
-          addresses: accessPages.addresses !== undefined ? accessPages.addresses : (currentUser.accessPages?.addresses || false)
+          addresses: accessPages.addresses !== undefined ? accessPages.addresses : (currentUser.accessPages?.addresses || false),
+          specialOrders: accessPages.specialOrders !== undefined ? accessPages.specialOrders : (currentUser.accessPages?.specialOrders || false),
+          applicants: accessPages.applicants !== undefined ? accessPages.applicants : (currentUser.accessPages?.applicants || false)
         };
       }
     }

@@ -1,5 +1,7 @@
 const express = require('express');
 const router = express.Router();
+const verifyToken = require('../../middleware/auth-middleware');
+const { requireAdminOrEmployee } = require('../../middleware/role-middleware');
 
 // Import all dashboard sub-routes
 const usersRoutes = require('./users/users-routes');
@@ -13,8 +15,13 @@ const wishlistsRoutes = require('./wishlists/wishlists-routes');
 const statsRoutes = require('./stats/stats-routes');
 const applicantsRoutes = require('./applicants/applicants-routes');
 const specialOrdersRoutes = require('./special-orders/special-orders-routes');
+const dashboardRoutes = require('./dashboard/dashboard-routes');
+const DashboardController = require('../controllers/dashboard/dashboard/dashboard-controller');
 
 // Mount all dashboard sub-routes
+router.use('/dashboard', dashboardRoutes);
+// GET /api/v1/dashboard/analytics - Get detailed analytics data
+router.get('/analytics', verifyToken, requireAdminOrEmployee, DashboardController.getAnalytics);
 router.use('/users', usersRoutes);
 router.use('/products', productsRoutes);
 router.use('/categories', categoriesRoutes);

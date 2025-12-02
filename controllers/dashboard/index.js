@@ -10,8 +10,10 @@ const wishlistsController = require('./wishlists/wishlists-controller');
 const statsController = require('./stats/stats-controller');
 const applicantsController = require('./applicants/applicants-controller');
 const specialOrdersController = require('./special-orders/special-orders-controller');
+const dashboardController = require('./dashboard/dashboard-controller');
 
 module.exports = {
+  dashboardController,
   usersController,
   productsController,
   categoriesController,

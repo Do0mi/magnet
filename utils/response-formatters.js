@@ -181,7 +181,9 @@ const formatUser = (user, options = {}) => {
       reviews: false,
       wishlists: false,
       categories: false,
-      addresses: false
+      addresses: false,
+      specialOrders: false,
+      applicants: false
     };
   }
 
