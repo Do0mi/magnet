@@ -38,8 +38,6 @@ exports.getDashboard = async (req, res) => {
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     const thirtyDaysAgo = new Date(today);
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const lastMonth = new Date(today);
-    lastMonth.setMonth(lastMonth.getMonth() - 1);
 
     // ========== USERS STATISTICS ==========
     const totalUsers = await User.countDocuments();
@@ -72,15 +70,15 @@ exports.getDashboard = async (req, res) => {
     const priceResult = await Product.aggregate([
       { $group: { _id: null, averagePrice: { $avg: '$pricePerUnit' }, minPrice: { $min: '$pricePerUnit' }, maxPrice: { $max: '$pricePerUnit' } } }
     ]);
-    const averagePrice = priceResult.length > 0 ? priceResult[0].averagePrice : 0;
-    const minPrice = priceResult.length > 0 ? priceResult[0].minPrice : 0;
-    const maxPrice = priceResult.length > 0 ? priceResult[0].maxPrice : 0;
+    const averagePrice = (priceResult.length > 0 && priceResult[0].averagePrice != null) ? Number(priceResult[0].averagePrice) || 0 : 0;
+    const minPrice = (priceResult.length > 0 && priceResult[0].minPrice != null) ? Number(priceResult[0].minPrice) || 0 : 0;
+    const maxPrice = (priceResult.length > 0 && priceResult[0].maxPrice != null) ? Number(priceResult[0].maxPrice) || 0 : 0;
 
     // Total stock
     const stockResult = await Product.aggregate([
       { $group: { _id: null, totalStock: { $sum: '$stock' } } }
     ]);
-    const totalStock = stockResult.length > 0 ? stockResult[0].totalStock : 0;
+    const totalStock = (stockResult.length > 0 && stockResult[0].totalStock != null) ? Number(stockResult[0].totalStock) || 0 : 0;
 
     const recentProducts = await Product.countDocuments({ createdAt: { $gte: thirtyDaysAgo } });
     const todayProducts = await Product.countDocuments({ createdAt: { $gte: today } });
@@ -100,29 +98,29 @@ exports.getDashboard = async (req, res) => {
       { $match: { status: { $in: ['delivered', 'shipped'] } } },
       { $group: { _id: null, totalRevenue: { $sum: '$total' }, averageOrderValue: { $avg: '$total' }, orderCount: { $sum: 1 } } }
     ]);
-    const totalRevenue = revenueResult.length > 0 ? revenueResult[0].totalRevenue : 0;
-    const averageOrderValue = revenueResult.length > 0 ? revenueResult[0].averageOrderValue : 0;
+    const totalRevenue = (revenueResult.length > 0 && revenueResult[0].totalRevenue != null) ? Number(revenueResult[0].totalRevenue) || 0 : 0;
+    const averageOrderValue = (revenueResult.length > 0 && revenueResult[0].averageOrderValue != null) ? Number(revenueResult[0].averageOrderValue) || 0 : 0;
 
     // Revenue today
     const todayRevenueResult = await Order.aggregate([
       { $match: { status: { $in: ['delivered', 'shipped'] }, createdAt: { $gte: today } } },
       { $group: { _id: null, totalRevenue: { $sum: '$total' } } }
     ]);
-    const todayRevenue = todayRevenueResult.length > 0 ? todayRevenueResult[0].totalRevenue : 0;
+    const todayRevenue = (todayRevenueResult.length > 0 && todayRevenueResult[0].totalRevenue != null) ? Number(todayRevenueResult[0].totalRevenue) || 0 : 0;
 
     // Revenue last 7 days
     const weekRevenueResult = await Order.aggregate([
       { $match: { status: { $in: ['delivered', 'shipped'] }, createdAt: { $gte: sevenDaysAgo } } },
       { $group: { _id: null, totalRevenue: { $sum: '$total' } } }
     ]);
-    const weekRevenue = weekRevenueResult.length > 0 ? weekRevenueResult[0].totalRevenue : 0;
+    const weekRevenue = (weekRevenueResult.length > 0 && weekRevenueResult[0].totalRevenue != null) ? Number(weekRevenueResult[0].totalRevenue) || 0 : 0;
 
     // Revenue last 30 days
     const monthRevenueResult = await Order.aggregate([
       { $match: { status: { $in: ['delivered', 'shipped'] }, createdAt: { $gte: thirtyDaysAgo } } },
       { $group: { _id: null, totalRevenue: { $sum: '$total' } } }
     ]);
-    const monthRevenue = monthRevenueResult.length > 0 ? monthRevenueResult[0].totalRevenue : 0;
+    const monthRevenue = (monthRevenueResult.length > 0 && monthRevenueResult[0].totalRevenue != null) ? Number(monthRevenueResult[0].totalRevenue) || 0 : 0;
 
     const recentOrders = await Order.countDocuments({ createdAt: { $gte: thirtyDaysAgo } });
     const todayOrders = await Order.countDocuments({ createdAt: { $gte: today } });
@@ -137,7 +135,7 @@ exports.getDashboard = async (req, res) => {
     const ratingResult = await Review.aggregate([
       { $group: { _id: null, averageRating: { $avg: '$rating' } } }
     ]);
-    const averageRating = ratingResult.length > 0 ? ratingResult[0].averageRating : 0;
+    const averageRating = (ratingResult.length > 0 && ratingResult[0].averageRating != null) ? Number(ratingResult[0].averageRating) || 0 : 0;
 
     // Reviews by rating
     const reviewsByRating = await Review.aggregate([
@@ -613,7 +611,7 @@ exports.getAnalytics = async (req, res) => {
         revenueOverTime,
         avgOrderValueByStatus: avgOrderValueByStatus.map(item => ({
           status: item._id,
-          avgValue: parseFloat(item.avgValue.toFixed(2)),
+          avgValue: item.avgValue != null ? parseFloat(Number(item.avgValue).toFixed(2)) : 0,
           count: item.count
         })),
         topCustomers
@@ -623,7 +621,7 @@ exports.getAnalytics = async (req, res) => {
         byStatus: reviewsByStatus,
         ratingOverTime: ratingOverTime.map(item => ({
           date: `${item._id.year}-${String(item._id.month).padStart(2, '0')}-${String(item._id.day).padStart(2, '0')}`,
-          avgRating: parseFloat(item.avgRating.toFixed(2)),
+          avgRating: item.avgRating != null ? parseFloat(Number(item.avgRating).toFixed(2)) : 0,
           count: item.count
         }))
       },

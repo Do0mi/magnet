@@ -1552,6 +1552,16 @@ const messages = {
   'invalid_special_order_status': {
     en: 'Invalid status',
     ar: 'حالة غير صالحة'
+  },
+
+  // Dashboard messages
+  'failed_get_dashboard': {
+    en: 'Failed to get dashboard',
+    ar: 'فشل في الحصول على لوحة التحكم'
+  },
+  'failed_get_analytics': {
+    en: 'Failed to get analytics',
+    ar: 'فشل في الحصول على التحليلات'
   }
 };
 

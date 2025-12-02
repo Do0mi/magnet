@@ -16,12 +16,12 @@ const statsRoutes = require('./stats/stats-routes');
 const applicantsRoutes = require('./applicants/applicants-routes');
 const specialOrdersRoutes = require('./special-orders/special-orders-routes');
 const dashboardRoutes = require('./dashboard/dashboard-routes');
-const DashboardController = require('../../controllers/dashboard/dashboard/dashboard-controller');
+const { dashboardController } = require('../../controllers/dashboard/index');
 
 // Mount all dashboard sub-routes
 router.use('/dashboard', dashboardRoutes);
 // GET /api/v1/dashboard/analytics - Get detailed analytics data
-router.get('/analytics', verifyToken, requireAdminOrEmployee, DashboardController.getAnalytics);
+router.get('/analytics', verifyToken, requireAdminOrEmployee, dashboardController.getAnalytics);
 router.use('/users', usersRoutes);
 router.use('/products', productsRoutes);
 router.use('/categories', categoriesRoutes);
