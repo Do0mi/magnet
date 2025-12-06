@@ -16,6 +16,7 @@ const {
   sendProductAllowNotification, 
   sendProductDisallowNotification 
 } = require('../../../utils/email-utils');
+const { sendNotification } = require('../../../services/fcm-service');
 
 // Helper function to validate admin or magnet employee permissions
 const validateAdminOrEmployeePermissions = (req, res) => {
@@ -577,13 +578,15 @@ exports.approveProduct = async (req, res) => {
     await attachReviewCountsToProducts([product]);
     const formattedProduct = formatProduct(product);
 
-    // Send approval email notification
+    // Send approval email and push notification
     try {
       const owner = await User.findById(product.owner).select('email firstname lastname');
       const approver = await User.findById(req.user.id).select('firstname lastname');
       if (owner && approver) {
         const productName = product.name?.en || product.name?.ar || 'Unknown Product';
         const approvedBy = `${approver.firstname} ${approver.lastname}`;
+        
+        // Send email notification
         await sendProductApprovalNotification(
           owner.email,
           `${owner.firstname} ${owner.lastname}`,
@@ -591,10 +594,22 @@ exports.approveProduct = async (req, res) => {
           approvedBy,
           new Date()
         );
+        
+        // Send push notification
+        await sendNotification(
+          product.owner._id.toString() || product.owner.toString(),
+          'Product Approved',
+          `Your product "${productName}" has been approved and is now live`,
+          {
+            type: 'product',
+            url: `/products/${product._id}`,
+            productId: product._id.toString()
+          }
+        );
       }
-    } catch (emailError) {
-      console.error('Failed to send approval email:', emailError);
-      // Don't fail the request if email fails
+    } catch (error) {
+      console.error('Failed to send approval notification:', error);
+      // Don't fail the request if notification fails
     }
 
     res.status(200).json(createResponse('success', {
@@ -643,13 +658,15 @@ exports.declineProduct = async (req, res) => {
   await attachReviewCountsToProducts([product]);
     const formattedProduct = formatProduct(product);
 
-    // Send decline email notification
+    // Send decline email and push notification
     try {
       const owner = await User.findById(product.owner).select('email firstname lastname');
       const decliner = await User.findById(req.user.id).select('firstname lastname');
       if (owner && decliner) {
         const productName = product.name?.en || product.name?.ar || 'Unknown Product';
         const declinedBy = `${decliner.firstname} ${decliner.lastname}`;
+        
+        // Send email notification
         await sendProductDeclineNotification(
           owner.email,
           `${owner.firstname} ${owner.lastname}`,
@@ -658,10 +675,22 @@ exports.declineProduct = async (req, res) => {
           new Date(),
           reason
         );
+        
+        // Send push notification
+        await sendNotification(
+          product.owner._id.toString() || product.owner.toString(),
+          'Product Declined',
+          `Your product "${productName}" has been declined${reason ? `: ${reason}` : ''}`,
+          {
+            type: 'product',
+            url: `/products/${product._id}`,
+            productId: product._id.toString()
+          }
+        );
       }
-    } catch (emailError) {
-      console.error('Failed to send decline email:', emailError);
-      // Don't fail the request if email fails
+    } catch (error) {
+      console.error('Failed to send decline notification:', error);
+      // Don't fail the request if notification fails
     }
 
     res.status(200).json(createResponse('success', {

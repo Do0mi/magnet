@@ -4,6 +4,7 @@ const Product = require('../../../models/product-model');
 const User = require('../../../models/user-model');
 const { getBilingualMessage } = require('../../../utils/messages');
 const { createResponse, formatOrder } = require('../../../utils/response-formatters');
+const { sendNotification } = require('../../../services/fcm-service');
 
 // Base currency for dashboard (always USD)
 const BASE_CURRENCY = 'USD';
@@ -250,6 +251,25 @@ exports.createOrder = async (req, res) => {
     await order.populate('items.product', 'name pricePerUnit images');
     await order.populate('shippingAddress', 'addressLine1 addressLine2 city state postalCode country');
 
+    // Send notification to customer
+    try {
+      const orderNumber = `ORD-${order._id.toString().slice(-8).toUpperCase()}`;
+      await sendNotification(
+        order.customer._id.toString() || order.customer.toString(),
+        'Order Confirmed',
+        `Your order ${orderNumber} has been confirmed`,
+        {
+          type: 'order',
+          url: `/orders/${order._id}`,
+          orderId: order._id.toString(),
+          status: 'confirmed'
+        }
+      );
+    } catch (notificationError) {
+      console.error('Failed to send order confirmation notification:', notificationError);
+      // Don't fail the request if notification fails
+    }
+
     // Format the order response
     const formattedOrder = {
       id: order._id,
@@ -407,6 +427,9 @@ exports.updateOrder = async (req, res) => {
     }
     if (paymentMethod) updateFields.paymentMethod = paymentMethod;
     if (notes) updateFields.notes = notes;
+    
+    // Track if status changed for notification
+    const oldStatus = existingOrder.status;
     if (status) updateFields.status = status;
 
     const order = await Order.findByIdAndUpdate(
@@ -417,6 +440,37 @@ exports.updateOrder = async (req, res) => {
       .populate('customer', 'firstname lastname email phone imageUrl')
       .populate('items.product', 'name pricePerUnit images')
       .populate('shippingAddress', 'addressLine1 addressLine2 city state postalCode country');
+
+    // Send notification if status changed
+    if (status && status !== oldStatus) {
+      try {
+        const orderNumber = `ORD-${order._id.toString().slice(-8).toUpperCase()}`;
+        const statusMessages = {
+          'confirmed': { title: 'Order Confirmed', message: `Your order ${orderNumber} has been confirmed` },
+          'shipped': { title: 'Order Shipped', message: `Your order ${orderNumber} has been shipped` },
+          'delivered': { title: 'Order Delivered', message: `Your order ${orderNumber} has been delivered` },
+          'cancelled': { title: 'Order Cancelled', message: `Your order ${orderNumber} has been cancelled` }
+        };
+        
+        const notification = statusMessages[status];
+        if (notification) {
+          await sendNotification(
+            order.customer._id.toString() || order.customer.toString(),
+            notification.title,
+            notification.message,
+            {
+              type: 'order',
+              url: `/orders/${order._id}`,
+              orderId: order._id.toString(),
+              status: status
+            }
+          );
+        }
+      } catch (notificationError) {
+        console.error('Failed to send order status notification:', notificationError);
+        // Don't fail the request if notification fails
+      }
+    }
 
     // Format the order response
     const formattedOrder = {

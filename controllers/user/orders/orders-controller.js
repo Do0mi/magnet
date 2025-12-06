@@ -6,6 +6,7 @@ const Address = require('../../../models/address-model');
 const { getBilingualMessage } = require('../../../utils/messages');
 const { createResponse, formatProduct } = require('../../../utils/response-formatters');
 const { convertCurrency, BASE_CURRENCY } = require('../../../services/currency-service');
+const { sendNotification } = require('../../../services/fcm-service');
 
 // Helper function to validate customer or business permissions
 const validateCustomerPermissions = (req, res) => {
@@ -228,6 +229,25 @@ exports.createOrder = async (req, res) => {
 
     // Format the order response with currency conversion
     const formattedOrder = await formatOrderWithCurrency(order, userCurrency);
+
+    // Send notification to customer
+    try {
+      const orderNumber = `ORD-${order._id.toString().slice(-8).toUpperCase()}`;
+      await sendNotification(
+        order.customer._id.toString() || order.customer.toString(),
+        'Order Placed',
+        `Your order ${orderNumber} has been placed and is pending confirmation`,
+        {
+          type: 'order',
+          url: `/orders/${order._id}`,
+          orderId: order._id.toString(),
+          status: 'pending'
+        }
+      );
+    } catch (notificationError) {
+      console.error('Failed to send order notification:', notificationError);
+      // Don't fail the request if notification fails
+    }
 
     res.status(201).json(createResponse('success', {
       order: formattedOrder,
@@ -564,6 +584,25 @@ exports.cancelOrder = async (req, res) => {
 
     // Format the order response with currency conversion
     const formattedOrder = await formatOrderWithCurrency(updatedOrder, userCurrency);
+
+    // Send notification to customer
+    try {
+      const orderNumber = `ORD-${updatedOrder._id.toString().slice(-8).toUpperCase()}`;
+      await sendNotification(
+        updatedOrder.customer._id.toString() || updatedOrder.customer.toString(),
+        'Order Cancelled',
+        `Your order ${orderNumber} has been cancelled`,
+        {
+          type: 'order',
+          url: `/orders/${updatedOrder._id}`,
+          orderId: updatedOrder._id.toString(),
+          status: 'cancelled'
+        }
+      );
+    } catch (notificationError) {
+      console.error('Failed to send cancellation notification:', notificationError);
+      // Don't fail the request if notification fails
+    }
 
     res.status(200).json(createResponse('success', {
       order: formattedOrder,

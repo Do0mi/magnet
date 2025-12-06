@@ -3,6 +3,7 @@ const User = require('../../../models/user-model');
 const bcrypt = require('bcryptjs');
 const { getBilingualMessage } = require('../../../utils/messages');
 const { formatUser, createResponse } = require('../../../utils/response-formatters');
+const { sendNotification } = require('../../../services/fcm-service');
 
 // Helper function to validate admin or magnet employee permissions
 const validateAdminOrEmployeePermissions = (req, res) => {
@@ -410,6 +411,8 @@ exports.updateUser = async (req, res) => {
     if (isPhoneVerified !== undefined) updateFields.isPhoneVerified = isPhoneVerified;
 
     // Handle business info updates
+    // Track old approval status for notifications
+    const oldApprovalStatus = currentUser.businessInfo?.approvalStatus;
     if (currentUser.role === 'business' || role === 'business') {
       const businessInfoUpdate = {};
       
@@ -497,6 +500,40 @@ exports.updateUser = async (req, res) => {
     await user.populate('businessInfo.approvedBy', 'firstname lastname email role');
     await user.populate('businessInfo.rejectedBy', 'firstname lastname email role');
     await user.populate('disallowedBy', 'firstname lastname email role');
+
+    // Send notification if business approval status changed
+    if (user.role === 'business' && approvalStatus !== undefined && approvalStatus !== oldApprovalStatus) {
+      try {
+        const companyName = user.businessInfo?.companyName || 'Your Business';
+        if (approvalStatus === 'approved') {
+          await sendNotification(
+            user._id.toString(),
+            'Business Approved',
+            `Your business "${companyName}" has been approved. You can now access all features.`,
+            {
+              type: 'system',
+              url: '/profile',
+              businessId: user._id.toString()
+            }
+          );
+        } else if (approvalStatus === 'rejected') {
+          const rejectionReason = user.businessInfo?.rejectionReason || '';
+          await sendNotification(
+            user._id.toString(),
+            'Business Rejected',
+            `Your business "${companyName}" has been rejected${rejectionReason ? `: ${rejectionReason}` : ''}`,
+            {
+              type: 'system',
+              url: '/profile',
+              businessId: user._id.toString()
+            }
+          );
+        }
+      } catch (notificationError) {
+        console.error('Failed to send business status notification:', notificationError);
+        // Don't fail the request if notification fails
+      }
+    }
 
     res.status(200).json(createResponse('success', {
       user: formatUser(user, { includeBusinessInfo: true })
@@ -637,7 +674,7 @@ exports.approveBusinessUser = async (req, res) => {
     await updatedBusiness.populate('businessInfo.approvedBy', 'firstname lastname email role');
     await updatedBusiness.populate('businessInfo.rejectedBy', 'firstname lastname email role');
 
-    // Send approval notification email
+    // Send approval notification email and push notification
     try {
       const { sendBusinessApprovalNotification } = require('../../../utils/email-utils');
       await sendBusinessApprovalNotification(
@@ -646,9 +683,22 @@ exports.approveBusinessUser = async (req, res) => {
         'approved',
         null
       );
-    } catch (emailError) {
-      console.error('Email notification error:', emailError);
-      // Don't fail the request if email fails
+      
+      // Send push notification
+      const companyName = updatedBusiness.businessInfo?.companyName || 'Your Business';
+      await sendNotification(
+        updatedBusiness._id.toString(),
+        'Business Approved',
+        `Your business "${companyName}" has been approved. You can now access all features.`,
+        {
+          type: 'system',
+          url: '/profile',
+          businessId: updatedBusiness._id.toString()
+        }
+      );
+    } catch (error) {
+      console.error('Notification error:', error);
+      // Don't fail the request if notification fails
     }
 
     res.status(200).json(createResponse('success', {
@@ -731,7 +781,7 @@ exports.declineBusinessUser = async (req, res) => {
     await updatedBusiness.populate('businessInfo.approvedBy', 'firstname lastname email role');
     await updatedBusiness.populate('businessInfo.rejectedBy', 'firstname lastname email role');
 
-    // Send rejection notification email
+    // Send rejection notification email and push notification
     try {
       const { sendBusinessApprovalNotification } = require('../../../utils/email-utils');
       await sendBusinessApprovalNotification(
@@ -740,9 +790,22 @@ exports.declineBusinessUser = async (req, res) => {
         'rejected',
         rejectionReason
       );
-    } catch (emailError) {
-      console.error('Email notification error:', emailError);
-      // Don't fail the request if email fails
+      
+      // Send push notification
+      const companyName = updatedBusiness.businessInfo?.companyName || 'Your Business';
+      await sendNotification(
+        updatedBusiness._id.toString(),
+        'Business Rejected',
+        `Your business "${companyName}" has been rejected${rejectionReason ? `: ${rejectionReason}` : ''}`,
+        {
+          type: 'system',
+          url: '/profile',
+          businessId: updatedBusiness._id.toString()
+        }
+      );
+    } catch (error) {
+      console.error('Notification error:', error);
+      // Don't fail the request if notification fails
     }
 
     res.status(200).json(createResponse('success', {
