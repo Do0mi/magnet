@@ -13,6 +13,7 @@ const cartRoutes = require('./cart/cart-routes');
 const categoriesRoutes = require('./categories/categories-routes');
 const applicantsRoutes = require('./applicants/applicants-routes');
 const specialOrdersRoutes = require('./special-orders/special-orders-routes');
+const notificationsRoutes = require('./notifications/notifications-routes');
 
 // Mount all user sub-routes
 router.use('/auth', authRoutes);
@@ -26,5 +27,6 @@ router.use('/cart', cartRoutes);
 router.use('/categories', categoriesRoutes);
 router.use('/applicants', applicantsRoutes);
 router.use('/special-orders', specialOrdersRoutes);
+router.use('/notifications', notificationsRoutes);
 
 module.exports = router;
