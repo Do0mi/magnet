@@ -259,10 +259,10 @@ exports.createOrder = async (req, res) => {
         'Order Confirmed',
         `Your order ${orderNumber} has been confirmed`,
         {
-          type: 'order',
+          type: 'order_confirmed',
           url: `/orders/${order._id}`,
           orderId: order._id.toString(),
-          status: 'confirmed'
+          orderNumber: orderNumber
         }
       );
     } catch (notificationError) {
@@ -446,10 +446,26 @@ exports.updateOrder = async (req, res) => {
       try {
         const orderNumber = `ORD-${order._id.toString().slice(-8).toUpperCase()}`;
         const statusMessages = {
-          'confirmed': { title: 'Order Confirmed', message: `Your order ${orderNumber} has been confirmed` },
-          'shipped': { title: 'Order Shipped', message: `Your order ${orderNumber} has been shipped` },
-          'delivered': { title: 'Order Delivered', message: `Your order ${orderNumber} has been delivered` },
-          'cancelled': { title: 'Order Cancelled', message: `Your order ${orderNumber} has been cancelled` }
+          'confirmed': { 
+            title: 'Order Confirmed', 
+            message: `Your order ${orderNumber} has been confirmed`,
+            type: 'order_confirmed'
+          },
+          'shipped': { 
+            title: 'Order Shipped', 
+            message: `Your order ${orderNumber} has been shipped`,
+            type: 'order_shipped'
+          },
+          'delivered': { 
+            title: 'Order Delivered', 
+            message: `Your order ${orderNumber} has been delivered`,
+            type: 'order_delivered'
+          },
+          'cancelled': { 
+            title: 'Order Cancelled', 
+            message: `Your order ${orderNumber} has been cancelled`,
+            type: 'order_cancelled'
+          }
         };
         
         const notification = statusMessages[status];
@@ -459,10 +475,10 @@ exports.updateOrder = async (req, res) => {
             notification.title,
             notification.message,
             {
-              type: 'order',
+              type: notification.type,
               url: `/orders/${order._id}`,
               orderId: order._id.toString(),
-              status: status
+              orderNumber: orderNumber
             }
           );
         }

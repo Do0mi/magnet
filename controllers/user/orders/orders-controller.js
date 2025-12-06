@@ -241,7 +241,7 @@ exports.createOrder = async (req, res) => {
           type: 'order',
           url: `/orders/${order._id}`,
           orderId: order._id.toString(),
-          status: 'pending'
+          orderNumber: orderNumber
         }
       );
     } catch (notificationError) {
@@ -593,10 +593,10 @@ exports.cancelOrder = async (req, res) => {
         'Order Cancelled',
         `Your order ${orderNumber} has been cancelled`,
         {
-          type: 'order',
+          type: 'order_cancelled',
           url: `/orders/${updatedOrder._id}`,
           orderId: updatedOrder._id.toString(),
-          status: 'cancelled'
+          orderNumber: orderNumber
         }
       );
     } catch (notificationError) {

@@ -511,9 +511,8 @@ exports.updateUser = async (req, res) => {
             'Business Approved',
             `Your business "${companyName}" has been approved. You can now access all features.`,
             {
-              type: 'system',
-              url: '/profile',
-              businessId: user._id.toString()
+              type: 'profile_update',
+              url: '/profile'
             }
           );
         } else if (approvalStatus === 'rejected') {
@@ -523,9 +522,8 @@ exports.updateUser = async (req, res) => {
             'Business Rejected',
             `Your business "${companyName}" has been rejected${rejectionReason ? `: ${rejectionReason}` : ''}`,
             {
-              type: 'system',
-              url: '/profile',
-              businessId: user._id.toString()
+              type: 'profile_update',
+              url: '/profile'
             }
           );
         }
@@ -691,9 +689,8 @@ exports.approveBusinessUser = async (req, res) => {
         'Business Approved',
         `Your business "${companyName}" has been approved. You can now access all features.`,
         {
-          type: 'system',
-          url: '/profile',
-          businessId: updatedBusiness._id.toString()
+          type: 'profile_update',
+          url: '/profile'
         }
       );
     } catch (error) {
@@ -798,9 +795,8 @@ exports.declineBusinessUser = async (req, res) => {
         'Business Rejected',
         `Your business "${companyName}" has been rejected${rejectionReason ? `: ${rejectionReason}` : ''}`,
         {
-          type: 'system',
-          url: '/profile',
-          businessId: updatedBusiness._id.toString()
+          type: 'profile_update',
+          url: '/profile'
         }
       );
     } catch (error) {
