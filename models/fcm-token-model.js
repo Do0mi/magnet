@@ -6,8 +6,7 @@ const fcmTokenSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true,
-    unique: true,
-    index: true
+    unique: true
   },
   token: {
     type: String,
@@ -30,7 +29,7 @@ const fcmTokenSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Ensure unique index on userId (one token per user)
-fcmTokenSchema.index({ userId: 1 }, { unique: true });
+// Note: unique: true on userId field already creates a unique index
+// No need for additional schema.index() call
 
 module.exports = mongoose.model('FCMToken', fcmTokenSchema);
