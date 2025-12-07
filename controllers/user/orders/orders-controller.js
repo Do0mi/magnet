@@ -239,7 +239,7 @@ exports.createOrder = async (req, res) => {
         `Your order ${orderNumber} has been placed and is pending confirmation`,
         {
           type: 'order',
-          url: `/orders/${order._id}`,
+          url: `/orders?orderId=${order._id}`,
           orderId: order._id.toString(),
           orderNumber: orderNumber
         }
@@ -594,7 +594,7 @@ exports.cancelOrder = async (req, res) => {
         `Your order ${orderNumber} has been cancelled`,
         {
           type: 'order_cancelled',
-          url: `/orders/${updatedOrder._id}`,
+          url: `/orders?orderId=${updatedOrder._id}`,
           orderId: updatedOrder._id.toString(),
           orderNumber: orderNumber
         }

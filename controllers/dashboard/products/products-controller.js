@@ -472,7 +472,7 @@ exports.updateProduct = async (req, res) => {
     await attachReviewCountsToProducts([product]);
     const formattedProduct = formatProduct(product);
 
-    // Send email notification if status changed
+    // Send email and push notification if status changed
     if (status && status !== oldStatus) {
       try {
         const owner = await User.findById(product.owner).select('email firstname lastname');
@@ -483,7 +483,7 @@ exports.updateProduct = async (req, res) => {
           const actionBy = `${actionUser.firstname} ${actionUser.lastname}`;
           
           if (status === 'approved' && oldStatus !== 'approved') {
-            // Status changed to approved
+            // Status changed to approved - send email notification
             await sendProductApprovalNotification(
               owner.email,
               `${owner.firstname} ${owner.lastname}`,
@@ -491,21 +491,46 @@ exports.updateProduct = async (req, res) => {
               actionBy,
               new Date()
             );
+            
+            // Send push notification
+            await sendNotification(
+              product.owner._id.toString() || product.owner.toString(),
+              'Product Approved',
+              `Your product "${productName}" has been approved and is now live`,
+              {
+                type: 'product',
+                url: `/products?productId=${product._id}`,
+                productId: product._id.toString()
+              }
+            );
           } else if (status === 'declined' && oldStatus !== 'declined') {
-            // Status changed to declined
+            // Status changed to declined - send email notification
+            const reason = declinedReason || product.declinedReason || 'No reason provided';
             await sendProductDeclineNotification(
               owner.email,
               `${owner.firstname} ${owner.lastname}`,
               productName,
               actionBy,
               new Date(),
-              declinedReason || product.declinedReason || 'No reason provided'
+              reason
+            );
+            
+            // Send push notification
+            await sendNotification(
+              product.owner._id.toString() || product.owner.toString(),
+              'Product Declined',
+              `Your product "${productName}" has been declined${reason ? `: ${reason}` : ''}`,
+              {
+                type: 'product',
+                url: `/products?productId=${product._id}`,
+                productId: product._id.toString()
+              }
             );
           }
         }
-      } catch (emailError) {
-        console.error('Failed to send status change email:', emailError);
-        // Don't fail the request if email fails
+      } catch (error) {
+        console.error('Failed to send status change notification:', error);
+        // Don't fail the request if notification fails
       }
     }
 
@@ -602,7 +627,7 @@ exports.approveProduct = async (req, res) => {
           `Your product "${productName}" has been approved and is now live`,
           {
             type: 'product',
-            url: `/products/${product._id}`,
+            url: `/products?productId=${product._id}`,
             productId: product._id.toString()
           }
         );
@@ -676,17 +701,17 @@ exports.declineProduct = async (req, res) => {
           reason
         );
         
-        // Send push notification
-        await sendNotification(
-          product.owner._id.toString() || product.owner.toString(),
-          'Product Declined',
-          `Your product "${productName}" has been declined${reason ? `: ${reason}` : ''}`,
-          {
-            type: 'product',
-            url: `/products/${product._id}`,
-            productId: product._id.toString()
-          }
-        );
+            // Send push notification
+            await sendNotification(
+              product.owner._id.toString() || product.owner.toString(),
+              'Product Declined',
+              `Your product "${productName}" has been declined${reason ? `: ${reason}` : ''}`,
+              {
+                type: 'product',
+                url: `/products?productId=${product._id}`,
+                productId: product._id.toString()
+              }
+            );
       }
     } catch (error) {
       console.error('Failed to send decline notification:', error);

@@ -5,6 +5,7 @@ const User = require('../../../models/user-model');
 const { SPECIAL_ORDER_STATUS } = require('../../../models/special-order-model');
 const { getBilingualMessage } = require('../../../utils/messages');
 const { createResponse, formatProduct, formatUser } = require('../../../utils/response-formatters');
+const { sendNotification } = require('../../../services/fcm-service');
 
 // Helper function to validate admin or magnet employee permissions
 const validateAdminOrEmployeePermissions = (req, res) => {
@@ -249,6 +250,23 @@ exports.createSpecialOrder = async (req, res) => {
 
     const formattedOrder = formatSpecialOrder(specialOrder);
 
+    // Send notification to user
+    try {
+      await sendNotification(
+        specialOrder.userId._id.toString() || specialOrder.userId.toString(),
+        'Special Order Created',
+        'A special order has been created for you. We will contact you soon.',
+        {
+          type: 'special_order',
+          url: `/special-orders?specialOrderId=${specialOrder._id}`,
+          specialOrderId: specialOrder._id.toString()
+        }
+      );
+    } catch (notificationError) {
+      console.error('Failed to send special order creation notification:', notificationError);
+      // Don't fail the request if notification fails
+    }
+
     res.status(201).json(createResponse('success', {
       specialOrder: formattedOrder
     }, {
@@ -288,6 +306,9 @@ exports.updateSpecialOrder = async (req, res) => {
     if (needs !== undefined) specialOrder.needs = needs.trim();
     if (reason !== undefined) specialOrder.reason = reason.trim();
     if (notes !== undefined) specialOrder.notes = notes ? notes.trim() : null;
+    
+    // Track old status for notification
+    const oldStatus = specialOrder.status;
     
     // Handle status update
     if (status !== undefined) {
@@ -331,6 +352,56 @@ exports.updateSpecialOrder = async (req, res) => {
       path: 'reviewedBy',
       select: 'firstname lastname email role'
     });
+
+    // Send notification if status changed
+    if (status !== undefined && status !== oldStatus) {
+      try {
+        const statusMessages = {
+          'pending': { 
+            title: 'Special Order Pending', 
+            message: 'Your special order is pending review',
+            type: 'special_order'
+          },
+          'reviewed': { 
+            title: 'Special Order Reviewed', 
+            message: 'Your special order has been reviewed',
+            type: 'special_order_reviewed'
+          },
+          'contacted': { 
+            title: 'Special Order Contacted', 
+            message: 'We have contacted you regarding your special order',
+            type: 'special_order_contacted'
+          },
+          'completed': { 
+            title: 'Special Order Completed', 
+            message: 'Your special order has been completed',
+            type: 'special_order_completed'
+          },
+          'cancelled': { 
+            title: 'Special Order Cancelled', 
+            message: 'Your special order has been cancelled',
+            type: 'special_order_cancelled'
+          }
+        };
+        
+        const notification = statusMessages[status];
+        if (notification) {
+          await sendNotification(
+            specialOrder.userId._id.toString() || specialOrder.userId.toString(),
+            notification.title,
+            notification.message,
+            {
+              type: notification.type,
+              url: `/special-orders?specialOrderId=${specialOrder._id}`,
+              specialOrderId: specialOrder._id.toString()
+            }
+          );
+        }
+      } catch (notificationError) {
+        console.error('Failed to send special order status notification:', notificationError);
+        // Don't fail the request if notification fails
+      }
+    }
 
     const formattedOrder = formatSpecialOrder(specialOrder);
 

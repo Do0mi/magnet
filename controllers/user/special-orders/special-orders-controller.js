@@ -1,6 +1,7 @@
 // User Special Orders Controller - User Special Order Management
 const SpecialOrder = require('../../../models/special-order-model');
 const { SPECIAL_ORDER_STATUS } = require('../../../models/special-order-model');
+const { sendNotification } = require('../../../services/fcm-service');
 const Product = require('../../../models/product-model');
 const { getBilingualMessage } = require('../../../utils/messages');
 const { createResponse, formatProduct } = require('../../../utils/response-formatters');
@@ -287,6 +288,23 @@ exports.createSpecialOrder = async (req, res) => {
     // Format special order with currency conversion
     const formattedOrder = await formatSpecialOrderWithCurrency(specialOrder, userCurrency);
 
+    // Send notification to user
+    try {
+      await sendNotification(
+        specialOrder.userId.toString(),
+        'Special Order Created',
+        'Your special order has been created. We will contact you soon.',
+        {
+          type: 'special_order',
+          url: `/special-orders?specialOrderId=${specialOrder._id}`,
+          specialOrderId: specialOrder._id.toString()
+        }
+      );
+    } catch (notificationError) {
+      console.error('Failed to send special order creation notification:', notificationError);
+      // Don't fail the request if notification fails
+    }
+
     res.status(201).json(createResponse('success', {
       specialOrder: formattedOrder,
       currency: userCurrency
@@ -362,6 +380,23 @@ exports.cancelSpecialOrder = async (req, res) => {
 
     // Format special order with currency conversion
     const formattedOrder = await formatSpecialOrderWithCurrency(specialOrder, userCurrency);
+
+    // Send notification to user
+    try {
+      await sendNotification(
+        specialOrder.userId.toString(),
+        'Special Order Cancelled',
+        'Your special order has been cancelled',
+        {
+          type: 'special_order_cancelled',
+          url: `/special-orders?specialOrderId=${specialOrder._id}`,
+          specialOrderId: specialOrder._id.toString()
+        }
+      );
+    } catch (notificationError) {
+      console.error('Failed to send special order cancellation notification:', notificationError);
+      // Don't fail the request if notification fails
+    }
 
     res.status(200).json(createResponse('success', {
       specialOrder: formattedOrder,

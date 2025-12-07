@@ -4,6 +4,53 @@ const FCMToken = require('../../../models/fcm-token-model');
 const { getBilingualMessage } = require('../../../utils/messages');
 
 /**
+ * Transform notification data URL from old format (path params) to new format (query params)
+ * Converts: /orders/123 -> /orders?orderId=123
+ *          /products/456 -> /products?productId=456
+ *          /special-orders/789 -> /special-orders?specialOrderId=789
+ */
+function transformNotificationData(data) {
+  if (!data || !data.url) {
+    return data || {};
+  }
+
+  const transformedData = { ...data };
+  const url = data.url;
+
+  // Transform orders URLs: /orders/123 -> /orders?orderId=123
+  const ordersMatch = url.match(/^\/orders\/([^\/\?]+)$/);
+  if (ordersMatch) {
+    const orderId = data.orderId || ordersMatch[1];
+    transformedData.url = `/orders?orderId=${orderId}`;
+    if (!transformedData.orderId) {
+      transformedData.orderId = orderId;
+    }
+  }
+
+  // Transform products URLs: /products/123 -> /products?productId=123
+  const productsMatch = url.match(/^\/products\/([^\/\?]+)$/);
+  if (productsMatch) {
+    const productId = data.productId || productsMatch[1];
+    transformedData.url = `/products?productId=${productId}`;
+    if (!transformedData.productId) {
+      transformedData.productId = productId;
+    }
+  }
+
+  // Transform special-orders URLs: /special-orders/123 -> /special-orders?specialOrderId=123
+  const specialOrdersMatch = url.match(/^\/special-orders\/([^\/\?]+)$/);
+  if (specialOrdersMatch) {
+    const specialOrderId = data.specialOrderId || specialOrdersMatch[1];
+    transformedData.url = `/special-orders?specialOrderId=${specialOrderId}`;
+    if (!transformedData.specialOrderId) {
+      transformedData.specialOrderId = specialOrderId;
+    }
+  }
+
+  return transformedData;
+}
+
+/**
  * POST /api/v1/user/notifications/token
  * Register or update FCM token for authenticated user
  */
@@ -129,7 +176,7 @@ exports.getNotifications = async (req, res) => {
       message: notif.message,
       read: notif.read,
       createdAt: notif.createdAt.toISOString(),
-      data: notif.data || {}
+      data: transformNotificationData(notif.data || {})
     }));
 
     const totalPages = Math.ceil(total / limit);
@@ -199,7 +246,7 @@ exports.markAsRead = async (req, res) => {
           message: notification.message,
           read: notification.read,
           createdAt: notification.createdAt.toISOString(),
-          data: notification.data || {}
+          data: transformNotificationData(notification.data || {})
         }
       }
     });

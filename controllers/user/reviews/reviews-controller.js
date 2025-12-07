@@ -234,7 +234,11 @@ exports.getProductReviews = async (req, res) => {
       });
     }
 
-    const reviews = await Review.find({ product: productId })
+    // Only get accepted reviews
+    const reviews = await Review.find({ 
+      product: productId,
+      status: 'accept'
+    })
       .populate('user', 'firstname lastname email role')
       .populate('rejectedBy', 'firstname lastname email role')
       .populate({
@@ -255,7 +259,11 @@ exports.getProductReviews = async (req, res) => {
       .skip(skip)
       .limit(parseInt(limit));
     
-    const total = await Review.countDocuments({ product: productId });
+    // Count only accepted reviews
+    const total = await Review.countDocuments({ 
+      product: productId,
+      status: 'accept'
+    });
     
     // Get user currency from middleware (defaults to USD if not set)
     const userCurrency = req.userCurrency || BASE_CURRENCY;

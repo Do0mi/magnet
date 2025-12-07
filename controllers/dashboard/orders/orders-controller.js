@@ -260,7 +260,7 @@ exports.createOrder = async (req, res) => {
         `Your order ${orderNumber} has been confirmed`,
         {
           type: 'order_confirmed',
-          url: `/orders/${order._id}`,
+          url: `/orders?orderId=${order._id}`,
           orderId: order._id.toString(),
           orderNumber: orderNumber
         }
@@ -476,7 +476,7 @@ exports.updateOrder = async (req, res) => {
             notification.message,
             {
               type: notification.type,
-              url: `/orders/${order._id}`,
+              url: `/orders?orderId=${order._id}`,
               orderId: order._id.toString(),
               orderNumber: orderNumber
             }
