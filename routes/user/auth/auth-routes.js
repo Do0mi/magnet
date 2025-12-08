@@ -7,7 +7,6 @@ const {
   validateRegister, 
   validateBusinessRegister, 
   validateSendEmailOTP, 
-  validateSendPhoneOTP, 
   validateConfirmOTP, 
   validateLogin, 
   validateLoginWithOTP, 
@@ -25,9 +24,6 @@ router.post('/login', validateLogin, AuthController.login);
 
 // POST /api/v1/user/auth/send-email-otp - Send Email OTP
 router.post('/send-email-otp', validateSendEmailOTP, AuthController.sendEmailOTP);
-
-// POST /api/v1/user/auth/send-phone-otp - Send Phone OTP
-router.post('/send-phone-otp', validateSendPhoneOTP, AuthController.sendPhoneOTP);
 
 // POST /api/v1/user/auth/confirm-otp - Confirm OTP
 router.post('/confirm-otp', validateConfirmOTP, AuthController.confirmOTP);

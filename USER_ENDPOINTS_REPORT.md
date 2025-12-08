@@ -301,45 +301,7 @@ Sends OTP code to email address for verification during registration.
 
 ---
 
-### 5. Send Phone OTP
-**POST** `/api/v1/user/auth/send-phone-otp`
-
-**Description / الوصف:**  
-Sends OTP code to phone number for verification during registration.
-
-**Authentication:** Not required
-
-**Request Body / جسم الطلب:**
-```json
-{
-  "phone": "+966501234567"
-}
-```
-
-**Required Fields / الحقول المطلوبة:**
-- `phone` - Phone number to verify
-
-**Validation Rules / قواعد التحقق:**
-- Phone must not already exist in system
-- OTP expires in 10 minutes
-
-**Response / الاستجابة:**
-```json
-{
-  "status": "success",
-  "message": {
-    "en": "OTP sent to phone successfully",
-    "ar": "تم إرسال رمز التحقق إلى الهاتف بنجاح"
-  }
-}
-```
-
-**Controller Function:** `AuthController.sendPhoneOTP`  
-**File Location:** `controllers/user/auth/auth-controller.js` (lines 160-179)
-
----
-
-### 6. Confirm OTP
+### 5. Confirm OTP
 **POST** `/api/v1/user/auth/confirm-otp`
 
 **Description / الوصف:**  
@@ -356,12 +318,13 @@ Verifies OTP code sent during registration.
 ```
 
 **Required Fields / الحقول المطلوبة:**
-- `identifier` - Email or phone used to send OTP
+- `identifier` - Email used to send OTP
 - `otp` - OTP code received
 
 **Validation Rules / قواعد التحقق:**
 - OTP must match the sent code
 - OTP must not be expired (10 minutes)
+- Only email OTP is supported
 
 **Response / الاستجابة:**
 ```json
@@ -379,11 +342,11 @@ Verifies OTP code sent during registration.
 
 ---
 
-### 7. Login with OTP
+### 6. Login with OTP
 **POST** `/api/v1/user/auth/login-with-otp`
 
 **Description / الوصف:**  
-Initiates OTP-based login. Sends OTP to user's email or phone.
+Initiates OTP-based login. Sends OTP to user's email (email only).
 
 **Authentication:** Not required
 
@@ -395,12 +358,12 @@ Initiates OTP-based login. Sends OTP to user's email or phone.
 ```
 
 **Required Fields / الحقول المطلوبة:**
-- `identifier` - Email or phone number
+- `identifier` - Email address (email only, phone not supported)
 
 **Validation Rules / قواعد التحقق:**
 - User must exist
 - User must be allowed and can login
-- Phone login is Saudi-only
+- Only email is supported for OTP login
 - OTP expires in 10 minutes
 
 **Response / الاستجابة:**
@@ -419,11 +382,11 @@ Initiates OTP-based login. Sends OTP to user's email or phone.
 
 ---
 
-### 8. Confirm Login OTP
+### 7. Confirm Login OTP
 **POST** `/api/v1/user/auth/confirm-login-otp`
 
 **Description / الوصف:**  
-Verifies OTP code and completes login. Returns JWT token.
+Verifies OTP code and completes login. Returns JWT token (email only).
 
 **Authentication:** Not required
 
@@ -436,13 +399,13 @@ Verifies OTP code and completes login. Returns JWT token.
 ```
 
 **Required Fields / الحقول المطلوبة:**
-- `identifier` - Email or phone used to send OTP
+- `identifier` - Email address used to send OTP (email only, phone not supported)
 - `otp` - OTP code received
 
 **Validation Rules / قواعد التحقق:**
 - User must exist
 - OTP must match and not be expired
-- Verifies email/phone based on identifier type
+- Only email OTP is supported
 
 **Response / الاستجابة:**
 ```json
@@ -1607,7 +1570,7 @@ Returns all active categories with bilingual names and descriptions, ordered alp
    - Email/phone login
    - OTP-based login
    - Password change
-   - Email/phone verification
+   - Email verification
 
 2. **Profile Management / إدارة الملف الشخصي:**
    - View and update profile
@@ -1652,7 +1615,7 @@ Returns all active categories with bilingual names and descriptions, ordered alp
 - Role-based access control
 - Input validation
 - Ownership validation (orders, addresses, reviews)
-- OTP verification for email/phone
+- OTP verification for email only
 - Duplicate prevention
 
 ### Email Notifications / إشعارات البريد الإلكتروني

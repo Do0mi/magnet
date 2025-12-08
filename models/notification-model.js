@@ -9,14 +9,12 @@ const notificationSchema = new mongoose.Schema({
     index: true
   },
   title: {
-    type: String,
-    required: true,
-    trim: true
+    type: mongoose.Schema.Types.Mixed,
+    required: true
   },
   message: {
-    type: String,
-    required: true,
-    trim: true
+    type: mongoose.Schema.Types.Mixed,
+    required: true
   },
   read: {
     type: Boolean,

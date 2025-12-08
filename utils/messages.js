@@ -81,6 +81,10 @@ const messages = {
     en: 'OTP confirmation failed',
     ar: 'فشل في تأكيد رمز التحقق'
   },
+  'email_required_for_otp_login': {
+    en: 'Email is required for OTP login',
+    ar: 'البريد الإلكتروني مطلوب لتسجيل الدخول برمز التحقق'
+  },
   'phone_login_saudi_only': {
     en: 'Phone login is only allowed for Saudi numbers',
     ar: 'تسجيل الدخول بالهاتف مسموح فقط للأرقام السعودية'
@@ -1562,6 +1566,120 @@ const messages = {
   'failed_get_analytics': {
     en: 'Failed to get analytics',
     ar: 'فشل في الحصول على التحليلات'
+  },
+
+  // Notification messages
+  'notification_order_placed': {
+    en: 'Order Placed',
+    ar: 'تم إنشاء الطلب'
+  },
+  'notification_order_placed_message': {
+    en: 'Your order {orderNumber} has been placed and is pending confirmation',
+    ar: 'تم إنشاء طلبك {orderNumber} وهو في انتظار التأكيد'
+  },
+  'notification_order_confirmed': {
+    en: 'Order Confirmed',
+    ar: 'تم تأكيد الطلب'
+  },
+  'notification_order_confirmed_message': {
+    en: 'Your order {orderNumber} has been confirmed',
+    ar: 'تم تأكيد طلبك {orderNumber}'
+  },
+  'notification_order_shipped': {
+    en: 'Order Shipped',
+    ar: 'تم شحن الطلب'
+  },
+  'notification_order_shipped_message': {
+    en: 'Your order {orderNumber} has been shipped',
+    ar: 'تم شحن طلبك {orderNumber}'
+  },
+  'notification_order_delivered': {
+    en: 'Order Delivered',
+    ar: 'تم تسليم الطلب'
+  },
+  'notification_order_delivered_message': {
+    en: 'Your order {orderNumber} has been delivered',
+    ar: 'تم تسليم طلبك {orderNumber}'
+  },
+  'notification_order_cancelled': {
+    en: 'Order Cancelled',
+    ar: 'تم إلغاء الطلب'
+  },
+  'notification_order_cancelled_message': {
+    en: 'Your order {orderNumber} has been cancelled',
+    ar: 'تم إلغاء طلبك {orderNumber}'
+  },
+  'notification_product_approved': {
+    en: 'Product Approved',
+    ar: 'تم الموافقة على المنتج'
+  },
+  'notification_product_approved_message': {
+    en: 'Your product "{productName}" has been approved and is now live',
+    ar: 'تم الموافقة على منتجك "{productName}" وهو متاح الآن'
+  },
+  'notification_product_declined': {
+    en: 'Product Declined',
+    ar: 'تم رفض المنتج'
+  },
+  'notification_product_declined_message': {
+    en: 'Your product "{productName}" has been declined{reason}',
+    ar: 'تم رفض منتجك "{productName}"{reason}'
+  },
+  'notification_business_approved': {
+    en: 'Business Approved',
+    ar: 'تم الموافقة على العمل'
+  },
+  'notification_business_approved_message': {
+    en: 'Your business account has been approved',
+    ar: 'تم الموافقة على حساب عملك'
+  },
+  'notification_business_rejected': {
+    en: 'Business Rejected',
+    ar: 'تم رفض العمل'
+  },
+  'notification_business_rejected_message': {
+    en: 'Your business account has been rejected{reason}',
+    ar: 'تم رفض حساب عملك{reason}'
+  },
+  'notification_special_order_created': {
+    en: 'Special Order Created',
+    ar: 'تم إنشاء الطلب الخاص'
+  },
+  'notification_special_order_created_message': {
+    en: 'Your special order has been created. We will contact you soon.',
+    ar: 'تم إنشاء طلبك الخاص. سنتواصل معك قريبًا.'
+  },
+  'notification_special_order_reviewed': {
+    en: 'Special Order Reviewed',
+    ar: 'تمت مراجعة الطلب الخاص'
+  },
+  'notification_special_order_reviewed_message': {
+    en: 'Your special order has been reviewed',
+    ar: 'تمت مراجعة طلبك الخاص'
+  },
+  'notification_special_order_contacted': {
+    en: 'Special Order Contacted',
+    ar: 'تم التواصل بخصوص الطلب الخاص'
+  },
+  'notification_special_order_contacted_message': {
+    en: 'We have contacted you regarding your special order',
+    ar: 'لقد تواصلنا معك بخصوص طلبك الخاص'
+  },
+  'notification_special_order_completed': {
+    en: 'Special Order Completed',
+    ar: 'تم إكمال الطلب الخاص'
+  },
+  'notification_special_order_completed_message': {
+    en: 'Your special order has been completed',
+    ar: 'تم إكمال طلبك الخاص'
+  },
+  'notification_special_order_cancelled': {
+    en: 'Special Order Cancelled',
+    ar: 'تم إلغاء الطلب الخاص'
+  },
+  'notification_special_order_cancelled_message': {
+    en: 'Your special order has been cancelled',
+    ar: 'تم إلغاء طلبك الخاص'
   }
 };
 

@@ -3,7 +3,6 @@ const User = require('../models/user-model');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { generateVerificationCode, sendVerificationEmail, generateOTP, sendOTPEmail, sendBusinessUnderReviewNotification } = require('../utils/email-utils');
-const { generateSMSVerificationCode, sendSMSVerificationCode, generateOTP: generateSMSOTP, sendOTPSMS } = require('../utils/sms-utils');
 const { getBilingualMessage } = require('../utils/messages');
 const { formatUser, createResponse } = require('../utils/response-formatters');
 const crypto = require('crypto');
@@ -153,26 +152,6 @@ exports.sendEmailOTP = async (req, res) => {
   }
 };
 
-exports.sendPhoneOTP = async (req, res) => {
-  try {
-    const { phone } = req.body;
-    const user = await User.findOne({ phone });
-    if (user) {
-      return res.status(400).json({ status: 'error', message: getBilingualMessage('phone_already_exists') });
-    }
-    const otp = generateSMSOTP();
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
-    otpStore[phone] = { code: otp, expiresAt };
-    const smsResult = await sendOTPSMS(phone, otp);
-    if (!smsResult.success) {
-      return res.status(500).json({ status: 'error', message: getBilingualMessage('failed_send_otp_sms') });
-    }
-    res.status(200).json({ status: 'success', message: getBilingualMessage('otp_sent_phone_success') });
-  } catch (err) {
-    console.error('Send phone OTP error:', err);
-    res.status(500).json({ status: 'error', message: getBilingualMessage('failed_send_otp') });
-  }
-};
 
 exports.confirmOTP = async (req, res) => {
   try {
@@ -233,11 +212,13 @@ exports.loginWithOTP = async (req, res) => {
   try {
     const { identifier } = req.body;
     const identifierType = getIdentifierType(identifier);
-    const query = identifierType === 'email' ? { email: identifier } : { phone: identifier };
-    if (identifierType === 'phone' && !isSaudiPhone(identifier)) {
-      return res.status(400).json({ status: 'error', message: getBilingualMessage('phone_login_saudi_only') });
+    
+    // Only allow email for OTP login
+    if (identifierType !== 'email') {
+      return res.status(400).json({ status: 'error', message: getBilingualMessage('email_required_for_otp_login') });
     }
-    const user = await User.findOne(query);
+    
+    const user = await User.findOne({ email: identifier });
     if (!user) {
       return res.status(404).json({ status: 'error', message: getBilingualMessage('user_not_found') });
     }
@@ -247,17 +228,11 @@ exports.loginWithOTP = async (req, res) => {
       }
       return res.status(403).json({ status: 'error', message: getBilingualMessage('account_not_active') });
     }
-    const otp = identifierType === 'email' ? generateOTP() : generateSMSOTP();
+    const otp = generateOTP();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
-    const otpField = identifierType === 'email' ? 'emailOTP' : 'phoneOTP';
-    user[otpField] = { code: otp, expiresAt };
+    user.emailOTP = { code: otp, expiresAt };
     await user.save();
-    let sendResult;
-    if (identifierType === 'email') {
-      sendResult = await sendOTPEmail(identifier, otp);
-    } else {
-      sendResult = await sendOTPSMS(identifier, otp);
-    }
+    const sendResult = await sendOTPEmail(identifier, otp);
     if (!sendResult.success) {
       return res.status(500).json({ status: 'error', message: getBilingualMessage('failed_send_otp_to') });
     }
@@ -292,25 +267,28 @@ exports.confirmLoginOTP = async (req, res) => {
   try {
     const { identifier, otp } = req.body;
     const identifierType = getIdentifierType(identifier);
-    const query = identifierType === 'email' ? { email: identifier } : { phone: identifier };
-    const user = await User.findOne(query)
+    
+    // Only allow email for OTP login
+    if (identifierType !== 'email') {
+      return res.status(400).json({ status: 'error', message: getBilingualMessage('email_required_for_otp_login') });
+    }
+    
+    const user = await User.findOne({ email: identifier })
       .populate('businessInfo.approvedBy', 'firstname lastname email role');
     if (!user) {
       return res.status(404).json({ status: 'error', message: getBilingualMessage('user_not_found') });
     }
-    const otpField = identifierType === 'email' ? 'emailOTP' : 'phoneOTP';
-    if (!user[otpField] || !user[otpField].code) {
+    if (!user.emailOTP || !user.emailOTP.code) {
       return res.status(400).json({ status: 'error', message: getBilingualMessage('no_otp_found_user') });
     }
-    if (user[otpField].code !== otp) {
+    if (user.emailOTP.code !== otp) {
       return res.status(400).json({ status: 'error', message: getBilingualMessage('invalid_otp') });
     }
-    if (user[otpField].expiresAt < new Date()) {
+    if (user.emailOTP.expiresAt < new Date()) {
       return res.status(400).json({ status: 'error', message: getBilingualMessage('otp_expired') });
     }
-    const verificationField = identifierType === 'email' ? 'isEmailVerified' : 'isPhoneVerified';
-    user[verificationField] = true;
-    user[otpField] = null;
+    user.isEmailVerified = true;
+    user.emailOTP = null;
     await user.save();
     await user.populate('businessInfo.approvedBy', 'firstname lastname email role');
     const token = generateToken(user);

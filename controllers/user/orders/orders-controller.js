@@ -7,6 +7,7 @@ const { getBilingualMessage } = require('../../../utils/messages');
 const { createResponse, formatProduct } = require('../../../utils/response-formatters');
 const { convertCurrency, BASE_CURRENCY } = require('../../../services/currency-service');
 const { sendNotification } = require('../../../services/fcm-service');
+const { getBilingualNotification } = require('../../../utils/notification-messages');
 
 // Helper function to validate customer or business permissions
 const validateCustomerPermissions = (req, res) => {
@@ -233,10 +234,15 @@ exports.createOrder = async (req, res) => {
     // Send notification to customer
     try {
       const orderNumber = `ORD-${order._id.toString().slice(-8).toUpperCase()}`;
+      const notification = getBilingualNotification(
+        'notification_order_placed',
+        'notification_order_placed_message',
+        { orderNumber }
+      );
       await sendNotification(
         order.customer._id.toString() || order.customer.toString(),
-        'Order Placed',
-        `Your order ${orderNumber} has been placed and is pending confirmation`,
+        notification.title,
+        notification.message,
         {
           type: 'order',
           url: `/orders?orderId=${order._id}`,
@@ -588,10 +594,15 @@ exports.cancelOrder = async (req, res) => {
     // Send notification to customer
     try {
       const orderNumber = `ORD-${updatedOrder._id.toString().slice(-8).toUpperCase()}`;
+      const notification = getBilingualNotification(
+        'notification_order_cancelled',
+        'notification_order_cancelled_message',
+        { orderNumber }
+      );
       await sendNotification(
         updatedOrder.customer._id.toString() || updatedOrder.customer.toString(),
-        'Order Cancelled',
-        `Your order ${orderNumber} has been cancelled`,
+        notification.title,
+        notification.message,
         {
           type: 'order_cancelled',
           url: `/orders?orderId=${updatedOrder._id}`,

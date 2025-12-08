@@ -17,6 +17,7 @@ const {
   sendProductDisallowNotification 
 } = require('../../../utils/email-utils');
 const { sendNotification } = require('../../../services/fcm-service');
+const { getBilingualNotification } = require('../../../utils/notification-messages');
 
 // Helper function to validate admin or magnet employee permissions
 const validateAdminOrEmployeePermissions = (req, res) => {
@@ -493,10 +494,15 @@ exports.updateProduct = async (req, res) => {
             );
             
             // Send push notification
+            const notification = getBilingualNotification(
+              'notification_product_approved',
+              'notification_product_approved_message',
+              { productName }
+            );
             await sendNotification(
               product.owner._id.toString() || product.owner.toString(),
-              'Product Approved',
-              `Your product "${productName}" has been approved and is now live`,
+              notification.title,
+              notification.message,
               {
                 type: 'product',
                 url: `/products?productId=${product._id}`,
@@ -516,10 +522,16 @@ exports.updateProduct = async (req, res) => {
             );
             
             // Send push notification
+            const reasonText = reason ? `: ${reason}` : '';
+            const notification = getBilingualNotification(
+              'notification_product_declined',
+              'notification_product_declined_message',
+              { productName, reason: reasonText }
+            );
             await sendNotification(
               product.owner._id.toString() || product.owner.toString(),
-              'Product Declined',
-              `Your product "${productName}" has been declined${reason ? `: ${reason}` : ''}`,
+              notification.title,
+              notification.message,
               {
                 type: 'product',
                 url: `/products?productId=${product._id}`,
@@ -621,10 +633,15 @@ exports.approveProduct = async (req, res) => {
         );
         
         // Send push notification
+        const notification = getBilingualNotification(
+          'notification_product_approved',
+          'notification_product_approved_message',
+          { productName }
+        );
         await sendNotification(
           product.owner._id.toString() || product.owner.toString(),
-          'Product Approved',
-          `Your product "${productName}" has been approved and is now live`,
+          notification.title,
+          notification.message,
           {
             type: 'product',
             url: `/products?productId=${product._id}`,

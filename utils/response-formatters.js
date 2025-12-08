@@ -167,7 +167,6 @@ const formatUser = (user, options = {}) => {
 
   if (includeOTP) {
     formatted.emailOTP = user.emailOTP;
-    formatted.phoneOTP = user.phoneOTP;
   }
 
   // Add accessPages for admin and employee roles

@@ -7,7 +7,6 @@ const {
   validateRegister, 
   validateBusinessRegister, 
   validateSendEmailOTP, 
-  validateSendPhoneOTP, 
   validateConfirmOTP, 
   validateLogin, 
   validateLoginWithOTP, 
@@ -22,9 +21,6 @@ router.post('/business-register', validateBusinessRegister, AuthController.busin
 
 // Send Email OTP API
 router.post('/send-email-otp', validateSendEmailOTP, AuthController.sendEmailOTP);
-
-// Send Phone OTP API
-router.post('/send-phone-otp', validateSendPhoneOTP, AuthController.sendPhoneOTP);
 
 // Confirm OTP API (for any identifier, not just users in DB)
 router.post('/confirm-otp', validateConfirmOTP, AuthController.confirmOTP);

@@ -234,7 +234,7 @@ exports.getAllUsers = async (req, res) => {
     const skip = (page - 1) * limit;
     const users = await User.find(query)
       .populate('businessInfo.approvedBy', 'firstname lastname email role')
-      .select('-password -emailOTP -phoneOTP -passwordResetToken')
+      .select('-password -emailOTP -passwordResetToken')
       .sort(sort)
       .skip(skip)
       .limit(parseInt(limit));
@@ -330,7 +330,7 @@ exports.getUserById = async (req, res) => {
     const { id } = req.params;
     const user = await User.findById(id)
       .populate('businessInfo.approvedBy', 'firstname lastname email role')
-      .select('-password -emailOTP -phoneOTP -passwordResetToken');
+      .select('-password -emailOTP -passwordResetToken');
     
     if (!user) {
       return res.status(404).json({ 

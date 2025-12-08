@@ -6,6 +6,7 @@ const { SPECIAL_ORDER_STATUS } = require('../../../models/special-order-model');
 const { getBilingualMessage } = require('../../../utils/messages');
 const { createResponse, formatProduct, formatUser } = require('../../../utils/response-formatters');
 const { sendNotification } = require('../../../services/fcm-service');
+const { getBilingualNotification } = require('../../../utils/notification-messages');
 
 // Helper function to validate admin or magnet employee permissions
 const validateAdminOrEmployeePermissions = (req, res) => {
@@ -252,10 +253,15 @@ exports.createSpecialOrder = async (req, res) => {
 
     // Send notification to user
     try {
+      const notification = getBilingualNotification(
+        'notification_special_order_created',
+        'notification_special_order_created_message',
+        {}
+      );
       await sendNotification(
         specialOrder.userId._id.toString() || specialOrder.userId.toString(),
-        'Special Order Created',
-        'A special order has been created for you. We will contact you soon.',
+        notification.title,
+        notification.message,
         {
           type: 'special_order',
           url: `/special-orders?specialOrderId=${specialOrder._id}`,
@@ -358,40 +364,45 @@ exports.updateSpecialOrder = async (req, res) => {
       try {
         const statusMessages = {
           'pending': { 
-            title: 'Special Order Pending', 
-            message: 'Your special order is pending review',
+            titleKey: 'notification_special_order_created',
+            messageKey: 'notification_special_order_created_message',
             type: 'special_order'
           },
           'reviewed': { 
-            title: 'Special Order Reviewed', 
-            message: 'Your special order has been reviewed',
+            titleKey: 'notification_special_order_reviewed',
+            messageKey: 'notification_special_order_reviewed_message',
             type: 'special_order_reviewed'
           },
           'contacted': { 
-            title: 'Special Order Contacted', 
-            message: 'We have contacted you regarding your special order',
+            titleKey: 'notification_special_order_contacted',
+            messageKey: 'notification_special_order_contacted_message',
             type: 'special_order_contacted'
           },
           'completed': { 
-            title: 'Special Order Completed', 
-            message: 'Your special order has been completed',
+            titleKey: 'notification_special_order_completed',
+            messageKey: 'notification_special_order_completed_message',
             type: 'special_order_completed'
           },
           'cancelled': { 
-            title: 'Special Order Cancelled', 
-            message: 'Your special order has been cancelled',
+            titleKey: 'notification_special_order_cancelled',
+            messageKey: 'notification_special_order_cancelled_message',
             type: 'special_order_cancelled'
           }
         };
         
-        const notification = statusMessages[status];
-        if (notification) {
+        const statusConfig = statusMessages[status];
+        if (statusConfig) {
+          const notification = getBilingualNotification(
+            statusConfig.titleKey,
+            statusConfig.messageKey,
+            {}
+          );
           await sendNotification(
             specialOrder.userId._id.toString() || specialOrder.userId.toString(),
             notification.title,
             notification.message,
             {
-              type: notification.type,
+              type: statusConfig.type,
               url: `/special-orders?specialOrderId=${specialOrder._id}`,
               specialOrderId: specialOrder._id.toString()
             }

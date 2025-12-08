@@ -2,6 +2,7 @@
 const SpecialOrder = require('../../../models/special-order-model');
 const { SPECIAL_ORDER_STATUS } = require('../../../models/special-order-model');
 const { sendNotification } = require('../../../services/fcm-service');
+const { getBilingualNotification } = require('../../../utils/notification-messages');
 const Product = require('../../../models/product-model');
 const { getBilingualMessage } = require('../../../utils/messages');
 const { createResponse, formatProduct } = require('../../../utils/response-formatters');
@@ -290,10 +291,15 @@ exports.createSpecialOrder = async (req, res) => {
 
     // Send notification to user
     try {
+      const notification = getBilingualNotification(
+        'notification_special_order_created',
+        'notification_special_order_created_message',
+        {}
+      );
       await sendNotification(
         specialOrder.userId.toString(),
-        'Special Order Created',
-        'Your special order has been created. We will contact you soon.',
+        notification.title,
+        notification.message,
         {
           type: 'special_order',
           url: `/special-orders?specialOrderId=${specialOrder._id}`,
@@ -383,10 +389,15 @@ exports.cancelSpecialOrder = async (req, res) => {
 
     // Send notification to user
     try {
+      const notification = getBilingualNotification(
+        'notification_special_order_cancelled',
+        'notification_special_order_cancelled_message',
+        {}
+      );
       await sendNotification(
         specialOrder.userId.toString(),
-        'Special Order Cancelled',
-        'Your special order has been cancelled',
+        notification.title,
+        notification.message,
         {
           type: 'special_order_cancelled',
           url: `/special-orders?specialOrderId=${specialOrder._id}`,

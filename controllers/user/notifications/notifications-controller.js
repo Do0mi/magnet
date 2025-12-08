@@ -2,6 +2,7 @@
 const Notification = require('../../../models/notification-model');
 const FCMToken = require('../../../models/fcm-token-model');
 const { getBilingualMessage } = require('../../../utils/messages');
+const { convertOldNotificationToBilingual } = require('../../../utils/notification-messages');
 
 /**
  * Transform notification data URL from old format (path params) to new format (query params)
@@ -169,15 +170,54 @@ exports.getNotifications = async (req, res) => {
     // Get unread count
     const unreadCount = await Notification.countDocuments({ userId, read: false });
 
-    // Format notifications
-    const formattedNotifications = notifications.map(notif => ({
-      id: notif._id.toString(),
-      title: notif.title,
-      message: notif.message,
-      read: notif.read,
-      createdAt: notif.createdAt.toISOString(),
-      data: transformNotificationData(notif.data || {})
-    }));
+    // Format notifications - handle bilingual title and message
+    const formattedNotifications = notifications.map(notif => {
+      let title, message;
+      
+      // Check if title/message are objects but have same value for en and ar (old format stored as object)
+      const titleIsSame = typeof notif.title === 'object' && notif.title !== null && 
+                         notif.title.en === notif.title.ar && notif.title.en;
+      const messageIsSame = typeof notif.message === 'object' && notif.message !== null && 
+                           notif.message.en === notif.message.ar && notif.message.en;
+      
+      // If both title and message have same en/ar values, try to convert them
+      if (titleIsSame && messageIsSame) {
+        const converted = convertOldNotificationToBilingual(notif.title.en, notif.message.en, notif.data || {});
+        title = converted.title;
+        message = converted.message;
+      } else if (typeof notif.title === 'object' && notif.title !== null && notif.title.en && notif.title.ar && 
+                 typeof notif.message === 'object' && notif.message !== null && notif.message.en && notif.message.ar) {
+        // Already in proper bilingual format
+        title = notif.title;
+        message = notif.message;
+      } else if (typeof notif.title === 'string' || typeof notif.message === 'string') {
+        // Old format (string) - try to convert to bilingual
+        const titleStr = typeof notif.title === 'string' ? notif.title : (notif.title?.en || notif.title || '');
+        const messageStr = typeof notif.message === 'string' ? notif.message : (notif.message?.en || notif.message || '');
+        const converted = convertOldNotificationToBilingual(titleStr, messageStr, notif.data || {});
+        title = converted.title;
+        message = converted.message;
+      } else {
+        // Fallback
+        title = { 
+          en: notif.title?.en || (typeof notif.title === 'string' ? notif.title : '') || '', 
+          ar: notif.title?.ar || (typeof notif.title === 'string' ? notif.title : '') || '' 
+        };
+        message = { 
+          en: notif.message?.en || (typeof notif.message === 'string' ? notif.message : '') || '', 
+          ar: notif.message?.ar || (typeof notif.message === 'string' ? notif.message : '') || '' 
+        };
+      }
+      
+      return {
+        id: notif._id.toString(),
+        title,
+        message,
+        read: notif.read,
+        createdAt: notif.createdAt.toISOString(),
+        data: transformNotificationData(notif.data || {})
+      };
+    });
 
     const totalPages = Math.ceil(total / limit);
 
@@ -240,14 +280,53 @@ exports.markAsRead = async (req, res) => {
         ar: 'تم تمييز الإشعار كمقروء'
       },
       data: {
-        notification: {
-          id: notification._id.toString(),
-          title: notification.title,
-          message: notification.message,
-          read: notification.read,
-          createdAt: notification.createdAt.toISOString(),
-          data: transformNotificationData(notification.data || {})
-        }
+        notification: (() => {
+          let title, message;
+          
+          // Check if title/message are objects but have same value for en and ar (old format stored as object)
+          const titleIsSame = typeof notification.title === 'object' && notification.title !== null && 
+                             notification.title.en === notification.title.ar && notification.title.en;
+          const messageIsSame = typeof notification.message === 'object' && notification.message !== null && 
+                               notification.message.en === notification.message.ar && notification.message.en;
+          
+          // If both title and message have same en/ar values, try to convert them
+          if (titleIsSame && messageIsSame) {
+            const converted = convertOldNotificationToBilingual(notification.title.en, notification.message.en, notification.data || {});
+            title = converted.title;
+            message = converted.message;
+          } else if (typeof notification.title === 'object' && notification.title !== null && notification.title.en && notification.title.ar && 
+                     typeof notification.message === 'object' && notification.message !== null && notification.message.en && notification.message.ar) {
+            // Already in proper bilingual format
+            title = notification.title;
+            message = notification.message;
+          } else if (typeof notification.title === 'string' || typeof notification.message === 'string') {
+            // Old format (string) - try to convert to bilingual
+            const titleStr = typeof notification.title === 'string' ? notification.title : (notification.title?.en || notification.title || '');
+            const messageStr = typeof notification.message === 'string' ? notification.message : (notification.message?.en || notification.message || '');
+            const converted = convertOldNotificationToBilingual(titleStr, messageStr, notification.data || {});
+            title = converted.title;
+            message = converted.message;
+          } else {
+            // Fallback
+            title = { 
+              en: notification.title?.en || (typeof notification.title === 'string' ? notification.title : '') || '', 
+              ar: notification.title?.ar || (typeof notification.title === 'string' ? notification.title : '') || '' 
+            };
+            message = { 
+              en: notification.message?.en || (typeof notification.message === 'string' ? notification.message : '') || '', 
+              ar: notification.message?.ar || (typeof notification.message === 'string' ? notification.message : '') || '' 
+            };
+          }
+          
+          return {
+            id: notification._id.toString(),
+            title,
+            message,
+            read: notification.read,
+            createdAt: notification.createdAt.toISOString(),
+            data: transformNotificationData(notification.data || {})
+          };
+        })()
       }
     });
   } catch (error) {

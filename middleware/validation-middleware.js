@@ -126,13 +126,6 @@ const validateSendEmailOTP = [
   handleValidationErrors
 ];
 
-// Send phone OTP validation
-const validateSendPhoneOTP = [
-  body('phone')
-    .matches(/^\+?[1-9]\d{1,14}$/)
-    .withMessage('phone_valid_required'),
-  handleValidationErrors
-];
 
 // Confirm OTP validation
 const validateConfirmOTP = [
@@ -228,7 +221,6 @@ module.exports = {
   validateRegister,
   validateBusinessRegister,
   validateSendEmailOTP,
-  validateSendPhoneOTP,
   validateConfirmOTP,
   validateLogin,
   validateLoginWithOTP,

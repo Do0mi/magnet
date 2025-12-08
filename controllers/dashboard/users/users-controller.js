@@ -4,6 +4,7 @@ const bcrypt = require('bcryptjs');
 const { getBilingualMessage } = require('../../../utils/messages');
 const { formatUser, createResponse } = require('../../../utils/response-formatters');
 const { sendNotification } = require('../../../services/fcm-service');
+const { getBilingualNotification } = require('../../../utils/notification-messages');
 
 // Helper function to validate admin or magnet employee permissions
 const validateAdminOrEmployeePermissions = (req, res) => {
@@ -506,10 +507,15 @@ exports.updateUser = async (req, res) => {
       try {
         const companyName = user.businessInfo?.companyName || 'Your Business';
         if (approvalStatus === 'approved') {
+          const notification = getBilingualNotification(
+            'notification_business_approved',
+            'notification_business_approved_message',
+            {}
+          );
           await sendNotification(
             user._id.toString(),
-            'Business Approved',
-            `Your business "${companyName}" has been approved. You can now access all features.`,
+            notification.title,
+            notification.message,
             {
               type: 'profile_update',
               url: '/profile'
@@ -517,10 +523,16 @@ exports.updateUser = async (req, res) => {
           );
         } else if (approvalStatus === 'rejected') {
           const rejectionReason = user.businessInfo?.rejectionReason || '';
+          const reasonText = rejectionReason ? `: ${rejectionReason}` : '';
+          const notification = getBilingualNotification(
+            'notification_business_rejected',
+            'notification_business_rejected_message',
+            { reason: reasonText }
+          );
           await sendNotification(
             user._id.toString(),
-            'Business Rejected',
-            `Your business "${companyName}" has been rejected${rejectionReason ? `: ${rejectionReason}` : ''}`,
+            notification.title,
+            notification.message,
             {
               type: 'profile_update',
               url: '/profile'
@@ -684,10 +696,15 @@ exports.approveBusinessUser = async (req, res) => {
       
       // Send push notification
       const companyName = updatedBusiness.businessInfo?.companyName || 'Your Business';
+      const notification = getBilingualNotification(
+        'notification_business_approved',
+        'notification_business_approved_message',
+        {}
+      );
       await sendNotification(
         updatedBusiness._id.toString(),
-        'Business Approved',
-        `Your business "${companyName}" has been approved. You can now access all features.`,
+        notification.title,
+        notification.message,
         {
           type: 'profile_update',
           url: '/profile'
@@ -790,10 +807,16 @@ exports.declineBusinessUser = async (req, res) => {
       
       // Send push notification
       const companyName = updatedBusiness.businessInfo?.companyName || 'Your Business';
+      const reasonText = rejectionReason ? `: ${rejectionReason}` : '';
+      const notification = getBilingualNotification(
+        'notification_business_rejected',
+        'notification_business_rejected_message',
+        { reason: reasonText }
+      );
       await sendNotification(
         updatedBusiness._id.toString(),
-        'Business Rejected',
-        `Your business "${companyName}" has been rejected${rejectionReason ? `: ${rejectionReason}` : ''}`,
+        notification.title,
+        notification.message,
         {
           type: 'profile_update',
           url: '/profile'

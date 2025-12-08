@@ -124,7 +124,6 @@ const userSchema = new mongoose.Schema({
   
   // Verification codes
   emailOTP: otpSchema,
-  phoneOTP: otpSchema,
   
   // Password reset
   passwordResetToken: { type: String },
@@ -154,10 +153,6 @@ userSchema.index({ 'businessInfo.approvalStatus': 1 });
 userSchema.index({ isAllowed: 1 });
 
 // Instance methods
-userSchema.methods.generateOTP = function() {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-};
-
 userSchema.methods.getFullName = function() {
   return `${this.firstname} ${this.lastname}`;
 };
@@ -192,7 +187,6 @@ userSchema.set('toJSON', {
   transform: function(doc, ret) {
     delete ret.password;
     delete ret.emailOTP;
-    delete ret.phoneOTP;
     delete ret.passwordResetToken;
     delete ret.passwordResetExpires;
     return ret;

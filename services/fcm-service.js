@@ -2,6 +2,7 @@
 const admin = require('firebase-admin');
 const Notification = require('../models/notification-model');
 const FCMToken = require('../models/fcm-token-model');
+const User = require('../models/user-model');
 
 // Initialize Firebase Admin SDK
 let firebaseInitialized = false;
@@ -47,23 +48,36 @@ initializeFirebase();
 /**
  * Send notification to a single user
  * @param {String} userId - User ID
- * @param {String} title - Notification title
- * @param {String} message - Notification message
+ * @param {String|Object} title - Notification title (string or {en: string, ar: string})
+ * @param {String|Object} message - Notification message (string or {en: string, ar: string})
  * @param {Object} data - Additional data payload (optional)
  * @returns {Promise<Object>} Result object with success status
  */
 async function sendNotification(userId, title, message, data = {}) {
   let tokenDoc = null;
   try {
-    // 1. Get user's FCM token from database
+    // 1. Get user's language preference and FCM token
+    const user = await User.findById(userId).select('language');
+    const userLanguage = (user && user.language) || 'en';
+    
+    // Normalize title and message to bilingual format
+    const bilingualTitle = typeof title === 'string' 
+      ? { en: title, ar: title } 
+      : (title.en && title.ar ? title : { en: title.en || title, ar: title.ar || title.en || title });
+    
+    const bilingualMessage = typeof message === 'string'
+      ? { en: message, ar: message }
+      : (message.en && message.ar ? message : { en: message.en || message, ar: message.ar || message.en || message });
+
+    // 2. Get user's FCM token from database
     tokenDoc = await FCMToken.findOne({ userId });
     if (!tokenDoc || !tokenDoc.token) {
       console.log(`No FCM token found for user ${userId}`);
       // Still create notification in database even if no token
       const notification = await Notification.create({
         userId,
-        title,
-        message,
+        title: bilingualTitle,
+        message: bilingualMessage,
         read: false,
         data,
         createdAt: new Date()
@@ -75,17 +89,17 @@ async function sendNotification(userId, title, message, data = {}) {
       };
     }
 
-    // 2. Create notification in database
+    // 3. Create notification in database with bilingual content
     const notification = await Notification.create({
       userId,
-      title,
-      message,
+      title: bilingualTitle,
+      message: bilingualMessage,
       read: false,
       data,
       createdAt: new Date()
     });
 
-    // 3. Send via FCM (only if Firebase is initialized)
+    // 4. Send via FCM (only if Firebase is initialized)
     if (!firebaseInitialized || admin.apps.length === 0) {
       console.warn('Firebase Admin SDK not initialized. Notification saved to database but not sent via FCM.');
       return {
@@ -95,10 +109,14 @@ async function sendNotification(userId, title, message, data = {}) {
       };
     }
 
+    // Use user's preferred language for FCM push notification
+    const fcmTitle = bilingualTitle[userLanguage] || bilingualTitle.en;
+    const fcmBody = bilingualMessage[userLanguage] || bilingualMessage.en;
+
     const fcmMessage = {
       notification: {
-        title: title,
-        body: message
+        title: fcmTitle,
+        body: fcmBody
       },
       data: {
         ...Object.keys(data).reduce((acc, key) => {
@@ -132,10 +150,19 @@ async function sendNotification(userId, title, message, data = {}) {
       });
       
       if (!notification) {
+        // Normalize title and message to bilingual format
+        const bilingualTitle = typeof title === 'string' 
+          ? { en: title, ar: title } 
+          : (title.en && title.ar ? title : { en: title.en || title, ar: title.ar || title.en || title });
+        
+        const bilingualMessage = typeof message === 'string'
+          ? { en: message, ar: message }
+          : (message.en && message.ar ? message : { en: message.en || message, ar: message.ar || message.en || message });
+        
         await Notification.create({
           userId,
-          title,
-          message,
+          title: bilingualTitle,
+          message: bilingualMessage,
           read: false,
           data,
           createdAt: new Date()
@@ -169,31 +196,47 @@ async function sendNotification(userId, title, message, data = {}) {
 /**
  * Send notifications to multiple users
  * @param {Array<String>} userIds - Array of user IDs
- * @param {String} title - Notification title
- * @param {String} message - Notification message
+ * @param {String|Object} title - Notification title (string or {en: string, ar: string})
+ * @param {String|Object} message - Notification message (string or {en: string, ar: string})
  * @param {Object} data - Additional data payload (optional)
  * @returns {Promise<Object>} Result object with success count
  */
 async function sendBulkNotifications(userIds, title, message, data = {}) {
   try {
-    // 1. Get FCM tokens for all users
+    // 1. Normalize title and message to bilingual format
+    const bilingualTitle = typeof title === 'string' 
+      ? { en: title, ar: title } 
+      : (title.en && title.ar ? title : { en: title.en || title, ar: title.ar || title.en || title });
+    
+    const bilingualMessage = typeof message === 'string'
+      ? { en: message, ar: message }
+      : (message.en && message.ar ? message : { en: message.en || message, ar: message.ar || message.en || message });
+
+    // 2. Get users and their FCM tokens
+    const users = await User.find({ _id: { $in: userIds } }).select('language');
     const tokens = await FCMToken.find({ userId: { $in: userIds } });
+    
+    const userLanguageMap = {};
+    users.forEach(user => {
+      userLanguageMap[user._id.toString()] = user.language || 'en';
+    });
+    
     const validTokens = tokens.map(t => t.token);
     const usersWithTokens = tokens.map(t => t.userId.toString());
     
-    // 2. Create notifications in database for all users
+    // 3. Create notifications in database for all users
     const notifications = await Notification.insertMany(
       userIds.map(userId => ({
         userId,
-        title,
-        message,
+        title: bilingualTitle,
+        message: bilingualMessage,
         read: false,
         data,
         createdAt: new Date()
       }))
     );
 
-    // 3. Send via FCM multicast (only if Firebase is initialized and we have tokens)
+    // 4. Send via FCM multicast (only if Firebase is initialized and we have tokens)
     if (!firebaseInitialized || admin.apps.length === 0) {
       console.warn('Firebase Admin SDK not initialized. Notifications saved to database but not sent via FCM.');
       return { 
@@ -213,16 +256,22 @@ async function sendBulkNotifications(userIds, title, message, data = {}) {
       };
     }
 
+    // For bulk notifications, we'll use English as default (FCM multicast doesn't support per-user language)
+    // Individual notifications will be sent with user's preferred language
     const fcmMessage = {
       notification: {
-        title: title,
-        body: message
+        title: bilingualTitle.en,
+        body: bilingualMessage.en
       },
       data: {
         ...Object.keys(data).reduce((acc, key) => {
           acc[key] = String(data[key]);
           return acc;
-        }, {})
+        }, {}),
+        titleEn: bilingualTitle.en,
+        titleAr: bilingualTitle.ar,
+        messageEn: bilingualMessage.en,
+        messageAr: bilingualMessage.ar
       },
       tokens: validTokens
     };

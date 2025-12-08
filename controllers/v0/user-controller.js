@@ -57,7 +57,7 @@ exports.getBusinessRequests = async (req, res) => {
     const query = { role: User.getUserRoles().BUSINESS, 'businessInfo.approvalStatus': status };
     const skip = (page - 1) * limit;
     const businesses = await User.find(query)
-      .select('-password -emailOTP -phoneOTP -passwordResetToken')
+      .select('-password -emailOTP -passwordResetToken')
       .populate('businessInfo.approvedBy', 'firstname lastname email role')
       .populate('businessInfo.rejectedBy', 'firstname lastname email role')
       .sort({ createdAt: -1 })
@@ -124,7 +124,7 @@ exports.businessApproval = async (req, res) => {
     const updatedBusiness = await User.findById(businessId)
       .populate('businessInfo.approvedBy', 'firstname lastname email role')
       .populate('businessInfo.rejectedBy', 'firstname lastname email role')
-      .select('-password -emailOTP -phoneOTP -passwordResetToken');
+      .select('-password -emailOTP -passwordResetToken');
     
     res.status(200).json(createResponse('success', {
       business: formatUser(updatedBusiness, { 
@@ -142,7 +142,7 @@ exports.getBusinessDetails = async (req, res) => {
   try {
     const { businessId } = req.params;
     const business = await User.findById(businessId)
-      .select('-password -emailOTP -phoneOTP -passwordResetToken')
+      .select('-password -emailOTP -passwordResetToken')
       .populate('businessInfo.approvedBy', 'firstname lastname email role')
       .populate('businessInfo.rejectedBy', 'firstname lastname email role');
     if (!business) {

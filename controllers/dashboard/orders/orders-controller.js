@@ -5,6 +5,7 @@ const User = require('../../../models/user-model');
 const { getBilingualMessage } = require('../../../utils/messages');
 const { createResponse, formatOrder } = require('../../../utils/response-formatters');
 const { sendNotification } = require('../../../services/fcm-service');
+const { getBilingualNotification } = require('../../../utils/notification-messages');
 
 // Base currency for dashboard (always USD)
 const BASE_CURRENCY = 'USD';
@@ -254,10 +255,15 @@ exports.createOrder = async (req, res) => {
     // Send notification to customer
     try {
       const orderNumber = `ORD-${order._id.toString().slice(-8).toUpperCase()}`;
+      const notification = getBilingualNotification(
+        'notification_order_confirmed',
+        'notification_order_confirmed_message',
+        { orderNumber }
+      );
       await sendNotification(
         order.customer._id.toString() || order.customer.toString(),
-        'Order Confirmed',
-        `Your order ${orderNumber} has been confirmed`,
+        notification.title,
+        notification.message,
         {
           type: 'order_confirmed',
           url: `/orders?orderId=${order._id}`,
@@ -447,35 +453,40 @@ exports.updateOrder = async (req, res) => {
         const orderNumber = `ORD-${order._id.toString().slice(-8).toUpperCase()}`;
         const statusMessages = {
           'confirmed': { 
-            title: 'Order Confirmed', 
-            message: `Your order ${orderNumber} has been confirmed`,
+            titleKey: 'notification_order_confirmed',
+            messageKey: 'notification_order_confirmed_message',
             type: 'order_confirmed'
           },
           'shipped': { 
-            title: 'Order Shipped', 
-            message: `Your order ${orderNumber} has been shipped`,
+            titleKey: 'notification_order_shipped',
+            messageKey: 'notification_order_shipped_message',
             type: 'order_shipped'
           },
           'delivered': { 
-            title: 'Order Delivered', 
-            message: `Your order ${orderNumber} has been delivered`,
+            titleKey: 'notification_order_delivered',
+            messageKey: 'notification_order_delivered_message',
             type: 'order_delivered'
           },
           'cancelled': { 
-            title: 'Order Cancelled', 
-            message: `Your order ${orderNumber} has been cancelled`,
+            titleKey: 'notification_order_cancelled',
+            messageKey: 'notification_order_cancelled_message',
             type: 'order_cancelled'
           }
         };
         
-        const notification = statusMessages[status];
-        if (notification) {
+        const statusConfig = statusMessages[status];
+        if (statusConfig) {
+          const notification = getBilingualNotification(
+            statusConfig.titleKey,
+            statusConfig.messageKey,
+            { orderNumber }
+          );
           await sendNotification(
             order.customer._id.toString() || order.customer.toString(),
             notification.title,
             notification.message,
             {
-              type: notification.type,
+              type: statusConfig.type,
               url: `/orders?orderId=${order._id}`,
               orderId: order._id.toString(),
               orderNumber: orderNumber
