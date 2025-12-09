@@ -68,20 +68,21 @@ const formatUser = (user, options = {}) => {
   }
 
   if (includeBusinessInfo && user.businessInfo) {
+    // Always include all businessInfo fields, even if null
     formatted.businessInfo = {
       crNumber: user.businessInfo.crNumber || null,
       vatNumber: user.businessInfo.vatNumber || null,
       companyName: user.businessInfo.companyName || null,
       companyType: user.businessInfo.companyType || null,
-      approvalStatus: user.businessInfo.approvalStatus
+      approvalStatus: user.businessInfo.approvalStatus || null
     };
 
     // Handle address fields - check if they exist directly or nested under address
     if (user.businessInfo.address) {
       formatted.businessInfo.address = {
-        city: user.businessInfo.address.city,
-        district: user.businessInfo.address.district,
-        streetName: user.businessInfo.address.streetName
+        city: user.businessInfo.address.city || null,
+        district: user.businessInfo.address.district || null,
+        streetName: user.businessInfo.address.streetName || null
       };
     } else {
       // Fallback for old data structure where address fields were directly on businessInfo
@@ -92,7 +93,7 @@ const formatUser = (user, options = {}) => {
       };
     }
     
-    // If approvedBy is populated, format it properly; otherwise include id or null
+    // Always include approvedBy - format it properly if populated, otherwise null
     if (user.businessInfo.approvedBy && typeof user.businessInfo.approvedBy === 'object') {
       formatted.businessInfo.approvedBy = {
         id: user.businessInfo.approvedBy._id,
@@ -103,12 +104,14 @@ const formatUser = (user, options = {}) => {
       };
     } else if (user.businessInfo.approvedBy) {
       formatted.businessInfo.approvedBy = { id: user.businessInfo.approvedBy };
-    }
-    if (user.businessInfo.approvedAt) {
-      formatted.businessInfo.approvedAt = user.businessInfo.approvedAt;
+    } else {
+      formatted.businessInfo.approvedBy = null;
     }
     
-    // If rejectedBy is populated, format it properly; otherwise include id or null
+    // Always include approvedAt
+    formatted.businessInfo.approvedAt = user.businessInfo.approvedAt || null;
+    
+    // Always include rejectedBy - format it properly if populated, otherwise null
     if (user.businessInfo.rejectedBy && typeof user.businessInfo.rejectedBy === 'object') {
       formatted.businessInfo.rejectedBy = {
         id: user.businessInfo.rejectedBy._id,
@@ -119,46 +122,16 @@ const formatUser = (user, options = {}) => {
       };
     } else if (user.businessInfo.rejectedBy) {
       formatted.businessInfo.rejectedBy = { id: user.businessInfo.rejectedBy };
-    }
-    if (user.businessInfo.rejectedAt) {
-      formatted.businessInfo.rejectedAt = user.businessInfo.rejectedAt;
-    }
-    if (user.businessInfo.rejectionReason) {
-      formatted.businessInfo.rejectionReason = user.businessInfo.rejectionReason;
-    }
-
-    // Conditionally show approval/rejection metadata based on status
-    const status = user.businessInfo.approvalStatus;
-    if (status === 'approved') {
-      // Ensure only approval metadata is present (and keep core business fields)
-      delete formatted.businessInfo.rejectedBy;
-      delete formatted.businessInfo.rejectedAt;
-      delete formatted.businessInfo.rejectionReason;
-      // Always include approvedBy key (null if missing)
-      if (formatted.businessInfo.approvedBy === undefined) {
-        formatted.businessInfo.approvedBy = null;
-      }
-      if (formatted.businessInfo.approvedAt === undefined) {
-        formatted.businessInfo.approvedAt = null;
-      }
-    } else if (status === 'rejected') {
-      // Show only rejection metadata (and keep core business fields)
-      delete formatted.businessInfo.approvedBy;
-      delete formatted.businessInfo.approvedAt;
-      // Always include rejection keys (null if missing)
-      if (formatted.businessInfo.rejectedBy === undefined) {
-        formatted.businessInfo.rejectedBy = null;
-      }
-      if (formatted.businessInfo.rejectedAt === undefined) {
-        formatted.businessInfo.rejectedAt = null;
-      }
-      if (formatted.businessInfo.rejectionReason === undefined) {
-        formatted.businessInfo.rejectionReason = null;
-      }
     } else {
-      // Pending: businessInfo should contain ONLY approvalStatus
-      formatted.businessInfo = { approvalStatus: status };
+      formatted.businessInfo.rejectedBy = null;
     }
+    
+    // Always include rejectedAt and rejectionReason
+    formatted.businessInfo.rejectedAt = user.businessInfo.rejectedAt || null;
+    formatted.businessInfo.rejectionReason = user.businessInfo.rejectionReason || null;
+
+    // Always include all businessInfo fields regardless of approval status
+    // All fields are already set above with null defaults if missing
   }
 
   if (includePassword) {
