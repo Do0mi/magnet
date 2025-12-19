@@ -16,6 +16,9 @@ router.get('/:id', requireBusiness, ProductController.getProductById);
 // POST /api/v1/business/products/product - The business user creates product
 router.post('/product', requireBusiness, ProductController.createProduct);
 
+// POST /api/v1/business/products/products - The business user creates multiple products (Bulk Create)
+router.post('/products', requireBusiness, ProductController.createProducts);
+
 // PUT /api/v1/business/products/product/:id - The business user updates product
 router.put('/product/:id', requireBusiness, ProductController.updateProduct);
 

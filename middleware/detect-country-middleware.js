@@ -166,7 +166,7 @@ const detectCountry = async (req, res, next) => {
     req.userCurrency = currency;
     
     // Log for debugging (can be removed in production)
-    // console.log(`[Country Detection] IP: ${ip}, Country: ${countryCode}, Currency: ${currency}`);
+    console.log(`[Country Detection] IP: ${ip}, Country: ${countryCode}, Currency: ${currency}`);
     
     next();
   } catch (error) {

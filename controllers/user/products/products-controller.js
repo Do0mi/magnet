@@ -154,6 +154,9 @@ exports.getProducts = async (req, res) => {
 
       // Get user currency from middleware (defaults to USD if not set)
       const userCurrency = req.userCurrency || BASE_CURRENCY;
+      
+      // Debug: Log currency detection
+      console.log(`[Products Controller - getProducts with search] Detected Currency: ${userCurrency}, User Country: ${req.userCountry || 'unknown'}, req.userCurrency: ${req.userCurrency}`);
 
       // Convert product prices to user's currency
       const formattedProducts = await Promise.all(
@@ -165,6 +168,7 @@ exports.getProducts = async (req, res) => {
             const basePrice = parseFloat(formatted.pricePerUnit);
             if (!isNaN(basePrice)) {
               const convertedPrice = await convertCurrency(basePrice, userCurrency);
+              console.log(`[Products Controller] Converting: ${basePrice} USD -> ${convertedPrice} ${userCurrency}`);
               formatted.pricePerUnit = convertedPrice.toString();
             }
           }
@@ -205,6 +209,9 @@ exports.getProducts = async (req, res) => {
 
       // Get user currency from middleware (defaults to USD if not set)
       const userCurrency = req.userCurrency || BASE_CURRENCY;
+      
+      // Debug: Log currency detection
+      console.log(`[Products Controller - getProducts without search] Detected Currency: ${userCurrency}, User Country: ${req.userCountry || 'unknown'}, req.userCurrency: ${req.userCurrency}`);
 
       // Convert product prices to user's currency
       const formattedProducts = await Promise.all(
@@ -216,6 +223,7 @@ exports.getProducts = async (req, res) => {
             const basePrice = parseFloat(formatted.pricePerUnit);
             if (!isNaN(basePrice)) {
               const convertedPrice = await convertCurrency(basePrice, userCurrency);
+              console.log(`[Products Controller] Converting: ${basePrice} USD -> ${convertedPrice} ${userCurrency}`);
               formatted.pricePerUnit = convertedPrice.toString();
             }
           }

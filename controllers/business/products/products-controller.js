@@ -484,3 +484,233 @@ exports.toggleProduct = async (req, res) => {
     });
   }
 };
+
+// Helper function to validate a single product data
+const validateProductData = (productData, index) => {
+  const errors = [];
+  const rowNumber = index + 1;
+
+  // Validate required fields
+  if (!productData.name || !productData.name.en || !productData.name.ar) {
+    errors.push(`Row ${rowNumber}: Name (EN) and Name (AR) are required`);
+  }
+
+  if (!productData.category || !productData.category.en || !productData.category.ar) {
+    errors.push(`Row ${rowNumber}: Category (EN) and Category (AR) are required`);
+  }
+
+  if (!productData.description || !productData.description.en || !productData.description.ar) {
+    errors.push(`Row ${rowNumber}: Description (EN) and Description (AR) are required`);
+  }
+
+  if (!productData.pricePerUnit) {
+    errors.push(`Row ${rowNumber}: Price Per Unit is required`);
+  }
+
+  // Validate custom fields
+  if (!productData.customFields || !Array.isArray(productData.customFields)) {
+    errors.push(`Row ${rowNumber}: Custom fields must be an array`);
+  } else {
+    if (productData.customFields.length < 3) {
+      errors.push(`Row ${rowNumber}: At least 3 custom fields are required`);
+    }
+    if (productData.customFields.length > 10) {
+      errors.push(`Row ${rowNumber}: Maximum 10 custom fields allowed`);
+    }
+
+    productData.customFields.forEach((field, fieldIndex) => {
+      if (!field.key || !field.key.en || !field.key.ar || !field.value || !field.value.en || !field.value.ar) {
+        errors.push(`Row ${rowNumber}, Custom Field ${fieldIndex + 1}: Key and Value must have both EN and AR`);
+      }
+    });
+  }
+
+  // Validate unit if provided
+  if (productData.unit) {
+    if (!productData.unit.en || !productData.unit.ar) {
+      errors.push(`Row ${rowNumber}: If Unit is provided, both EN and AR are required`);
+    }
+  }
+
+  return errors;
+};
+
+// POST /api/v1/business/products/products - Create multiple products (Bulk Create)
+exports.createProducts = async (req, res) => {
+  try {
+    const permissionError = validateBusinessPermissions(req, res);
+    if (permissionError) return;
+
+    const { products } = req.body;
+
+    // Validate products array
+    if (!products || !Array.isArray(products) || products.length === 0) {
+      return res.status(400).json({
+        status: 'error',
+        message: getBilingualMessage('products_array_required')
+      });
+    }
+
+    if (products.length > 100) {
+      return res.status(400).json({
+        status: 'error',
+        message: getBilingualMessage('max_products_limit_exceeded')
+      });
+    }
+
+    const generateProductCode = require('../../../utils/generateProductCode');
+    const createdProducts = [];
+    const failedProducts = [];
+    const validationErrors = [];
+
+    // Validate all products first
+    for (let i = 0; i < products.length; i++) {
+      const productData = products[i];
+      const errors = validateProductData(productData, i);
+      
+      if (errors.length > 0) {
+        validationErrors.push(...errors);
+        failedProducts.push({
+          index: i + 1,
+          product: productData.name?.en || productData.name?.ar || 'Unknown',
+          errors: errors
+        });
+      }
+    }
+
+    // If all products have validation errors, return early
+    if (failedProducts.length === products.length) {
+      return res.status(400).json({
+        status: 'error',
+        message: getBilingualMessage('all_products_validation_failed'),
+        data: {
+          total: products.length,
+          failed: failedProducts.length,
+          validationErrors: validationErrors,
+          failedProducts: failedProducts
+        }
+      });
+    }
+
+    // Process valid products
+    for (let i = 0; i < products.length; i++) {
+      const productData = products[i];
+      
+      // Skip if already marked as failed in validation
+      if (failedProducts.some(fp => fp.index === i + 1)) {
+        continue;
+      }
+
+      try {
+        // Check if category exists and is active
+        const categoryExists = await Category.findOne({
+          'name.en': productData.category.en,
+          'name.ar': productData.category.ar
+        });
+
+        if (!categoryExists) {
+          failedProducts.push({
+            index: i + 1,
+            product: productData.name?.en || productData.name?.ar || 'Unknown',
+            error: getBilingualMessage('category_not_found')
+          });
+          continue;
+        }
+
+        if (categoryExists.status !== 'active') {
+          failedProducts.push({
+            index: i + 1,
+            product: productData.name?.en || productData.name?.ar || 'Unknown',
+            error: getBilingualMessage('category_inactive')
+          });
+          continue;
+        }
+
+        // Generate product code if not provided
+        let code = productData.code;
+        if (!code) {
+          code = await generateProductCode();
+        } else {
+          // Check if code already exists
+          const existingProduct = await Product.findOne({ code });
+          if (existingProduct) {
+            // Generate new code if duplicate
+            code = await generateProductCode();
+          }
+        }
+
+        // Create product
+        const product = new Product({
+          code,
+          category: productData.category,
+          name: productData.name,
+          images: productData.images || [],
+          description: productData.description,
+          unit: productData.unit,
+          minOrder: productData.minOrder,
+          pricePerUnit: productData.pricePerUnit,
+          stock: productData.stock !== undefined ? productData.stock : 0,
+          customFields: productData.customFields,
+          attachments: productData.attachments || [],
+          status: 'pending', // Business products need approval
+          isAllowed: true,
+          owner: req.user.id
+        });
+
+        await product.save();
+        createdProducts.push(product);
+
+      } catch (error) {
+        console.error(`Error creating product at index ${i + 1}:`, error);
+        failedProducts.push({
+          index: i + 1,
+          product: productData.name?.en || productData.name?.ar || 'Unknown',
+          error: error.message || getBilingualMessage('failed_create_product')
+        });
+      }
+    }
+
+    // Populate created products
+    if (createdProducts.length > 0) {
+      await Product.populate(createdProducts, [
+        { path: 'owner', select: 'firstname lastname email role businessInfo.companyName' },
+        { path: 'approvedBy', select: 'firstname lastname email role' }
+      ]);
+      await attachReviewCountsToProducts(createdProducts);
+    }
+
+    const formattedProducts = createdProducts.map(product => formatProduct(product));
+
+    // Build response
+    const response = {
+      success: createdProducts.length,
+      failed: failedProducts.length,
+      total: products.length,
+      products: formattedProducts
+    };
+
+    if (failedProducts.length > 0) {
+      response.failedProducts = failedProducts;
+    }
+
+    if (validationErrors.length > 0) {
+      response.validationErrors = validationErrors;
+    }
+
+    // Return success if at least one product was created
+    const statusCode = createdProducts.length > 0 ? 201 : 400;
+    const status = createdProducts.length > 0 ? 'success' : 'error';
+    const message = createdProducts.length > 0
+      ? getBilingualMessage('products_created_success')
+      : getBilingualMessage('products_creation_failed');
+
+    res.status(statusCode).json(createResponse(status, response, message));
+
+  } catch (error) {
+    console.error('Create products error:', error);
+    res.status(500).json({
+      status: 'error',
+      message: getBilingualMessage('failed_create_products')
+    });
+  }
+};

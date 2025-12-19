@@ -44,8 +44,13 @@ exports.getProducts = async (req, res) => {
 
     // Match stage for basic filters
     const matchStage = {};
-    if (category) matchStage.category = category;
     if (status) matchStage.status = status;
+
+    // Category is a bilingual object { en: String, ar: String }, so we need to match against both
+    const categoryFilter = category ? [
+      { 'category.en': { $regex: category, $options: 'i' } },
+      { 'category.ar': { $regex: category, $options: 'i' } }
+    ] : [];
 
     // If search is provided, we need to use aggregation to search across populated fields
     if (search) {
@@ -58,10 +63,8 @@ exports.getProducts = async (req, res) => {
         }
       });
 
-      pipeline.push({
-        $match: {
-          ...matchStage,
-          $or: [
+      // Build search conditions
+      const searchConditions = [
             { 'name.en': { $regex: search, $options: 'i' } },
             { 'name.ar': { $regex: search, $options: 'i' } },
             { 'description.en': { $regex: search, $options: 'i' } },
@@ -69,8 +72,23 @@ exports.getProducts = async (req, res) => {
             { code: { $regex: search, $options: 'i' } },
             { 'ownerInfo.firstname': { $regex: search, $options: 'i' } },
             { 'ownerInfo.lastname': { $regex: search, $options: 'i' } }
-          ]
-        }
+      ];
+
+      // Combine category filter with search conditions if category is provided
+      const matchConditions = { ...matchStage };
+      if (categoryFilter.length > 0) {
+        // If both category and search exist, we need $and to combine them
+        matchConditions.$and = [
+          { $or: categoryFilter },
+          { $or: searchConditions }
+        ];
+      } else {
+        // Only search conditions
+        matchConditions.$or = searchConditions;
+      }
+
+      pipeline.push({
+        $match: matchConditions
       });
 
       // Add lookup for category
@@ -126,7 +144,7 @@ exports.getProducts = async (req, res) => {
       const products = await Product.aggregate(pipeline);
       await attachReviewCountsToProducts(products);
 
-      // Get total count for pagination
+      // Get total count for pagination - use same match conditions as main pipeline
       const countPipeline = [
         {
           $lookup: {
@@ -137,18 +155,7 @@ exports.getProducts = async (req, res) => {
           }
         },
         {
-          $match: {
-            ...matchStage,
-            $or: [
-              { 'name.en': { $regex: search, $options: 'i' } },
-              { 'name.ar': { $regex: search, $options: 'i' } },
-              { 'description.en': { $regex: search, $options: 'i' } },
-              { 'description.ar': { $regex: search, $options: 'i' } },
-              { code: { $regex: search, $options: 'i' } },
-              { 'ownerInfo.firstname': { $regex: search, $options: 'i' } },
-              { 'ownerInfo.lastname': { $regex: search, $options: 'i' } }
-            ]
-          }
+          $match: matchConditions
         },
         { $count: 'total' }
       ];
@@ -171,7 +178,12 @@ exports.getProducts = async (req, res) => {
 
     } else {
       // No search - use regular find with populate
-      const filter = matchStage;
+      const filter = { ...matchStage };
+      
+      // Add category filter for non-search path
+      if (categoryFilter.length > 0) {
+        filter.$or = categoryFilter;
+      }
 
       const products = await Product.find(filter)
         .populate('owner', 'firstname lastname email role businessInfo.companyName')

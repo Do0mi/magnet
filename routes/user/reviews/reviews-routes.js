@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { addReview, getProductReviews, deleteReview, getAllAcceptedReviews } = require('../../../controllers/user/reviews/reviews-controller');
 const authenticateToken = require('../../../middleware/auth-middleware');
-const { requireCustomer } = require('../../../middleware/role-middleware');
+const { requireCustomerOrBusiness } = require('../../../middleware/role-middleware');
 const detectCountry = require('../../../middleware/detect-country-middleware');
 
 // Detect user country from IP (must be before auth to set req.userCurrency)
@@ -12,7 +12,7 @@ router.use(detectCountry);
 router.use(authenticateToken);
 
 // Apply customer role validation to all routes
-router.use(requireCustomer);
+router.use(requireCustomerOrBusiness);
 
 // GET /api/v1/user/reviews - Get all accepted reviews for all products
 router.get('/', getAllAcceptedReviews);

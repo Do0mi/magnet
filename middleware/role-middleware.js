@@ -65,6 +65,9 @@ const requireAdminEmployeeOrBusiness = requireRole(['admin', 'magnet_employee', 
 // Check if user is admin, magnet employee, or customer
 const requireAdminEmployeeOrCustomer = requireRole(['admin', 'magnet_employee', 'customer']);
 
+// Check if user is customer or business
+const requireCustomerOrBusiness = requireRole(['customer', 'business']);
+
 module.exports = {
   requireRole,
   requireAdmin,
@@ -73,5 +76,6 @@ module.exports = {
   requireCustomer,
   requireAdminOrEmployee,
   requireAdminEmployeeOrBusiness,
-  requireAdminEmployeeOrCustomer
+  requireAdminEmployeeOrCustomer,
+  requireCustomerOrBusiness
 }; 

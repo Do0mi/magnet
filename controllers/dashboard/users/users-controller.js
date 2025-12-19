@@ -271,6 +271,12 @@ exports.toggleUser = async (req, res) => {
       updateFields.disallowedAt = null;
     }
 
+    // For business users, preserve the approvalStatus - only change isAllowed
+    if (user.role === 'business' && user.businessInfo) {
+      // Explicitly preserve businessInfo.approvalStatus and other businessInfo fields
+      updateFields['businessInfo.approvalStatus'] = user.businessInfo.approvalStatus;
+    }
+
     let updatedUser = await User.findByIdAndUpdate(
       req.params.id,
       updateFields,

@@ -97,6 +97,10 @@ const messages = {
     en: 'Account is not active. Please contact support.',
     ar: 'الحساب غير نشط. يرجى الاتصال بالدعم.'
   },
+  'account_not_allowed': {
+    en: 'Your account has been disabled. Please contact support.',
+    ar: 'تم تعطيل حسابك. يرجى الاتصال بالدعم.'
+  },
   'login_success': {
     en: 'Login successful',
     ar: 'تم تسجيل الدخول بنجاح'
@@ -336,6 +340,30 @@ const messages = {
   'product_created_success': {
     en: 'Product created successfully',
     ar: 'تم إنشاء المنتج بنجاح'
+  },
+  'products_array_required': {
+    en: 'Products array is required',
+    ar: 'مصفوفة المنتجات مطلوبة'
+  },
+  'max_products_limit_exceeded': {
+    en: 'Maximum 100 products can be created at once',
+    ar: 'يمكن إنشاء 100 منتج كحد أقصى في المرة الواحدة'
+  },
+  'all_products_validation_failed': {
+    en: 'All products failed validation. Please check the errors',
+    ar: 'فشل التحقق من جميع المنتجات. يرجى التحقق من الأخطاء'
+  },
+  'products_created_success': {
+    en: 'Products created successfully',
+    ar: 'تم إنشاء المنتجات بنجاح'
+  },
+  'products_creation_failed': {
+    en: 'Failed to create products',
+    ar: 'فشل في إنشاء المنتجات'
+  },
+  'failed_create_products': {
+    en: 'Failed to create products',
+    ar: 'فشل في إنشاء المنتجات'
   },
   'invalid_attachments': {
     en: 'Invalid attachments. All attachments must be approved and allowed products',
