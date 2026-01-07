@@ -7,7 +7,8 @@ const { sendApplicantSubmissionNotification } = require('../../../utils/email-ut
 // POST /api/v1/user/applicants - Submit an application
 exports.submitApplication = async (req, res) => {
   try {
-    const { name, email, age, gender, links } = req.body;
+    const { name, email, birthdate, studySituation, gender, phone, city, country, links } = req.body;
+    
     const cvFile = req.file;
 
     // Validate required fields
@@ -34,17 +35,69 @@ exports.submitApplication = async (req, res) => {
       });
     }
 
-    if (!age || isNaN(age) || age < 1 || age > 150) {
+    // Validate birthdate
+    if (!birthdate) {
       return res.status(400).json({
         status: 'error',
-        message: getBilingualMessage('invalid_age')
+        message: getBilingualMessage('birthdate_required')
       });
     }
 
+    const birthdateDate = new Date(birthdate);
+    if (isNaN(birthdateDate.getTime())) {
+      return res.status(400).json({
+        status: 'error',
+        message: getBilingualMessage('invalid_birthdate')
+      });
+    }
+
+    // Validate that birthdate is not in the future
+    if (birthdateDate > new Date()) {
+      return res.status(400).json({
+        status: 'error',
+        message: getBilingualMessage('birthdate_cannot_be_future')
+      });
+    }
+
+    // Validate gender
     if (!gender || !['male', 'female'].includes(gender)) {
       return res.status(400).json({
         status: 'error',
         message: getBilingualMessage('invalid_gender')
+      });
+    }
+
+    // Validate phone number
+    if (!phone || !phone.trim()) {
+      return res.status(400).json({
+        status: 'error',
+        message: getBilingualMessage('phone_required')
+      });
+    }
+
+    // Basic phone validation (international format)
+    const phoneRegex = /^\+?[1-9]\d{1,14}$/;
+    const cleanedPhone = phone.trim().replace(/[\s-]/g, '');
+    if (!phoneRegex.test(cleanedPhone)) {
+      return res.status(400).json({
+        status: 'error',
+        message: getBilingualMessage('phone_valid_required')
+      });
+    }
+
+    // Validate city
+    if (!city || !city.trim()) {
+      return res.status(400).json({
+        status: 'error',
+        message: getBilingualMessage('city_required')
+      });
+    }
+
+    // Validate country
+    if (!country || !country.trim()) {
+      return res.status(400).json({
+        status: 'error',
+        message: getBilingualMessage('country_required')
       });
     }
 
@@ -77,7 +130,7 @@ exports.submitApplication = async (req, res) => {
     }
 
     // Check if applicant with this email already exists (case-insensitive check)
-    const trimmedEmail = email.trim();
+    const trimmedEmail = email.trim().toLowerCase();
     const existingApplicant = await Applicant.findOne({ 
       email: new RegExp(`^${trimmedEmail}$`, 'i')
     });
@@ -92,9 +145,13 @@ exports.submitApplication = async (req, res) => {
     // Create applicant
     const applicantData = {
       name: name.trim(),
-      email: trimmedEmail,
-      age: parseInt(age),
+      email: email.trim().toLowerCase(),
+      birthdate: birthdateDate,
+      studySituation: studySituation ? studySituation.trim() : undefined,
       gender,
+      phone: cleanedPhone,
+      city: city.trim(),
+      country: country.trim(),
       links: processedLinks,
       status: 'pending',
       has_cv: !!cvFile

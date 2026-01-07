@@ -29,7 +29,7 @@ const handleUploadError = (err, req, res, next) => {
 };
 
 // POST /api/v1/user/applicants - Submit an application (no authentication required)
-router.post('/', upload.single('cv'), handleUploadError, submitApplication);
+router.post('/', upload.single('cvFile'), handleUploadError, submitApplication);
 
 module.exports = router;
 

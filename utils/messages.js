@@ -373,6 +373,10 @@ const messages = {
     en: 'Product not found',
     ar: 'المنتج غير موجود'
   },
+  'invalid_product_id': {
+    en: 'Invalid product ID format',
+    ar: 'تنسيق معرف المنتج غير صالح'
+  },
   'not_authorized_update_product': {
     en: 'Not authorized to update this product',
     ar: 'غير مصرح بتحديث هذا المنتج'
@@ -1478,6 +1482,22 @@ const messages = {
   'cv_must_be_pdf': {
     en: 'CV must be a PDF file',
     ar: 'يجب أن يكون ملف السيرة الذاتية بصيغة PDF'
+  },
+  'birthdate_required': {
+    en: 'Birthdate is required',
+    ar: 'تاريخ الميلاد مطلوب'
+  },
+  'invalid_birthdate': {
+    en: 'Invalid birthdate format',
+    ar: 'تنسيق تاريخ الميلاد غير صالح'
+  },
+  'birthdate_cannot_be_future': {
+    en: 'Birthdate cannot be in the future',
+    ar: 'تاريخ الميلاد لا يمكن أن يكون في المستقبل'
+  },
+  'phone_required': {
+    en: 'Phone number is required',
+    ar: 'رقم الهاتف مطلوب'
   },
   'application_submitted_success': {
     en: 'Application submitted successfully',

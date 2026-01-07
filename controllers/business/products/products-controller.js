@@ -1,4 +1,5 @@
 // Business Products Controller - Business Product Management
+const mongoose = require('mongoose');
 const Product = require('../../../models/product-model');
 const Category = require('../../../models/category-model');
 const { getBilingualMessage } = require('../../../utils/messages');
@@ -21,6 +22,10 @@ const validateBusinessPermissions = (req, res) => {
 
 // Helper function to check if product belongs to business
 const checkProductOwnership = async (productId, businessId) => {
+  // Validate that productId is a valid ObjectId
+  if (!mongoose.Types.ObjectId.isValid(productId)) {
+    return { product: null, isOwner: false };
+  }
   const product = await Product.findById(productId);
   if (!product) return { product: null, isOwner: false };
   return { product, isOwner: product.owner.toString() === businessId };
@@ -84,6 +89,14 @@ exports.getProductById = async (req, res) => {
   try {
     const permissionError = validateBusinessPermissions(req, res);
     if (permissionError) return;
+
+    // Validate that the ID parameter is a valid ObjectId
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({
+        status: 'error',
+        message: getBilingualMessage('invalid_product_id')
+      });
+    }
 
     const { product, isOwner } = await checkProductOwnership(req.params.id, req.user.id);
 
@@ -255,6 +268,14 @@ exports.updateProduct = async (req, res) => {
     const permissionError = validateBusinessPermissions(req, res);
     if (permissionError) return;
 
+    // Validate that the ID parameter is a valid ObjectId
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({
+        status: 'error',
+        message: getBilingualMessage('invalid_product_id')
+      });
+    }
+
     const { product, isOwner } = await checkProductOwnership(req.params.id, req.user.id);
 
     if (!product) {
@@ -403,6 +424,14 @@ exports.deleteProduct = async (req, res) => {
     const permissionError = validateBusinessPermissions(req, res);
     if (permissionError) return;
 
+    // Validate that the ID parameter is a valid ObjectId
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({
+        status: 'error',
+        message: getBilingualMessage('invalid_product_id')
+      });
+    }
+
     const { product, isOwner } = await checkProductOwnership(req.params.id, req.user.id);
 
     if (!product) {
@@ -444,6 +473,14 @@ exports.toggleProduct = async (req, res) => {
   try {
     const permissionError = validateBusinessPermissions(req, res);
     if (permissionError) return;
+
+    // Validate that the ID parameter is a valid ObjectId
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({
+        status: 'error',
+        message: getBilingualMessage('invalid_product_id')
+      });
+    }
 
     const { product, isOwner } = await checkProductOwnership(req.params.id, req.user.id);
 

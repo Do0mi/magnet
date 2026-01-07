@@ -12,16 +12,33 @@ const applicantSchema = new mongoose.Schema({
     trim: true,
     unique: true
   },
-  age: {
-    type: Number,
-    required: true,
-    min: 1,
-    max: 150
+  birthdate: {
+    type: Date,
+    required: true
+  },
+  studySituation: {
+    type: String,
+    trim: true
   },
   gender: {
     type: String,
     required: true,
     enum: ['male', 'female'],
+    trim: true
+  },
+  phone: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  city: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  country: {
+    type: String,
+    required: true,
     trim: true
   },
   cv: {
