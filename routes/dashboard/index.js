@@ -15,6 +15,7 @@ const wishlistsRoutes = require('./wishlists/wishlists-routes');
 const statsRoutes = require('./stats/stats-routes');
 const applicantsRoutes = require('./applicants/applicants-routes');
 const specialOrdersRoutes = require('./special-orders/special-orders-routes');
+const bannersRoutes = require('./banners/banners-routes');
 const dashboardRoutes = require('./dashboard/dashboard-routes');
 const { dashboardController } = require('../../controllers/dashboard/index');
 
@@ -33,5 +34,6 @@ router.use('/wishlists', wishlistsRoutes);
 router.use('/stats', statsRoutes);
 router.use('/applicants', applicantsRoutes);
 router.use('/special-orders', specialOrdersRoutes);
+router.use('/banners', bannersRoutes);
 
 module.exports = router;

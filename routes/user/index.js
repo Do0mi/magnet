@@ -14,6 +14,7 @@ const categoriesRoutes = require('./categories/categories-routes');
 const applicantsRoutes = require('./applicants/applicants-routes');
 const specialOrdersRoutes = require('./special-orders/special-orders-routes');
 const notificationsRoutes = require('./notifications/notifications-routes');
+const bannersRoutes = require('./banners/banners-routes');
 
 // Mount all user sub-routes
 router.use('/auth', authRoutes);
@@ -28,5 +29,6 @@ router.use('/categories', categoriesRoutes);
 router.use('/applicants', applicantsRoutes);
 router.use('/special-orders', specialOrdersRoutes);
 router.use('/notifications', notificationsRoutes);
+router.use('/banners', bannersRoutes);
 
 module.exports = router;

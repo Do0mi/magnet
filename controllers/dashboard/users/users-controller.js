@@ -146,7 +146,8 @@ exports.createUser = async (req, res) => {
           categories: accessPages.categories || false,
           addresses: accessPages.addresses || false,
           specialOrders: accessPages.specialOrders || false,
-          applicants: accessPages.applicants || false
+          applicants: accessPages.applicants || false,
+          banners: accessPages.banners || false
         };
       }
     }
@@ -459,20 +460,37 @@ exports.updateUser = async (req, res) => {
     }
 
     // Handle access pages for admin/employee roles
-    if ((currentUser.role === 'admin' || currentUser.role === 'magnet_employee' || role === 'admin' || role === 'magnet_employee') && accessPages) {
-      if (typeof accessPages === 'object') {
+    if (currentUser.role === 'admin' || currentUser.role === 'magnet_employee' || role === 'admin' || role === 'magnet_employee') {
+      if (accessPages && typeof accessPages === 'object') {
+        // Preserve existing accessPages or initialize with defaults
+        const existingAccessPages = currentUser.accessPages || {
+          dashboard: false,
+          analytics: false,
+          users: false,
+          products: false,
+          orders: false,
+          reviews: false,
+          wishlists: false,
+          categories: false,
+          addresses: false,
+          specialOrders: false,
+          applicants: false,
+          banners: false
+        };
+        
         updateFields.accessPages = {
-          dashboard: accessPages.dashboard !== undefined ? accessPages.dashboard : (currentUser.accessPages?.dashboard || false),
-          analytics: accessPages.analytics !== undefined ? accessPages.analytics : (currentUser.accessPages?.analytics || false),
-          users: accessPages.users !== undefined ? accessPages.users : (currentUser.accessPages?.users || false),
-          products: accessPages.products !== undefined ? accessPages.products : (currentUser.accessPages?.products || false),
-          orders: accessPages.orders !== undefined ? accessPages.orders : (currentUser.accessPages?.orders || false),
-          reviews: accessPages.reviews !== undefined ? accessPages.reviews : (currentUser.accessPages?.reviews || false),
-          wishlists: accessPages.wishlists !== undefined ? accessPages.wishlists : (currentUser.accessPages?.wishlists || false),
-          categories: accessPages.categories !== undefined ? accessPages.categories : (currentUser.accessPages?.categories || false),
-          addresses: accessPages.addresses !== undefined ? accessPages.addresses : (currentUser.accessPages?.addresses || false),
-          specialOrders: accessPages.specialOrders !== undefined ? accessPages.specialOrders : (currentUser.accessPages?.specialOrders || false),
-          applicants: accessPages.applicants !== undefined ? accessPages.applicants : (currentUser.accessPages?.applicants || false)
+          dashboard: accessPages.dashboard !== undefined ? accessPages.dashboard : existingAccessPages.dashboard,
+          analytics: accessPages.analytics !== undefined ? accessPages.analytics : existingAccessPages.analytics,
+          users: accessPages.users !== undefined ? accessPages.users : existingAccessPages.users,
+          products: accessPages.products !== undefined ? accessPages.products : existingAccessPages.products,
+          orders: accessPages.orders !== undefined ? accessPages.orders : existingAccessPages.orders,
+          reviews: accessPages.reviews !== undefined ? accessPages.reviews : existingAccessPages.reviews,
+          wishlists: accessPages.wishlists !== undefined ? accessPages.wishlists : existingAccessPages.wishlists,
+          categories: accessPages.categories !== undefined ? accessPages.categories : existingAccessPages.categories,
+          addresses: accessPages.addresses !== undefined ? accessPages.addresses : existingAccessPages.addresses,
+          specialOrders: accessPages.specialOrders !== undefined ? accessPages.specialOrders : existingAccessPages.specialOrders,
+          applicants: accessPages.applicants !== undefined ? accessPages.applicants : existingAccessPages.applicants,
+          banners: accessPages.banners !== undefined ? accessPages.banners : existingAccessPages.banners
         };
       }
     }
@@ -493,7 +511,7 @@ exports.updateUser = async (req, res) => {
     let user = await User.findByIdAndUpdate(
       req.params.id,
       updateFields,
-      { new: true, runValidators: true }
+      { new: true, runValidators: true, overwrite: false }
     ).select('-password');
 
     if (!user) {

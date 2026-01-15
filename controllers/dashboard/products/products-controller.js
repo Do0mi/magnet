@@ -5,6 +5,7 @@ const User = require('../../../models/user-model');
 const { getBilingualMessage } = require('../../../utils/messages');
 const { createResponse, formatProduct, formatReview } = require('../../../utils/response-formatters');
 const { attachReviewCountsToProducts } = require('../../../utils/review-helpers');
+const { getProductsBannerDiscounts, getProductBannerDiscount, applyBannerDiscountToProduct } = require('../../../utils/banner-helpers');
 
 // Base currency for dashboard (always USD)
 const BASE_CURRENCY = 'USD';
@@ -163,7 +164,23 @@ exports.getProducts = async (req, res) => {
       const countResult = await Product.aggregate(countPipeline);
       const total = countResult.length > 0 ? countResult[0].total : 0;
 
-      const formattedProducts = products.map(product => formatProduct(product));
+      // Get banner discounts for all products
+      const productIds = products.map(p => p._id.toString());
+      const bannerDiscounts = await getProductsBannerDiscounts(productIds);
+
+      const formattedProducts = await Promise.all(
+        products.map(async (product) => {
+          const formatted = formatProduct(product);
+          const productIdStr = product._id.toString();
+          const bannerDiscount = bannerDiscounts[productIdStr];
+          
+          if (bannerDiscount) {
+            return await applyBannerDiscountToProduct(formatted, bannerDiscount, BASE_CURRENCY);
+          }
+          
+          return formatted;
+        })
+      );
 
       res.status(200).json(createResponse('success', {
         products: formattedProducts,
@@ -195,7 +212,23 @@ exports.getProducts = async (req, res) => {
 
       const total = await Product.countDocuments(filter);
 
-      const formattedProducts = products.map(product => formatProduct(product));
+      // Get banner discounts for all products
+      const productIds = products.map(p => p._id.toString());
+      const bannerDiscounts = await getProductsBannerDiscounts(productIds);
+
+      const formattedProducts = await Promise.all(
+        products.map(async (product) => {
+          const formatted = formatProduct(product);
+          const productIdStr = product._id.toString();
+          const bannerDiscount = bannerDiscounts[productIdStr];
+          
+          if (bannerDiscount) {
+            return await applyBannerDiscountToProduct(formatted, bannerDiscount, BASE_CURRENCY);
+          }
+          
+          return formatted;
+        })
+      );
 
       res.status(200).json(createResponse('success', {
         products: formattedProducts,
@@ -236,7 +269,13 @@ exports.getProductById = async (req, res) => {
     }
 
     await attachReviewCountsToProducts([product]);
-    const formattedProduct = formatProduct(product);
+    let formattedProduct = formatProduct(product);
+
+    // Check if product is in a banner and apply discount
+    const bannerDiscount = await getProductBannerDiscount(req.params.id);
+    if (bannerDiscount) {
+      formattedProduct = await applyBannerDiscountToProduct(formattedProduct, bannerDiscount, BASE_CURRENCY);
+    }
 
     res.status(200).json(createResponse('success', { 
       product: formattedProduct,

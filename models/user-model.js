@@ -141,7 +141,8 @@ const userSchema = new mongoose.Schema({
     categories: { type: Boolean, default: false },
     addresses: { type: Boolean, default: false },
     specialOrders: { type: Boolean, default: false },
-    applicants: { type: Boolean, default: false }
+    applicants: { type: Boolean, default: false },
+    banners: { type: Boolean, default: false }
   }
 }, {
   timestamps: true
@@ -209,7 +210,8 @@ userSchema.pre('save', function(next) {
         categories: true,
         addresses: true,
         specialOrders: true,
-        applicants: true
+        applicants: true,
+        banners: true
       };
     } else if (this.role === USER_ROLES.EMPLOYEE) {
       // Employee access is managed by admin - keep existing values or set defaults
@@ -225,7 +227,8 @@ userSchema.pre('save', function(next) {
           categories: false,
           addresses: false,
           specialOrders: false,
-          applicants: false
+          applicants: false,
+          banners: false
         };
       }
     } else {
@@ -241,7 +244,8 @@ userSchema.pre('save', function(next) {
         categories: false,
         addresses: false,
         specialOrders: false,
-        applicants: false
+        applicants: false,
+        banners: false
       };
     }
   }

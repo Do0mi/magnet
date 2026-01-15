@@ -155,7 +155,8 @@ const formatUser = (user, options = {}) => {
       categories: false,
       addresses: false,
       specialOrders: false,
-      applicants: false
+      applicants: false,
+      banners: false
     };
   }
 
@@ -192,6 +193,7 @@ const formatProduct = (product, options = {}) => {
     rating: product.rating,
     attachments: product.attachments,
     isAllowed: product.isAllowed,
+    isInBanner: product.isInBanner !== undefined ? product.isInBanner : false,
     declinedReason: product.declinedReason,
     createdAt: product.createdAt,
     updatedAt: product.updatedAt,
@@ -588,6 +590,70 @@ const formatApplicant = (applicant, options = {}) => {
 };
 
 /**
+ * Format banner data with selective fields
+ * @param {Object} banner - Banner object from database
+ * @param {Object} options - Formatting options
+ * @param {boolean} options.includeProducts - Include products array (default: false)
+ * @returns {Object} Formatted banner object
+ */
+const formatBanner = (banner, options = {}) => {
+  if (!banner) return null;
+  
+  const {
+    includeProducts = false
+  } = options;
+
+  const formatted = {
+    id: banner._id,
+    title: banner.title,
+    description: banner.description,
+    imageUrl: banner.imageUrl,
+    percentage: banner.percentage,
+    isAllowed: banner.isAllowed,
+    createdAt: banner.createdAt,
+    updatedAt: banner.updatedAt
+  };
+
+  // Include owner if populated
+  if (banner.owner) {
+    if (typeof banner.owner === 'object') {
+      formatted.owner = {
+        id: banner.owner._id,
+        firstname: banner.owner.firstname,
+        lastname: banner.owner.lastname,
+        email: banner.owner.email,
+        role: banner.owner.role
+      };
+      if (banner.owner.businessInfo && banner.owner.businessInfo.companyName) {
+        formatted.owner.companyName = banner.owner.businessInfo.companyName;
+      }
+    } else {
+      formatted.owner = banner.owner;
+    }
+  }
+
+  // Include products if requested
+  if (includeProducts && banner.products) {
+    if (Array.isArray(banner.products)) {
+      formatted.products = banner.products.map(product => {
+        if (typeof product === 'object') {
+          return formatProduct(product, {
+            includeOwner: true,
+            includeApproval: false,
+            includeCustomFields: true
+          });
+        }
+        return product;
+      });
+    } else {
+      formatted.products = banner.products;
+    }
+  }
+
+  return formatted;
+};
+
+/**
  * Create standardized API response
  * @param {string} status - Response status ('success' or 'error')
  * @param {Object} data - Response data
@@ -621,6 +687,7 @@ module.exports = {
   formatReview,
   formatAddress,
   formatApplicant,
+  formatBanner,
   createResponse
 };
 

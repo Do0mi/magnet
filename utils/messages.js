@@ -1728,6 +1728,95 @@ const messages = {
   'notification_special_order_cancelled_message': {
     en: 'Your special order has been cancelled',
     ar: 'تم إلغاء طلبك الخاص'
+  },
+  // Banner messages
+  'banner_created_success': {
+    en: 'Banner created successfully',
+    ar: 'تم إنشاء البانر بنجاح'
+  },
+  'banner_updated_success': {
+    en: 'Banner updated successfully',
+    ar: 'تم تحديث البانر بنجاح'
+  },
+  'banner_deleted_success': {
+    en: 'Banner deleted successfully',
+    ar: 'تم حذف البانر بنجاح'
+  },
+  'banner_toggled_success': {
+    en: 'Banner status toggled successfully',
+    ar: 'تم تغيير حالة البانر بنجاح'
+  },
+  'banner_not_found': {
+    en: 'Banner not found',
+    ar: 'البانر غير موجود'
+  },
+  'invalid_banner_id': {
+    en: 'Invalid banner ID',
+    ar: 'معرف البانر غير صالح'
+  },
+  'failed_create_banner': {
+    en: 'Failed to create banner',
+    ar: 'فشل في إنشاء البانر'
+  },
+  'failed_update_banner': {
+    en: 'Failed to update banner',
+    ar: 'فشل في تحديث البانر'
+  },
+  'failed_delete_banner': {
+    en: 'Failed to delete banner',
+    ar: 'فشل في حذف البانر'
+  },
+  'failed_get_banners': {
+    en: 'Failed to get banners',
+    ar: 'فشل في الحصول على البانرات'
+  },
+  'failed_get_banner': {
+    en: 'Failed to get banner',
+    ar: 'فشل في الحصول على البانر'
+  },
+  'failed_toggle_banner': {
+    en: 'Failed to toggle banner',
+    ar: 'فشل في تغيير حالة البانر'
+  },
+  'banner_title_required_both_languages': {
+    en: 'Banner title is required in both languages (EN and AR)',
+    ar: 'عنوان البانر مطلوب باللغتين (الإنجليزية والعربية)'
+  },
+  'banner_description_required_both_languages': {
+    en: 'Banner description is required in both languages (EN and AR)',
+    ar: 'وصف البانر مطلوب باللغتين (الإنجليزية والعربية)'
+  },
+  'banner_image_url_required': {
+    en: 'Banner image URL is required',
+    ar: 'رابط صورة البانر مطلوب'
+  },
+  'banner_percentage_required': {
+    en: 'Banner percentage is required',
+    ar: 'نسبة الخصم مطلوبة'
+  },
+  'banner_percentage_invalid': {
+    en: 'Banner percentage must be between 0 and 100',
+    ar: 'نسبة الخصم يجب أن تكون بين 0 و 100'
+  },
+  'banner_products_invalid': {
+    en: 'Invalid products for banner',
+    ar: 'منتجات غير صالحة للبانر'
+  },
+  'banner_product_not_owned': {
+    en: 'You can only add your own products to the banner',
+    ar: 'يمكنك فقط إضافة منتجاتك الخاصة إلى البانر'
+  },
+  'banner_access_denied': {
+    en: 'You do not have access to banners page',
+    ar: 'ليس لديك صلاحية للوصول إلى صفحة البانرات'
+  },
+  'banner_product_already_in_banner': {
+    en: 'One or more products are already in another banner',
+    ar: 'واحد أو أكثر من المنتجات موجود بالفعل في بانر آخر'
+  },
+  'banner_product_conflict': {
+    en: 'Product is already assigned to another banner',
+    ar: 'المنتج موجود بالفعل في بانر آخر'
   }
 };
 

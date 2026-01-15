@@ -4,6 +4,7 @@ const { getBilingualMessage } = require('../../../utils/messages');
 const { createResponse, formatProduct } = require('../../../utils/response-formatters');
 const { attachReviewCountsToProducts } = require('../../../utils/review-helpers');
 const { convertCurrency, BASE_CURRENCY } = require('../../../services/currency-service');
+const { getProductsBannerDiscounts, getProductBannerDiscount, applyBannerDiscountToProduct } = require('../../../utils/banner-helpers');
 
 // GET /api/v1/user/products - Get all approved and allowed products
 exports.getProducts = async (req, res) => {
@@ -158,18 +159,29 @@ exports.getProducts = async (req, res) => {
       // Debug: Log currency detection
       console.log(`[Products Controller - getProducts with search] Detected Currency: ${userCurrency}, User Country: ${req.userCountry || 'unknown'}, req.userCurrency: ${req.userCurrency}`);
 
-      // Convert product prices to user's currency
+      // Get banner discounts for all products
+      const productIds = products.map(p => p._id.toString());
+      const bannerDiscounts = await getProductsBannerDiscounts(productIds);
+
+      // Convert product prices to user's currency and apply banner discounts
       const formattedProducts = await Promise.all(
         products.map(async (product) => {
-          const formatted = formatProduct(product);
+          let formatted = formatProduct(product);
+          const productIdStr = product._id.toString();
+          const bannerDiscount = bannerDiscounts[productIdStr];
           
-          // Convert pricePerUnit if it exists
-          if (formatted.pricePerUnit) {
-            const basePrice = parseFloat(formatted.pricePerUnit);
-            if (!isNaN(basePrice)) {
-              const convertedPrice = await convertCurrency(basePrice, userCurrency);
-              console.log(`[Products Controller] Converting: ${basePrice} USD -> ${convertedPrice} ${userCurrency}`);
-              formatted.pricePerUnit = convertedPrice.toString();
+          // Apply banner discount if exists
+          if (bannerDiscount) {
+            formatted = await applyBannerDiscountToProduct(formatted, bannerDiscount, userCurrency);
+          } else {
+            // Convert pricePerUnit if no banner discount
+            if (formatted.pricePerUnit) {
+              const basePrice = parseFloat(formatted.pricePerUnit);
+              if (!isNaN(basePrice)) {
+                const convertedPrice = await convertCurrency(basePrice, userCurrency);
+                console.log(`[Products Controller] Converting: ${basePrice} USD -> ${convertedPrice} ${userCurrency}`);
+                formatted.pricePerUnit = convertedPrice.toString();
+              }
             }
           }
           
@@ -213,18 +225,29 @@ exports.getProducts = async (req, res) => {
       // Debug: Log currency detection
       console.log(`[Products Controller - getProducts without search] Detected Currency: ${userCurrency}, User Country: ${req.userCountry || 'unknown'}, req.userCurrency: ${req.userCurrency}`);
 
-      // Convert product prices to user's currency
+      // Get banner discounts for all products
+      const productIds = products.map(p => p._id.toString());
+      const bannerDiscounts = await getProductsBannerDiscounts(productIds);
+
+      // Convert product prices to user's currency and apply banner discounts
       const formattedProducts = await Promise.all(
         products.map(async (product) => {
-          const formatted = formatProduct(product);
+          let formatted = formatProduct(product);
+          const productIdStr = product._id.toString();
+          const bannerDiscount = bannerDiscounts[productIdStr];
           
-          // Convert pricePerUnit if it exists
-          if (formatted.pricePerUnit) {
-            const basePrice = parseFloat(formatted.pricePerUnit);
-            if (!isNaN(basePrice)) {
-              const convertedPrice = await convertCurrency(basePrice, userCurrency);
-              console.log(`[Products Controller] Converting: ${basePrice} USD -> ${convertedPrice} ${userCurrency}`);
-              formatted.pricePerUnit = convertedPrice.toString();
+          // Apply banner discount if exists
+          if (bannerDiscount) {
+            formatted = await applyBannerDiscountToProduct(formatted, bannerDiscount, userCurrency);
+          } else {
+            // Convert pricePerUnit if no banner discount
+            if (formatted.pricePerUnit) {
+              const basePrice = parseFloat(formatted.pricePerUnit);
+              if (!isNaN(basePrice)) {
+                const convertedPrice = await convertCurrency(basePrice, userCurrency);
+                console.log(`[Products Controller] Converting: ${basePrice} USD -> ${convertedPrice} ${userCurrency}`);
+                formatted.pricePerUnit = convertedPrice.toString();
+              }
             }
           }
           
@@ -277,14 +300,20 @@ exports.getProductById = async (req, res) => {
     // Get user currency from middleware (defaults to USD if not set)
     const userCurrency = req.userCurrency || BASE_CURRENCY;
 
-    const formattedProduct = formatProduct(product);
+    let formattedProduct = formatProduct(product);
 
-    // Convert pricePerUnit if it exists
-    if (formattedProduct.pricePerUnit) {
-      const basePrice = parseFloat(formattedProduct.pricePerUnit);
-      if (!isNaN(basePrice)) {
-        const convertedPrice = await convertCurrency(basePrice, userCurrency);
-        formattedProduct.pricePerUnit = convertedPrice.toString();
+    // Check if product is in a banner and apply discount
+    const bannerDiscount = await getProductBannerDiscount(req.params.id);
+    if (bannerDiscount) {
+      formattedProduct = await applyBannerDiscountToProduct(formattedProduct, bannerDiscount, userCurrency);
+    } else {
+      // Convert pricePerUnit if no banner discount
+      if (formattedProduct.pricePerUnit) {
+        const basePrice = parseFloat(formattedProduct.pricePerUnit);
+        if (!isNaN(basePrice)) {
+          const convertedPrice = await convertCurrency(basePrice, userCurrency);
+          formattedProduct.pricePerUnit = convertedPrice.toString();
+        }
       }
     }
 
