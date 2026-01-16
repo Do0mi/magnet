@@ -10,7 +10,7 @@ router.use(verifyToken);
 // POST /api/v1/dashboard/banners - Create banner
 router.post('/', requireAdminOrEmployee, BannerController.createBanner);
 
-// GET /api/v1/dashboard/banners - Get all banners without products
+// GET /api/v1/dashboard/banners - Get all banners with products
 router.get('/', requireAdminOrEmployee, BannerController.getBanners);
 
 // GET /api/v1/dashboard/banners/:id - Get banner by id with discounted products

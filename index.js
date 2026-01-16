@@ -62,8 +62,30 @@ const PORT = process.env.PORT || 5000;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Apply general rate limiting to all API routes
-app.use('/api', generalLimiter);
+// CORS configuration (must be before routes and after body parsers)
+app.use(cors({
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+}));
+
+// Apply general rate limiting to all API routes (excluding OPTIONS requests)
+app.use('/api', (req, res, next) => {
+  if (req.method === 'OPTIONS') {
+    return next(); // Skip rate limiting for preflight requests
+  }
+  generalLimiter(req, res, next);
+});
 
 // Set up session
 app.use(cookieSession({
@@ -117,21 +139,6 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/magnet-pr
     console.error('Could not connect to MongoDB', err);
     process.exit(1);
   });
-
-// CORS configuration
-app.use(cors({
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true
-}));
 
 // Socket.IO setup
 io.use((socket, next) => {

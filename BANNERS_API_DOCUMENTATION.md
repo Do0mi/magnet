@@ -989,5 +989,5 @@ When products are returned from product endpoints (dashboard, business, or user)
 
 ---
 
-**Last Updated:** 2024-01-15
-**آخر تحديث:** 2024-01-15
+**Last Updated:** 2024-12-19
+**آخر تحديث:** 2024-12-19
