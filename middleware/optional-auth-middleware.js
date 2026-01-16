@@ -21,8 +21,12 @@ module.exports = async (req, res, next) => {
     const token = authHeader.split(' ')[1];
     
     try {
-      // Verify token
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'magnetprojecttokensecret');
+      // Verify token (only if JWT_SECRET is configured)
+      if (!process.env.JWT_SECRET) {
+        req.user = undefined;
+        return next();
+      }
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
       
       // Add user from payload to request
       req.user = decoded;

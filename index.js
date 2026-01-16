@@ -11,6 +11,9 @@ const jwt = require('jsonwebtoken');
 const Order = require('./models/order-model');
 const Product = require('./models/product-model');
 
+// Rate limiting middleware
+const { generalLimiter } = require('./middleware/rate-limit-middleware');
+
 // New API v1 Routes
 const dashboardRoutes = require('./routes/dashboard');
 const businessRoutes = require('./routes/business');
@@ -26,20 +29,49 @@ require('./config/passport-setup');
 // Load environment variables
 dotenv.config();
 
+// Validate required environment variables
+if (!process.env.JWT_SECRET) {
+  console.error('ERROR: JWT_SECRET environment variable is required but not set!');
+  process.exit(1);
+}
+if (!process.env.COOKIE_KEY) {
+  console.error('ERROR: COOKIE_KEY environment variable is required but not set!');
+  process.exit(1);
+}
+
+// CORS allowed origins
+const allowedOrigins = [
+  'https://magnet-web-omega.vercel.app',
+  'https://magnet-b2b.com',
+  'https://dashboard.magnet-b2b.com',
+  'http://localhost:5173'
+];
+
 // Initialize app
 const app = express();
 const server = http.createServer(app);
-const io = socketio(server, { cors: { origin: '*' } });
+const io = socketio(server, { 
+  cors: { 
+    origin: allowedOrigins,
+    credentials: true
+  } 
+});
 const PORT = process.env.PORT || 5000;
 
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Apply general rate limiting to all API routes
+app.use('/api', generalLimiter);
+
 // Set up session
 app.use(cookieSession({
   maxAge: 24 * 60 * 60 * 1000,
-  keys: [process.env.COOKIE_KEY || 'magnetdefaultsecretkey']
+  keys: [process.env.COOKIE_KEY],
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production', // Only send cookies over HTTPS in production
+  sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax'
 }));
 
 // Initialize passport
@@ -86,9 +118,18 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/magnet-pr
     process.exit(1);
   });
 
-// CORS configuration (temporarily simplified for deployment)
+// CORS configuration
 app.use(cors({
-  origin: '*', // <-- Replace this with specific origins in production
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
 }));
 
@@ -100,7 +141,7 @@ io.use((socket, next) => {
     return next();
   }
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'magnetprojecttokensecret');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     socket.user = decoded;
     next();
   } catch (err) {
@@ -158,10 +199,30 @@ app.get('/', (req, res) => {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({
+  // Log full error details to server console
+  console.error('Error:', err);
+  console.error('Stack:', err.stack);
+  
+  // Determine status code
+  const statusCode = err.statusCode || err.status || 500;
+  
+  // In production, don't expose internal error messages
+  const isDevelopment = process.env.NODE_ENV !== 'production';
+  const message = isDevelopment 
+    ? (err.message || 'Something went wrong on the server')
+    : 'Something went wrong on the server';
+  
+  // For CORS errors, provide specific message
+  if (err.message === 'Not allowed by CORS') {
+    return res.status(403).json({
+      status: 'error',
+      message: 'CORS: Request origin not allowed'
+    });
+  }
+  
+  res.status(statusCode).json({
     status: 'error',
-    message: err.message || 'Something went wrong on the server'
+    message: message
   });
 });
 

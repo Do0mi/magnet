@@ -8,14 +8,14 @@ const detectCountry = require('../../../middleware/detect-country-middleware');
 // Detect user country from IP (must be before auth to set req.userCurrency)
 router.use(detectCountry);
 
-// Apply authentication to all routes
-router.use(authenticateToken);
-
-// Apply customer role validation to all routes
+// Apply customer role validation to all routes below
 router.use(requireCustomerOrBusiness);
 
-// GET /api/v1/user/reviews - Get all accepted reviews for all products
+// GET /api/v1/user/reviews - Get all accepted reviews for all products (Public route - no auth required)
 router.get('/', getAllAcceptedReviews);
+
+// Apply authentication to all routes below
+router.use(authenticateToken);
 
 // POST /api/v1/user/reviews/products/:id/reviews - Add a review to a product
 router.post('/products/:id/reviews', addReview);
