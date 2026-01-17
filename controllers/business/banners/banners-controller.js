@@ -5,6 +5,7 @@ const Product = require('../../../models/product-model');
 const { getBilingualMessage } = require('../../../utils/messages');
 const { createResponse, formatBanner, formatProduct } = require('../../../utils/response-formatters');
 const { convertCurrency, BASE_CURRENCY } = require('../../../services/currency-service');
+const { disableExpiredBanners } = require('../../../utils/banner-helpers');
 
 // Helper function to validate business permissions
 const validateBusinessPermissions = (req, res) => {
@@ -199,6 +200,9 @@ exports.getBanners = async (req, res) => {
   try {
     const permissionError = validateBusinessPermissions(req, res);
     if (permissionError) return;
+
+    // Automatically disable expired banners before fetching
+    await disableExpiredBanners();
 
     const { page = 1, limit = 10 } = req.query;
     const skip = (page - 1) * limit;

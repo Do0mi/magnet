@@ -22,6 +22,7 @@ const userRoutes = require('./routes/user');
 // Currency service and cron job
 const { initializeRates } = require('./services/currency-service');
 const { startCurrencyUpdateJob } = require('./jobs/currency-update-job');
+const { startBannerExpirationJob } = require('./jobs/banner-expiration-job');
 
 // Config
 require('./config/passport-setup');
@@ -134,6 +135,9 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/magnet-pr
 
     // Start hourly currency update cron job
     startCurrencyUpdateJob();
+
+    // Start banner expiration cron job (runs every 15 minutes)
+    startBannerExpirationJob();
   })
   .catch(err => {
     console.error('Could not connect to MongoDB', err);

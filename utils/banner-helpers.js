@@ -114,6 +114,50 @@ const getProductsBannerDiscounts = async (productIds) => {
 };
 
 /**
+ * Automatically disable expired banners (set isAllowed to false)
+ * This function finds all banners where:
+ * - isAllowed is true
+ * - to date has passed
+ * And sets their isAllowed to false
+ * @returns {Promise<Object>} Result with count of disabled banners
+ */
+const disableExpiredBanners = async () => {
+  try {
+    const currentDate = new Date();
+    
+    // Find all banners that are allowed but have passed their 'to' date
+    const result = await Banner.updateMany(
+      {
+        isAllowed: true,
+        to: { $exists: true, $lt: currentDate }
+      },
+      {
+        $set: { 
+          isAllowed: false,
+          updatedAt: currentDate
+        }
+      }
+    );
+
+    if (result.modifiedCount > 0) {
+      console.log(`[Banner Helpers] Disabled ${result.modifiedCount} expired banner(s)`);
+    }
+
+    return {
+      success: true,
+      disabledCount: result.modifiedCount
+    };
+  } catch (error) {
+    console.error('[Banner Helpers] Error disabling expired banners:', error);
+    return {
+      success: false,
+      error: error.message,
+      disabledCount: 0
+    };
+  }
+};
+
+/**
  * Apply discount to product price
  * @param {Object} product - Product object
  * @param {Object} bannerDiscount - Banner discount info
@@ -152,6 +196,7 @@ const applyBannerDiscountToProduct = async (product, bannerDiscount, userCurrenc
 module.exports = {
   calculateDiscountedPrice,
   isBannerCurrentlyAllowed,
+  disableExpiredBanners,
   getProductBannerDiscount,
   getProductsBannerDiscounts,
   applyBannerDiscountToProduct
