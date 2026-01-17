@@ -6,7 +6,7 @@
  * 
  * SCHEDULE:
  * - Runs every 15 minutes
- * - Cron expression: '*/15 * * * *' (every 15 minutes)
+ * - Cron expression: '*\/15 * * * *' (every 15 minutes)
  * 
  * BEHAVIOR:
  * - Finds all banners where isAllowed is true and 'to' date has passed
