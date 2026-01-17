@@ -5,6 +5,7 @@ const Product = require('../../../models/product-model');
 const { getBilingualMessage } = require('../../../utils/messages');
 const { createResponse, formatBanner, formatProduct } = require('../../../utils/response-formatters');
 const { convertCurrency, BASE_CURRENCY } = require('../../../services/currency-service');
+const { isBannerCurrentlyAllowed } = require('../../../utils/banner-helpers');
 
 // Helper function to calculate discounted price
 const calculateDiscountedPrice = (originalPrice, percentage) => {
@@ -14,20 +15,26 @@ const calculateDiscountedPrice = (originalPrice, percentage) => {
   return (price - discount).toFixed(2);
 };
 
-// GET /api/v1/user/banners - Get all banners with products (only allowed banners)
+// GET /api/v1/user/banners - Get all banners with products (only allowed banners within date range)
 exports.getBanners = async (req, res) => {
   try {
     const { page = 1, limit = 10 } = req.query;
     const skip = (page - 1) * limit;
 
-    // Customers can only see allowed banners
-    const banners = await Banner.find({ isAllowed: true })
+    // Get all banners that are explicitly allowed
+    const allBanners = await Banner.find({ isAllowed: true })
       .populate('owner', 'firstname lastname email role businessInfo.companyName')
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(parseInt(limit));
+      .sort({ createdAt: -1 });
 
-    const total = await Banner.countDocuments({ isAllowed: true });
+    // Filter banners to only include those currently allowed (within date range)
+    const currentDate = new Date();
+    const allowedBanners = allBanners.filter(banner => 
+      isBannerCurrentlyAllowed(banner, currentDate)
+    );
+
+    // Apply pagination to filtered results
+    const total = allowedBanners.length;
+    const banners = allowedBanners.slice(skip, skip + parseInt(limit));
 
     // Get user currency from middleware (defaults to USD if not set)
     const userCurrency = req.userCurrency || BASE_CURRENCY;
@@ -122,8 +129,9 @@ exports.getBannerById = async (req, res) => {
       });
     }
 
-    // Customers can only see allowed banners
-    if (!banner.isAllowed) {
+    // Customers can only see banners that are currently allowed (within date range)
+    const currentDate = new Date();
+    if (!isBannerCurrentlyAllowed(banner, currentDate)) {
       return res.status(403).json({
         status: 'error',
         message: getBilingualMessage('insufficient_permissions')

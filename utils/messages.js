@@ -1817,6 +1817,14 @@ const messages = {
   'banner_product_conflict': {
     en: 'Product is already assigned to another banner',
     ar: 'المنتج موجود بالفعل في بانر آخر'
+  },
+  'banner_invalid_date_range': {
+    en: 'Invalid date range. The "from" date must be before or equal to the "to" date',
+    ar: 'نطاق تاريخ غير صالح. يجب أن يكون تاريخ "من" قبل أو يساوي تاريخ "إلى"'
+  },
+  'banner_cannot_be_allowed_past_date': {
+    en: 'Cannot allow banner. The end date has already passed. Please update the date to a future or present date',
+    ar: 'لا يمكن السماح بالبانر. تاريخ الانتهاء قد انتهى بالفعل. يرجى تحديث التاريخ إلى تاريخ مستقبلي أو حاضر'
   }
 };
 

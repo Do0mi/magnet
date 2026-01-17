@@ -610,6 +610,8 @@ const formatBanner = (banner, options = {}) => {
     imageUrl: banner.imageUrl,
     percentage: banner.percentage,
     isAllowed: banner.isAllowed,
+    from: banner.from || null,
+    to: banner.to || null,
     createdAt: banner.createdAt,
     updatedAt: banner.updatedAt
   };

@@ -29,9 +29,20 @@ This document contains JSON request body examples for all banner endpoints.
     "507f1f77bcf86cd799439011",
     "507f1f77bcf86cd799439012",
     "507f1f77bcf86cd799439013"
-  ]
+  ],
+  "from": "2024-06-01T00:00:00.000Z",
+  "to": "2024-08-31T23:59:59.999Z"
 }
 ```
+
+**Date Fields (Optional):**
+- `from`: Start date/time when the banner becomes active (ISO 8601 format). If not provided, banner is available immediately (if `isAllowed` is true).
+- `to`: End date/time when the banner expires (ISO 8601 format). If not provided, banner remains available indefinitely (if `isAllowed` is true).
+- **Note:** The `from` date must be before or equal to the `to` date. If both dates are provided, validation will fail if `from > to`.
+- **حقول التاريخ (اختيارية):**
+  - `from`: تاريخ/وقت البدء عندما يصبح البانر نشطاً (تنسيق ISO 8601). إذا لم يتم توفيره، البانر متاح فوراً (إذا كان `isAllowed` صحيحاً).
+  - `to`: تاريخ/وقت الانتهاء عندما ينتهي البانر (تنسيق ISO 8601). إذا لم يتم توفيره، البانر يبقى متاحاً إلى ما لا نهاية (إذا كان `isAllowed` صحيحاً).
+  - **ملاحظة:** تاريخ `from` يجب أن يكون قبل أو يساوي تاريخ `to`. إذا تم توفير كلا التاريخين، ستفشل التحقق من الصحة إذا كان `from > to`.
 
 **Note:** Products in the `products` array must not be in any other banner. If a product is already in another banner, you'll receive an error.
 **ملاحظة:** المنتجات في مصفوفة `products` يجب ألا تكون في أي بانر آخر. إذا كان المنتج موجود في بانر آخر، ستحصل على خطأ.
@@ -104,6 +115,8 @@ This document contains JSON request body examples for all banner endpoints.
         "imageUrl": "https://example.com/images/banners/summer-sale.jpg",
         "percentage": 50,
         "isAllowed": true,
+        "from": "2024-06-01T00:00:00.000Z",
+        "to": "2024-08-31T23:59:59.999Z",
         "owner": {
           "id": "507f1f77bcf86cd799439001",
           "firstname": "Admin",
@@ -235,9 +248,20 @@ This document contains JSON request body examples for all banner endpoints.
     "507f1f77bcf86cd799439012",
     "507f1f77bcf86cd799439013",
     "507f1f77bcf86cd799439014"
-  ]
+  ],
+  "from": "2024-06-01T00:00:00.000Z",
+  "to": "2024-09-30T23:59:59.999Z"
 }
 ```
+
+**Date Fields Update:**
+- To update dates, include `from` and/or `to` in the request body
+- To remove a date, set it to `null`
+- If updating `to` date while banner is allowed, the new `to` date must be in the future or present (not in the past)
+- **تحديث حقول التاريخ:**
+  - لتحديث التواريخ، قم بتضمين `from` و/أو `to` في جسم الطلب
+  - لإزالة تاريخ، قم بتعيينه إلى `null`
+  - إذا كنت تقوم بتحديث تاريخ `to` بينما البانر مسموح، يجب أن يكون تاريخ `to` الجديد في المستقبل أو الحاضر (وليس في الماضي)
 
 **Partial Update Example (only updating percentage and products):**
 ```json
@@ -277,6 +301,8 @@ This document contains JSON request body examples for all banner endpoints.
       "imageUrl": "https://example.com/images/banners/updated-summer-sale.jpg",
       "percentage": 60,
       "isAllowed": true,
+      "from": "2024-06-01T00:00:00.000Z",
+      "to": "2024-09-30T23:59:59.999Z",
       "owner": {
         "id": "507f1f77bcf86cd799439001",
         "firstname": "Admin",
@@ -328,6 +354,30 @@ This document contains JSON request body examples for all banner endpoints.
 **URL Parameter:**
 - `id`: Banner ID (e.g., `507f1f77bcf86cd799439014`)
 
+**Important Notes:**
+- You can always **disallow** a banner (set `isAllowed` to `false`)
+- You can only **allow** a banner if:
+  - The banner has no `to` date, OR
+  - The `to` date is in the future or present (not in the past)
+- If you try to allow a banner whose `to` date has already passed, you'll receive an error. You must first update the `to` date to a future or present date.
+- **ملاحظات مهمة:**
+  - يمكنك دائماً **تعطيل** البانر (تعيين `isAllowed` إلى `false`)
+  - يمكنك فقط **تفعيل** البانر إذا:
+    - البانر ليس له تاريخ `to`، أو
+    - تاريخ `to` في المستقبل أو الحاضر (وليس في الماضي)
+  - إذا حاولت تفعيل بانر انتهى تاريخ `to` الخاص به بالفعل، ستحصل على خطأ. يجب أولاً تحديث تاريخ `to` إلى تاريخ مستقبلي أو حاضر.
+
+**Error Response (400 Bad Request) - Trying to allow past-dated banner:**
+```json
+{
+  "status": "error",
+  "message": {
+    "en": "Cannot allow banner. The end date has already passed. Please update the date to a future or present date",
+    "ar": "لا يمكن السماح بالبانر. تاريخ الانتهاء قد انتهى بالفعل. يرجى تحديث التاريخ إلى تاريخ مستقبلي أو حاضر"
+  }
+}
+```
+
 **Response (200 OK):**
 ```json
 {
@@ -346,6 +396,8 @@ This document contains JSON request body examples for all banner endpoints.
       "imageUrl": "https://example.com/images/banners/summer-sale.jpg",
       "percentage": 50,
       "isAllowed": false,
+      "from": "2024-06-01T00:00:00.000Z",
+      "to": "2024-08-31T23:59:59.999Z",
       "owner": {
         "id": "507f1f77bcf86cd799439001",
         "firstname": "Admin",
@@ -389,9 +441,14 @@ This document contains JSON request body examples for all banner endpoints.
   "products": [
     "507f1f77bcf86cd799439021",
     "507f1f77bcf86cd799439022"
-  ]
+  ],
+  "from": "2024-07-01T00:00:00.000Z",
+  "to": "2024-07-31T23:59:59.999Z"
 }
 ```
+
+**Date Fields:** Same as dashboard endpoints (optional `from` and `to` fields)
+**حقول التاريخ:** نفس نقاط نهاية لوحة التحكم (حقول `from` و`to` اختيارية)
 
 **Note:** 
 - The `products` array must only contain product IDs that belong to the authenticated business user
@@ -418,6 +475,8 @@ This document contains JSON request body examples for all banner endpoints.
       "imageUrl": "https://example.com/images/banners/business-offer.jpg",
       "percentage": 30,
       "isAllowed": true,
+      "from": "2024-07-01T00:00:00.000Z",
+      "to": "2024-07-31T23:59:59.999Z",
       "owner": {
         "id": "507f1f77bcf86cd799439020",
         "firstname": "Business",
@@ -448,6 +507,9 @@ This document contains JSON request body examples for all banner endpoints.
 ```
 
 **No Request Body Required**
+
+**Note:** Returns all banners owned by the authenticated business user, regardless of date range or `isAllowed` status. This allows business users to see and manage all their banners, including past and future ones.
+**ملاحظة:** يُرجع جميع البانرات المملوكة للمستخدم التجاري المصادق عليه، بغض النظر عن نطاق التاريخ أو حالة `isAllowed`. يسمح هذا للمستخدمين التجاريين برؤية وإدارة جميع بانراتهم، بما في ذلك الماضية والمستقبلية.
 
 **Response (200 OK):** Same structure as dashboard GET all banners (with products included), but only returns banners owned by the authenticated business user.
 
@@ -529,6 +591,9 @@ This document contains JSON request body examples for all banner endpoints.
 **URL Parameter:**
 - `id`: Banner ID (must belong to the authenticated business user)
 
+**Important Notes:** Same rules as dashboard toggle endpoint - cannot allow banners with past `to` dates.
+**ملاحظات مهمة:** نفس قواعد نقطة نهاية toggle في لوحة التحكم - لا يمكن تفعيل البانرات التي انتهى تاريخ `to` الخاص بها.
+
 **Response (200 OK):** Same structure as dashboard toggle banner.
 
 ---
@@ -546,8 +611,23 @@ This document contains JSON request body examples for all banner endpoints.
 
 **No Request Body Required**
 
-**Note:** This endpoint is public and returns only banners where `isAllowed: true`. Products are included with discounted prices and currency conversion based on user's country.
-**ملاحظة:** هذه النقطة عامة وتُرجع فقط البانرات التي لديها `isAllowed: true`. يتم تضمين المنتجات مع الأسعار المخفضة وتحويل العملة بناءً على دولة المستخدم.
+**Note:** This endpoint is public and returns only banners that are:
+- `isAllowed: true` AND
+- Currently within their date range (if dates are set):
+  - Current date/time must be >= `from` date (if `from` is set)
+  - Current date/time must be <= `to` date (if `to` is set)
+- If no dates are set, banner is available as long as `isAllowed: true`
+
+Products are included with discounted prices and currency conversion based on user's country.
+
+**ملاحظة:** هذه النقطة عامة وتُرجع فقط البانرات التي:
+- `isAllowed: true` و
+- حالياً ضمن نطاق تاريخها (إذا تم تعيين التواريخ):
+  - تاريخ/وقت الحالي يجب أن يكون >= تاريخ `from` (إذا تم تعيين `from`)
+  - تاريخ/وقت الحالي يجب أن يكون <= تاريخ `to` (إذا تم تعيين `to`)
+- إذا لم يتم تعيين تواريخ، البانر متاح طالما أن `isAllowed: true`
+
+يتم تضمين المنتجات مع الأسعار المخفضة وتحويل العملة بناءً على دولة المستخدم.
 
 **Response (200 OK):**
 ```json
@@ -568,6 +648,8 @@ This document contains JSON request body examples for all banner endpoints.
         "imageUrl": "https://example.com/images/banners/summer-sale.jpg",
         "percentage": 50,
         "isAllowed": true,
+        "from": "2024-06-01T00:00:00.000Z",
+        "to": "2024-08-31T23:59:59.999Z",
         "owner": {
           "id": "507f1f77bcf86cd799439001",
           "firstname": "Admin",
@@ -611,6 +693,8 @@ This document contains JSON request body examples for all banner endpoints.
         "imageUrl": "https://example.com/images/banners/business-offer.jpg",
         "percentage": 30,
         "isAllowed": true,
+        "from": "2024-07-01T00:00:00.000Z",
+        "to": "2024-07-31T23:59:59.999Z",
         "owner": {
           "id": "507f1f77bcf86cd799439020",
           "firstname": "Business",
@@ -663,8 +747,8 @@ This document contains JSON request body examples for all banner endpoints.
 **URL Parameter:**
 - `id`: Banner ID (must be an allowed banner)
 
-**Note:** This endpoint automatically calculates discounted prices and converts currency based on user's country.
-**ملاحظة:** تقوم هذه النقطة بحساب الأسعار المخفضة وتحويل العملة تلقائياً بناءً على دولة المستخدم.
+**Note:** This endpoint automatically calculates discounted prices and converts currency based on user's country. Only returns banners that are currently allowed (within date range if dates are set).
+**ملاحظة:** تقوم هذه النقطة بحساب الأسعار المخفضة وتحويل العملة تلقائياً بناءً على دولة المستخدم. تُرجع فقط البانرات المسموحة حالياً (ضمن نطاق التاريخ إذا تم تعيين التواريخ).
 
 **Response (200 OK):**
 ```json
@@ -684,6 +768,8 @@ This document contains JSON request body examples for all banner endpoints.
       "imageUrl": "https://example.com/images/banners/summer-sale.jpg",
       "percentage": 50,
       "isAllowed": true,
+      "from": "2024-06-01T00:00:00.000Z",
+      "to": "2024-08-31T23:59:59.999Z",
       "owner": {
         "id": "507f1f77bcf86cd799439001",
         "firstname": "Admin",
@@ -778,6 +864,28 @@ This document contains JSON request body examples for all banner endpoints.
 }
 ```
 
+### 400 Bad Request - Invalid Date Range
+```json
+{
+  "status": "error",
+  "message": {
+    "en": "Invalid date range. The \"from\" date must be before or equal to the \"to\" date",
+    "ar": "نطاق تاريخ غير صالح. يجب أن يكون تاريخ \"من\" قبل أو يساوي تاريخ \"إلى\""
+  }
+}
+```
+
+### 400 Bad Request - Cannot Allow Past-Dated Banner
+```json
+{
+  "status": "error",
+  "message": {
+    "en": "Cannot allow banner. The end date has already passed. Please update the date to a future or present date",
+    "ar": "لا يمكن السماح بالبانر. تاريخ الانتهاء قد انتهى بالفعل. يرجى تحديث التاريخ إلى تاريخ مستقبلي أو حاضر"
+  }
+}
+```
+
 ### 403 Forbidden - Permission Error
 ```json
 {
@@ -830,7 +938,9 @@ This document contains JSON request body examples for all banner endpoints.
 | `imageUrl` | String | Yes | URL of the banner image |
 | `percentage` | Number | Yes | Discount percentage (0-100) |
 | `products` | Array of ObjectIds | No | Array of product IDs to apply the discount to. **Note:** A product can only exist in one banner at a time |
-| `isAllowed` | Boolean | No | Whether the banner is active/visible (default: true) |
+| `isAllowed` | Boolean | No | Whether the banner is active/visible (default: true). **Note:** Even if `isAllowed` is true, banner must be within date range to be visible to users |
+| `from` | Date (ISO 8601) | No | Start date/time when banner becomes active. If not set, banner is available immediately (if `isAllowed` is true) |
+| `to` | Date (ISO 8601) | No | End date/time when banner expires. If not set, banner remains available indefinitely (if `isAllowed` is true) |
 | `owner` | ObjectId | No | User ID who created the banner (null for admin/employee banners, shows as "Magnet") |
 
 ### Product Fields (when in a banner)
@@ -918,6 +1028,35 @@ When a product is included in a banner, additional fields are returned in produc
 9. Admin/Magnet Employee created banners show "Magnet" as the owner company name
    - البانرات التي ينشئها Admin/Magnet Employee تظهر "Magnet" كاسم الشركة المالكة
 
+### Banner Date Range and Availability
+### نطاق تاريخ البانر والتوفر
+
+10. **Banner Availability Rules:**
+    - A banner is visible to users only if:
+      - `isAllowed: true` AND
+      - Current date/time >= `from` date (if `from` is set) AND
+      - Current date/time <= `to` date (if `to` is set)
+    - If no dates are set, banner availability depends only on `isAllowed`
+    - **Dashboard/Business endpoints:** Can access all banners (no date filtering)
+    - **User endpoints:** Only return banners that are currently available (within date range)
+    - **قواعد توفر البانر:**
+      - البانر مرئي للمستخدمين فقط إذا:
+        - `isAllowed: true` و
+        - تاريخ/وقت الحالي >= تاريخ `from` (إذا تم تعيين `from`) و
+        - تاريخ/وقت الحالي <= تاريخ `to` (إذا تم تعيين `to`)
+      - إذا لم يتم تعيين تواريخ، يعتمد توفر البانر فقط على `isAllowed`
+      - **نقاط نهاية Dashboard/Business:** يمكن الوصول إلى جميع البانرات (بدون تصفية حسب التاريخ)
+      - **نقاط نهاية User:** تُرجع فقط البانرات المتاحة حالياً (ضمن نطاق التاريخ)
+
+11. **Toggle Banner Restrictions:**
+    - You can always **disallow** a banner (set `isAllowed` to `false`)
+    - You can only **allow** a banner if the `to` date hasn't passed (or if no `to` date is set)
+    - If trying to allow a banner with a past `to` date, you must first update the `to` date to a future or present date
+    - **قيود تبديل البانر:**
+      - يمكنك دائماً **تعطيل** البانر (تعيين `isAllowed` إلى `false`)
+      - يمكنك فقط **تفعيل** البانر إذا لم ينته تاريخ `to` (أو إذا لم يتم تعيين تاريخ `to`)
+      - إذا حاولت تفعيل بانر بتاريخ `to` ماضي، يجب أولاً تحديث تاريخ `to` إلى تاريخ مستقبلي أو حاضر
+
 ---
 
 ## Product Endpoints Integration
@@ -991,3 +1130,17 @@ When products are returned from product endpoints (dashboard, business, or user)
 
 **Last Updated:** 2024-12-19
 **آخر تحديث:** 2024-12-19
+
+**Changelog:**
+- Added `from` and `to` date fields for banner availability control
+- Updated user endpoints to filter banners by date range
+- Added validation to prevent allowing banners with past end dates
+- Dashboard and Business endpoints can access all banners regardless of date range
+- User endpoints only return banners currently within their date range
+
+**سجل التغييرات:**
+- إضافة حقول `from` و`to` للتحكم في توفر البانر
+- تحديث نقاط نهاية المستخدم لتصفية البانرات حسب نطاق التاريخ
+- إضافة التحقق لمنع تفعيل البانرات التي انتهى تاريخ انتهائها
+- نقاط نهاية Dashboard و Business يمكنها الوصول إلى جميع البانرات بغض النظر عن نطاق التاريخ
+- نقاط نهاية User تُرجع فقط البانرات الموجودة حالياً ضمن نطاق تاريخها

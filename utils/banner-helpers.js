@@ -11,26 +11,61 @@ const calculateDiscountedPrice = (originalPrice, percentage) => {
 };
 
 /**
+ * Check if a banner is currently allowed based on isAllowed flag and date range
+ * @param {Object} banner - Banner object
+ * @param {Date} currentDate - Current date (defaults to now)
+ * @returns {boolean} True if banner is currently allowed
+ */
+const isBannerCurrentlyAllowed = (banner, currentDate = new Date()) => {
+  // First check if banner is explicitly disallowed
+  if (!banner.isAllowed) {
+    return false;
+  }
+
+  // If no date range is set, banner is allowed (if isAllowed is true)
+  if (!banner.from && !banner.to) {
+    return true;
+  }
+
+  // Check if current date is before the 'from' date
+  if (banner.from && currentDate < new Date(banner.from)) {
+    return false;
+  }
+
+  // Check if current date is after the 'to' date
+  if (banner.to && currentDate > new Date(banner.to)) {
+    return false;
+  }
+
+  // Banner is within the date range
+  return true;
+};
+
+/**
  * Get banner discount information for a product
  * @param {String} productId - Product ID
  * @returns {Object|null} Banner discount info or null if product is not in any banner
  */
 const getProductBannerDiscount = async (productId) => {
   try {
-    const banner = await Banner.findOne({
+    const banners = await Banner.find({
       products: productId,
       isAllowed: true
-    }).select('percentage _id title');
+    }).select('percentage _id title from to');
 
-    if (!banner) {
-      return null;
+    // Find the first banner that is currently allowed (within date range)
+    const currentDate = new Date();
+    for (const banner of banners) {
+      if (isBannerCurrentlyAllowed(banner, currentDate)) {
+        return {
+          bannerId: banner._id,
+          bannerTitle: banner.title,
+          discountPercentage: banner.percentage
+        };
+      }
     }
 
-    return {
-      bannerId: banner._id,
-      bannerTitle: banner.title,
-      discountPercentage: banner.percentage
-    };
+    return null;
   } catch (error) {
     console.error('Error getting product banner discount:', error);
     return null;
@@ -47,14 +82,21 @@ const getProductsBannerDiscounts = async (productIds) => {
     const banners = await Banner.find({
       products: { $in: productIds },
       isAllowed: true
-    }).select('percentage _id title products');
+    }).select('percentage _id title products from to');
 
     const discountsMap = {};
+    const currentDate = new Date();
     
     banners.forEach(banner => {
+      // Only include banner if it's currently allowed (within date range)
+      if (!isBannerCurrentlyAllowed(banner, currentDate)) {
+        return;
+      }
+
       banner.products.forEach(productId => {
         const productIdStr = productId.toString();
-        if (productIds.includes(productIdStr)) {
+        // Only set discount if product is in the list and not already assigned
+        if (productIds.includes(productIdStr) && !discountsMap[productIdStr]) {
           discountsMap[productIdStr] = {
             bannerId: banner._id,
             bannerTitle: banner.title,
@@ -109,6 +151,7 @@ const applyBannerDiscountToProduct = async (product, bannerDiscount, userCurrenc
 
 module.exports = {
   calculateDiscountedPrice,
+  isBannerCurrentlyAllowed,
   getProductBannerDiscount,
   getProductsBannerDiscounts,
   applyBannerDiscountToProduct

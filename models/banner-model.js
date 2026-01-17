@@ -29,6 +29,14 @@ const bannerSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  from: {
+    type: Date,
+    required: false // Optional - if not set, banner is always available (if isAllowed is true)
+  },
+  to: {
+    type: Date,
+    required: false // Optional - if not set, banner is always available (if isAllowed is true)
+  },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });

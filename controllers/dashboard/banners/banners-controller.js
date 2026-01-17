@@ -145,6 +145,14 @@ exports.createBanner = async (req, res) => {
       }
     }
 
+    // Validate date range if provided
+    if (from && to && new Date(from) > new Date(to)) {
+      return res.status(400).json({
+        status: 'error',
+        message: getBilingualMessage('banner_invalid_date_range')
+      });
+    }
+
     const banner = new Banner({
       title,
       description,
@@ -152,7 +160,9 @@ exports.createBanner = async (req, res) => {
       percentage,
       products: products || [],
       owner: req.user.id, // Set owner to the admin/employee creating the banner
-      isAllowed: true
+      isAllowed: true,
+      from: from ? new Date(from) : undefined,
+      to: to ? new Date(to) : undefined
     });
 
     await banner.save();
@@ -399,7 +409,7 @@ exports.updateBanner = async (req, res) => {
       });
     }
 
-    const { title, description, imageUrl, percentage, products } = req.body;
+    const { title, description, imageUrl, percentage, products, from, to } = req.body;
     const updateFields = { updatedAt: Date.now() };
 
     if (title) {
@@ -464,7 +474,39 @@ exports.updateBanner = async (req, res) => {
         }
       }
       updateFields.products = products;
-      
+    }
+
+    // Handle date fields
+    if (from !== undefined) {
+      updateFields.from = from ? new Date(from) : null;
+    }
+    if (to !== undefined) {
+      updateFields.to = to ? new Date(to) : null;
+    }
+
+    // Validate date range if both dates are provided
+    const finalFrom = updateFields.from !== undefined ? updateFields.from : banner.from;
+    const finalTo = updateFields.to !== undefined ? updateFields.to : banner.to;
+    if (finalFrom && finalTo && new Date(finalFrom) > new Date(finalTo)) {
+      return res.status(400).json({
+        status: 'error',
+        message: getBilingualMessage('banner_invalid_date_range')
+      });
+    }
+
+    // If updating dates and trying to allow banner, check if 'to' date has passed
+    if (updateFields.to !== undefined && banner.isAllowed) {
+      const currentDate = new Date();
+      if (updateFields.to && new Date(updateFields.to) < currentDate) {
+        return res.status(400).json({
+          status: 'error',
+          message: getBilingualMessage('banner_cannot_be_allowed_past_date')
+        });
+      }
+    }
+
+    // Update isInBanner field for products if products are being updated
+    if (products !== undefined) {
       // Update isInBanner field for products
       // Get old banner products to remove them from banner status
       const oldBannerData = await Banner.findById(req.params.id).select('products');
@@ -599,6 +641,15 @@ exports.toggleBanner = async (req, res) => {
       return res.status(404).json({
         status: 'error',
         message: getBilingualMessage('banner_not_found')
+      });
+    }
+
+    // If trying to allow the banner, check if the 'to' date has passed
+    const currentDate = new Date();
+    if (!banner.isAllowed && banner.to && new Date(banner.to) < currentDate) {
+      return res.status(400).json({
+        status: 'error',
+        message: getBilingualMessage('banner_cannot_be_allowed_past_date')
       });
     }
 
