@@ -85,7 +85,7 @@ exports.createBanner = async (req, res) => {
     const permissionError = validateBusinessPermissions(req, res);
     if (permissionError) return;
 
-    const { title, description, imageUrl, percentage, products } = req.body;
+    const { title, description, imageUrl, percentage, products, from, to } = req.body;
 
     // Validate required fields
     if (!title || !title.en || !title.ar) {
