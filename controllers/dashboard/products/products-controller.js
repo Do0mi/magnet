@@ -165,6 +165,8 @@ exports.getProducts = async (req, res) => {
       const total = countResult.length > 0 ? countResult[0].total : 0;
 
       // Get banner discounts for all products
+      // Note: pricePerUnit always returns base price without discount (converted to user currency)
+      // If product is in an active banner (isInBanner: true with active banner), discountPercentage and discountedPrice are returned
       const productIds = products.map(p => p._id.toString());
       const bannerDiscounts = await getProductsBannerDiscounts(productIds);
 
@@ -174,7 +176,7 @@ exports.getProducts = async (req, res) => {
           const productIdStr = product._id.toString();
           const bannerDiscount = bannerDiscounts[productIdStr];
           
-          // Apply banner discount info (returns base pricePerUnit with discount info if in banner)
+          // Apply banner discount info (returns base pricePerUnit with discount info if in active banner)
           return await applyBannerDiscountToProduct(formatted, bannerDiscount, BASE_CURRENCY);
         })
       );
@@ -210,6 +212,8 @@ exports.getProducts = async (req, res) => {
       const total = await Product.countDocuments(filter);
 
       // Get banner discounts for all products
+      // Note: pricePerUnit always returns base price without discount (converted to user currency)
+      // If product is in an active banner (isInBanner: true with active banner), discountPercentage and discountedPrice are returned
       const productIds = products.map(p => p._id.toString());
       const bannerDiscounts = await getProductsBannerDiscounts(productIds);
 
@@ -219,7 +223,7 @@ exports.getProducts = async (req, res) => {
           const productIdStr = product._id.toString();
           const bannerDiscount = bannerDiscounts[productIdStr];
           
-          // Apply banner discount info (returns base pricePerUnit with discount info if in banner)
+          // Apply banner discount info (returns base pricePerUnit with discount info if in active banner)
           return await applyBannerDiscountToProduct(formatted, bannerDiscount, BASE_CURRENCY);
         })
       );
@@ -265,9 +269,11 @@ exports.getProductById = async (req, res) => {
     await attachReviewCountsToProducts([product]);
     let formattedProduct = formatProduct(product);
 
-    // Check if product is in a banner and apply discount info
+    // Check if product is in an active banner and apply discount info
+    // Note: pricePerUnit always returns base price without discount (converted to user currency)
+    // If product is in an active banner (isInBanner: true with active banner), discountPercentage and discountedPrice are returned
     const bannerDiscount = await getProductBannerDiscount(req.params.id);
-    // Apply banner discount info (returns base pricePerUnit with discount info if in banner)
+    // Apply banner discount info (returns base pricePerUnit with discount info if in active banner)
     formattedProduct = await applyBannerDiscountToProduct(formattedProduct, bannerDiscount, BASE_CURRENCY);
 
     res.status(200).json(createResponse('success', { 

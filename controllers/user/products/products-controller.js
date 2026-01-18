@@ -164,13 +164,15 @@ exports.getProducts = async (req, res) => {
       const bannerDiscounts = await getProductsBannerDiscounts(productIds);
 
       // Convert product prices to user's currency and apply banner discounts
+      // Note: pricePerUnit always returns base price without discount (converted to user currency)
+      // If product is in an active banner (isInBanner: true with active banner), discountPercentage and discountedPrice are returned
       const formattedProducts = await Promise.all(
         products.map(async (product) => {
           let formatted = formatProduct(product);
           const productIdStr = product._id.toString();
           const bannerDiscount = bannerDiscounts[productIdStr];
           
-          // Apply banner discount info (returns base pricePerUnit with discount info if in banner)
+          // Apply banner discount info (returns base pricePerUnit with discount info if in active banner)
           formatted = await applyBannerDiscountToProduct(formatted, bannerDiscount, userCurrency);
           
           return formatted;
@@ -218,13 +220,15 @@ exports.getProducts = async (req, res) => {
       const bannerDiscounts = await getProductsBannerDiscounts(productIds);
 
       // Convert product prices to user's currency and apply banner discounts
+      // Note: pricePerUnit always returns base price without discount (converted to user currency)
+      // If product is in an active banner (isInBanner: true with active banner), discountPercentage and discountedPrice are returned
       const formattedProducts = await Promise.all(
         products.map(async (product) => {
           let formatted = formatProduct(product);
           const productIdStr = product._id.toString();
           const bannerDiscount = bannerDiscounts[productIdStr];
           
-          // Apply banner discount info (returns base pricePerUnit with discount info if in banner)
+          // Apply banner discount info (returns base pricePerUnit with discount info if in active banner)
           formatted = await applyBannerDiscountToProduct(formatted, bannerDiscount, userCurrency);
           
           return formatted;
@@ -278,9 +282,11 @@ exports.getProductById = async (req, res) => {
 
     let formattedProduct = formatProduct(product);
 
-    // Check if product is in a banner and apply discount info
+    // Check if product is in an active banner and apply discount info
+    // Note: pricePerUnit always returns base price without discount (converted to user currency)
+    // If product is in an active banner (isInBanner: true with active banner), discountPercentage and discountedPrice are returned
     const bannerDiscount = await getProductBannerDiscount(req.params.id);
-    // Apply banner discount info (returns base pricePerUnit with discount info if in banner)
+    // Apply banner discount info (returns base pricePerUnit with discount info if in active banner)
     formattedProduct = await applyBannerDiscountToProduct(formattedProduct, bannerDiscount, userCurrency);
 
     res.status(200).json(createResponse('success', { 

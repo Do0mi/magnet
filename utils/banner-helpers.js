@@ -43,11 +43,13 @@ const isBannerCurrentlyAllowed = (banner, currentDate = new Date()) => {
 
 /**
  * Get banner discount information for a product
+ * If product has isInBanner: true, returns discount info even if banner is not active
  * @param {String} productId - Product ID
  * @returns {Object|null} Banner discount info or null if product is not in any banner
  */
 const getProductBannerDiscount = async (productId) => {
   try {
+    // First, try to find active banners (isAllowed: true and within date range)
     const banners = await Banner.find({
       products: productId,
       isAllowed: true
@@ -65,6 +67,26 @@ const getProductBannerDiscount = async (productId) => {
       }
     }
 
+    // If no active banner found, check if product has isInBanner: true
+    // If so, return discount info from any banner containing this product
+    const Product = require('../models/product-model');
+    const product = await Product.findById(productId).select('isInBanner');
+    
+    if (product && product.isInBanner) {
+      // Find any banner (even if not active) for this product
+      const anyBanner = await Banner.findOne({
+        products: productId
+      }).select('percentage _id title');
+
+      if (anyBanner) {
+        return {
+          bannerId: anyBanner._id,
+          bannerTitle: anyBanner.title,
+          discountPercentage: anyBanner.percentage
+        };
+      }
+    }
+
     return null;
   } catch (error) {
     console.error('Error getting product banner discount:', error);
@@ -74,11 +96,14 @@ const getProductBannerDiscount = async (productId) => {
 
 /**
  * Get banner discount information for multiple products
+ * Returns discount info for products that are in active banners
+ * If a product has isInBanner: true, tries to find an active banner for it
  * @param {Array} productIds - Array of product IDs
  * @returns {Object} Map of productId to banner discount info
  */
 const getProductsBannerDiscounts = async (productIds) => {
   try {
+    // First, try to find active banners (isAllowed: true and within date range)
     const banners = await Banner.find({
       products: { $in: productIds },
       isAllowed: true
@@ -87,6 +112,7 @@ const getProductsBannerDiscounts = async (productIds) => {
     const discountsMap = {};
     const currentDate = new Date();
     
+    // First pass: only include active banners (within date range)
     banners.forEach(banner => {
       // Only include banner if it's currently allowed (within date range)
       if (!isBannerCurrentlyAllowed(banner, currentDate)) {
@@ -105,6 +131,39 @@ const getProductsBannerDiscounts = async (productIds) => {
         }
       });
     });
+
+    // Second pass: if product has isInBanner: true but no active banner found,
+    // try to find any banner (even if not active) to return discount info
+    const Product = require('../models/product-model');
+    const productsWithBanner = await Product.find({
+      _id: { $in: productIds },
+      isInBanner: true
+    }).select('_id');
+
+    const productsNeedingDiscount = productsWithBanner
+      .map(p => p._id.toString())
+      .filter(productIdStr => !discountsMap[productIdStr]);
+
+    if (productsNeedingDiscount.length > 0) {
+      // Find any banners (even inactive) for these products
+      const anyBanners = await Banner.find({
+        products: { $in: productsNeedingDiscount }
+      }).select('percentage _id title products');
+
+      anyBanners.forEach(banner => {
+        banner.products.forEach(productId => {
+          const productIdStr = productId.toString();
+          // Only set discount if product needs it and not already assigned
+          if (productsNeedingDiscount.includes(productIdStr) && !discountsMap[productIdStr]) {
+            discountsMap[productIdStr] = {
+              bannerId: banner._id,
+              bannerTitle: banner.title,
+              discountPercentage: banner.percentage
+            };
+          }
+        });
+      });
+    }
 
     return discountsMap;
   } catch (error) {
