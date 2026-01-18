@@ -43,9 +43,9 @@ const isBannerCurrentlyAllowed = (banner, currentDate = new Date()) => {
 
 /**
  * Get banner discount information for a product
- * If product has isInBanner: true, returns discount info even if banner is not active
+ * Only returns discount info if banner is allowed (isAllowed: true) and product has isInBanner: true
  * @param {String} productId - Product ID
- * @returns {Object|null} Banner discount info or null if product is not in any banner
+ * @returns {Object|null} Banner discount info or null if banner is not allowed or product not in banner
  */
 const getProductBannerDiscount = async (productId) => {
   try {
@@ -68,21 +68,22 @@ const getProductBannerDiscount = async (productId) => {
     }
 
     // If no active banner found, check if product has isInBanner: true
-    // If so, return discount info from any banner containing this product
+    // If so, return discount info from an allowed banner containing this product
     const Product = require('../models/product-model');
     const product = await Product.findById(productId).select('isInBanner');
     
     if (product && product.isInBanner) {
-      // Find any banner (even if not active) for this product
-      const anyBanner = await Banner.findOne({
-        products: productId
+      // Find an allowed banner (isAllowed: true) for this product
+      const allowedBanner = await Banner.findOne({
+        products: productId,
+        isAllowed: true
       }).select('percentage _id title');
 
-      if (anyBanner) {
+      if (allowedBanner) {
         return {
-          bannerId: anyBanner._id,
-          bannerTitle: anyBanner.title,
-          discountPercentage: anyBanner.percentage
+          bannerId: allowedBanner._id,
+          bannerTitle: allowedBanner.title,
+          discountPercentage: allowedBanner.percentage
         };
       }
     }
@@ -96,8 +97,7 @@ const getProductBannerDiscount = async (productId) => {
 
 /**
  * Get banner discount information for multiple products
- * Returns discount info for products that are in active banners
- * If a product has isInBanner: true, tries to find an active banner for it
+ * Only returns discount info if banner is allowed (isAllowed: true) and product has isInBanner: true
  * @param {Array} productIds - Array of product IDs
  * @returns {Object} Map of productId to banner discount info
  */
@@ -133,7 +133,7 @@ const getProductsBannerDiscounts = async (productIds) => {
     });
 
     // Second pass: if product has isInBanner: true but no active banner found,
-    // try to find any banner (even if not active) to return discount info
+    // try to find an allowed banner (isAllowed: true) to return discount info
     const Product = require('../models/product-model');
     const productsWithBanner = await Product.find({
       _id: { $in: productIds },
@@ -145,12 +145,13 @@ const getProductsBannerDiscounts = async (productIds) => {
       .filter(productIdStr => !discountsMap[productIdStr]);
 
     if (productsNeedingDiscount.length > 0) {
-      // Find any banners (even inactive) for these products
-      const anyBanners = await Banner.find({
-        products: { $in: productsNeedingDiscount }
+      // Find allowed banners (isAllowed: true) for these products
+      const allowedBanners = await Banner.find({
+        products: { $in: productsNeedingDiscount },
+        isAllowed: true
       }).select('percentage _id title products');
 
-      anyBanners.forEach(banner => {
+      allowedBanners.forEach(banner => {
         banner.products.forEach(productId => {
           const productIdStr = productId.toString();
           // Only set discount if product needs it and not already assigned
