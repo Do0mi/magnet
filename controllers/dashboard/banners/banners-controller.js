@@ -251,20 +251,23 @@ exports.getBanners = async (req, res) => {
             products.map(async (product) => {
               const formatted = formatProduct(product);
               
-              // Apply discount and convert currency
+              // Apply discount info and convert currency
               if (formatted.pricePerUnit) {
                 const basePrice = parseFloat(formatted.pricePerUnit);
                 if (!isNaN(basePrice) && basePrice > 0) {
-                  // Calculate discounted price
-                  const discountedPrice = calculateDiscountedPrice(basePrice, banner.percentage);
+                  // Convert base price to user currency (this is pricePerUnit without discount)
+                  const convertedBasePrice = await convertCurrency(basePrice, userCurrency);
                   
-                  // Convert to user currency
-                  const convertedPrice = await convertCurrency(parseFloat(discountedPrice), userCurrency);
+                  // Calculate discounted price in base currency
+                  const discountedPriceBase = calculateDiscountedPrice(basePrice, banner.percentage);
                   
-                  formatted.pricePerUnit = convertedPrice.toString();
-                  formatted.originalPrice = basePrice.toString(); // Keep original for reference
-                  formatted.discountPercentage = banner.percentage;
-                  formatted.discountedPrice = convertedPrice.toString();
+                  // Convert discounted price to user currency
+                  const convertedDiscountedPrice = await convertCurrency(parseFloat(discountedPriceBase), userCurrency);
+                  
+                  // Return base pricePerUnit (no discount) with discount info separately
+                  formatted.pricePerUnit = convertedBasePrice.toString(); // Base price without discount, converted to user currency
+                  formatted.discountPercentage = banner.percentage; // Discount percentage if product is in banner
+                  formatted.discountedPrice = convertedDiscountedPrice.toString(); // Discounted price if product is in banner
                 }
               }
               

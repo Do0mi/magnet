@@ -158,14 +158,23 @@ const disableExpiredBanners = async () => {
 };
 
 /**
- * Apply discount to product price
+ * Apply discount info to product (returns base pricePerUnit with discount info separately)
  * @param {Object} product - Product object
  * @param {Object} bannerDiscount - Banner discount info
  * @param {String} userCurrency - Target currency for conversion
- * @returns {Object} Product with discount applied
+ * @returns {Object} Product with base pricePerUnit and discount info separately
  */
 const applyBannerDiscountToProduct = async (product, bannerDiscount, userCurrency = BASE_CURRENCY) => {
   if (!bannerDiscount || !product.pricePerUnit) {
+    // If no discount, just convert the price to user currency
+    const basePrice = parseFloat(product.pricePerUnit);
+    if (!isNaN(basePrice) && basePrice > 0) {
+      const convertedPrice = await convertCurrency(basePrice, userCurrency);
+      return {
+        ...product,
+        pricePerUnit: convertedPrice.toString()
+      };
+    }
     return product;
   }
 
@@ -174,20 +183,21 @@ const applyBannerDiscountToProduct = async (product, bannerDiscount, userCurrenc
     return product;
   }
 
-  // Calculate discounted price
-  const discountedPrice = calculateDiscountedPrice(basePrice, bannerDiscount.discountPercentage);
+  // Convert base price to user currency (this is the pricePerUnit without discount)
+  const convertedBasePrice = await convertCurrency(basePrice, userCurrency);
   
-  // Convert to user currency
-  const convertedPrice = await convertCurrency(parseFloat(discountedPrice), userCurrency);
-  const convertedOriginalPrice = await convertCurrency(basePrice, userCurrency);
+  // Calculate discounted price in base currency
+  const discountedPriceBase = calculateDiscountedPrice(basePrice, bannerDiscount.discountPercentage);
+  
+  // Convert discounted price to user currency
+  const convertedDiscountedPrice = await convertCurrency(parseFloat(discountedPriceBase), userCurrency);
 
-  // Return product with discount info
+  // Return product with base pricePerUnit (no discount) and discount info separately
   return {
     ...product,
-    pricePerUnit: convertedPrice.toString(),
-    originalPrice: convertedOriginalPrice.toString(),
-    discountPercentage: bannerDiscount.discountPercentage,
-    discountedPrice: convertedPrice.toString(),
+    pricePerUnit: convertedBasePrice.toString(), // Base price without discount, converted to user currency
+    discountPercentage: bannerDiscount.discountPercentage, // Discount percentage if product is in banner
+    discountedPrice: convertedDiscountedPrice.toString(), // Discounted price if product is in banner
     bannerId: bannerDiscount.bannerId,
     bannerTitle: bannerDiscount.bannerTitle
   };

@@ -73,11 +73,8 @@ exports.getProducts = async (req, res) => {
         const productIdStr = product._id.toString();
         const bannerDiscount = bannerDiscounts[productIdStr];
         
-        if (bannerDiscount) {
-          return await applyBannerDiscountToProduct(formatted, bannerDiscount, BASE_CURRENCY);
-        }
-        
-        return formatted;
+        // Apply banner discount info (returns base pricePerUnit with discount info if in banner)
+        return await applyBannerDiscountToProduct(formatted, bannerDiscount, BASE_CURRENCY);
       })
     );
 
@@ -137,11 +134,10 @@ exports.getProductById = async (req, res) => {
     await attachReviewCountsToProducts([product]);
     let formattedProduct = formatProduct(product);
 
-    // Check if product is in a banner and apply discount
+    // Check if product is in a banner and apply discount info
     const bannerDiscount = await getProductBannerDiscount(req.params.id);
-    if (bannerDiscount) {
-      formattedProduct = await applyBannerDiscountToProduct(formattedProduct, bannerDiscount, BASE_CURRENCY);
-    }
+    // Apply banner discount info (returns base pricePerUnit with discount info if in banner)
+    formattedProduct = await applyBannerDiscountToProduct(formattedProduct, bannerDiscount, BASE_CURRENCY);
 
     res.status(200).json(createResponse('success', { 
       product: formattedProduct,

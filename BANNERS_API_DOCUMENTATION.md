@@ -135,8 +135,7 @@ This document contains JSON request body examples for all banner endpoints.
               "en": "Product Name",
               "ar": "اسم المنتج"
             },
-            "pricePerUnit": "25.00",
-            "originalPrice": "50.00",
+            "pricePerUnit": "50.00",
             "discountPercentage": 50,
             "discountedPrice": "25.00",
             "images": ["https://example.com/product.jpg"],
@@ -206,8 +205,7 @@ This document contains JSON request body examples for all banner endpoints.
           "en": "Product Name",
           "ar": "اسم المنتج"
         },
-        "pricePerUnit": "25.00",
-        "originalPrice": "50.00",
+        "pricePerUnit": "50.00",
         "discountPercentage": 50,
         "discountedPrice": "25.00",
         "images": ["https://example.com/product.jpg"],
@@ -668,8 +666,7 @@ Products are included with discounted prices and currency conversion based on us
               "en": "Product Name",
               "ar": "اسم المنتج"
             },
-            "pricePerUnit": "750.00",
-            "originalPrice": "50.00",
+            "pricePerUnit": "1500.00",
             "discountPercentage": 50,
             "discountedPrice": "750.00",
             "images": ["https://example.com/product.jpg"],
@@ -713,10 +710,9 @@ Products are included with discounted prices and currency conversion based on us
               "en": "Another Product",
               "ar": "منتج آخر"
             },
-            "pricePerUnit": "525.00",
-            "originalPrice": "75.00",
+            "pricePerUnit": "2250.00",
             "discountPercentage": 30,
-            "discountedPrice": "525.00",
+            "discountedPrice": "1575.00",
             "images": ["https://example.com/product2.jpg"],
             "description": {
               "en": "Another product description",
@@ -789,10 +785,9 @@ Products are included with discounted prices and currency conversion based on us
           "en": "Product Name",
           "ar": "اسم المنتج"
         },
-        "pricePerUnit": "25.00",
-        "originalPrice": "50.00",
+        "pricePerUnit": "1500.00",
         "discountPercentage": 50,
-        "discountedPrice": "25.00",
+        "discountedPrice": "750.00",
         "images": ["https://example.com/product.jpg"],
         "description": {
           "en": "Product description",
@@ -951,10 +946,9 @@ When a product is included in a banner, additional fields are returned in produc
 | Field | Type | Description |
 |-------|------|-------------|
 | `isInBanner` | Boolean | Indicates if the product exists in any banner (true/false) |
-| `originalPrice` | String | Original price before discount (in base currency or user's currency) |
-| `discountPercentage` | Number | Discount percentage from the banner (0-100) |
-| `discountedPrice` | String | Final price after discount (in user's currency) |
-| `pricePerUnit` | String | Final discounted price (same as discountedPrice, in user's currency) |
+| `pricePerUnit` | String | **Base price without discount, converted to user's currency** (always returned, whether product is in banner or not) |
+| `discountPercentage` | Number | **Discount percentage from the banner (0-100)** - **Only returned if product is in a banner** |
+| `discountedPrice` | String | **Final price after discount, converted to user's currency** - **Only returned if product is in a banner** |
 | `bannerId` | ObjectId | ID of the banner this product belongs to (optional, in some responses) |
 | `bannerTitle` | Object (Bilingual) | Title of the banner this product belongs to (optional, in some responses) |
 
@@ -996,16 +990,14 @@ When a product is included in a banner, additional fields are returned in produc
 ### Discount Information in Products
 ### معلومات الخصم في المنتجات
 
-3. **Products in banners automatically return discount information** in all product endpoints:
-   - `originalPrice`: Original price before discount
-   - `discountPercentage`: Discount percentage from banner
-   - `discountedPrice`: Final price after applying discount
-   - `pricePerUnit`: Updated to show discounted price
-   - **المنتجات في البانرات تُرجع معلومات الخصم تلقائياً** في جميع endpoints المنتجات:
-     - `originalPrice`: السعر الأصلي قبل الخصم
-     - `discountPercentage`: نسبة الخصم من البانر
-     - `discountedPrice`: السعر النهائي بعد تطبيق الخصم
-     - `pricePerUnit`: محدث لإظهار السعر المخفض
+3. **Products automatically return price information** in all product endpoints:
+   - `pricePerUnit`: **Always returns the base price without discount, converted to user's currency** (whether product is in banner or not)
+   - `discountPercentage`: **Only returned if product is in a banner** - Discount percentage from banner (0-100)
+   - `discountedPrice`: **Only returned if product is in a banner** - Final price after applying discount, converted to user's currency
+   - **المنتجات تُرجع معلومات السعر تلقائياً** في جميع endpoints المنتجات:
+     - `pricePerUnit`: **دائماً يُرجع السعر الأساسي بدون خصم، محول لعملة المستخدم** (سواء كان المنتج في بانر أم لا)
+     - `discountPercentage`: **يُرجع فقط إذا كان المنتج في بانر** - نسبة الخصم من البانر (0-100)
+     - `discountedPrice`: **يُرجع فقط إذا كان المنتج في بانر** - السعر النهائي بعد تطبيق الخصم، محول لعملة المستخدم
 
 ### Other Notes
 ## ملاحظات أخرى
@@ -1022,8 +1014,10 @@ When a product is included in a banner, additional fields are returned in produc
 7. Currency conversion is automatic based on user's country for user endpoints
    - تحويل العملة تلقائي بناءً على دولة المستخدم لـ endpoints المستخدم
 
-8. Discount calculation: `discountedPrice = originalPrice * (1 - percentage / 100)`
-   - حساب الخصم: `السعر_المخفض = السعر_الأصلي * (1 - النسبة / 100)`
+8. Discount calculation: `discountedPrice = pricePerUnit * (1 - percentage / 100)`
+   - حساب الخصم: `السعر_المخفض = السعر_لكل_وحدة * (1 - النسبة / 100)`
+   - **Note:** `pricePerUnit` always contains the base price without discount, and `discountedPrice` is calculated from it.
+   - **ملاحظة:** `pricePerUnit` يحتوي دائماً على السعر الأساسي بدون خصم، و`discountedPrice` يُحسب منه.
 
 9. Admin/Magnet Employee created banners show "Magnet" as the owner company name
    - البانرات التي ينشئها Admin/Magnet Employee تظهر "Magnet" كاسم الشركة المالكة
@@ -1062,9 +1056,9 @@ When a product is included in a banner, additional fields are returned in produc
 ## Product Endpoints Integration
 ## تكامل endpoints المنتجات
 
-When products are returned from product endpoints (dashboard, business, or user), if a product exists in a banner, the following discount information is automatically included:
+When products are returned from product endpoints (dashboard, business, or user), the following price information is always included. If a product exists in a banner, additional discount information is also included:
 
-عند إرجاع المنتجات من endpoints المنتجات (dashboard, business, أو user)، إذا كان المنتج موجود في بانر، يتم تضمين معلومات الخصم التالية تلقائياً:
+عند إرجاع المنتجات من endpoints المنتجات (dashboard, business, أو user)، يتم تضمين معلومات السعر التالية دائماً. إذا كان المنتج موجود في بانر، يتم تضمين معلومات الخصم الإضافية أيضاً:
 
 ### Example Product Response (with Banner Discount)
 ### مثال على استجابة المنتج (مع خصم البانر)
@@ -1080,8 +1074,7 @@ When products are returned from product endpoints (dashboard, business, or user)
         "en": "Product Name",
         "ar": "اسم المنتج"
       },
-      "pricePerUnit": "25.00",
-      "originalPrice": "50.00",
+      "pricePerUnit": "50.00",
       "discountPercentage": 50,
       "discountedPrice": "25.00",
       "isInBanner": true,
@@ -1095,6 +1088,9 @@ When products are returned from product endpoints (dashboard, business, or user)
   }
 }
 ```
+
+**Note:** `pricePerUnit` shows the base price (50.00) without discount. The discount information (`discountPercentage` and `discountedPrice`) is provided separately.
+**ملاحظة:** `pricePerUnit` يُظهر السعر الأساسي (50.00) بدون خصم. معلومات الخصم (`discountPercentage` و `discountedPrice`) مُقدمة بشكل منفصل.
 
 ### Example Product Response (without Banner)
 ### مثال على استجابة المنتج (بدون بانر)
@@ -1128,10 +1124,13 @@ When products are returned from product endpoints (dashboard, business, or user)
 
 ---
 
-**Last Updated:** 2024-12-19
-**آخر تحديث:** 2024-12-19
+**Last Updated:** 2024-12-20
+**آخر تحديث:** 2024-12-20
 
 **Changelog:**
+- **Refactored product price responses:** `pricePerUnit` now always returns the base price without discount (converted to user's currency), whether the product is in a banner or not
+- **Discount information is now separate:** `discountPercentage` and `discountedPrice` are only returned if the product is in a banner
+- **Removed `originalPrice` field:** No longer needed as `pricePerUnit` contains the base price
 - Added `from` and `to` date fields for banner availability control
 - Updated user endpoints to filter banners by date range
 - Added validation to prevent allowing banners with past end dates
@@ -1139,6 +1138,9 @@ When products are returned from product endpoints (dashboard, business, or user)
 - User endpoints only return banners currently within their date range
 
 **سجل التغييرات:**
+- **إعادة هيكلة استجابات سعر المنتج:** `pricePerUnit` يُرجع الآن دائماً السعر الأساسي بدون خصم (محول لعملة المستخدم)، سواء كان المنتج في بانر أم لا
+- **معلومات الخصم أصبحت منفصلة:** `discountPercentage` و`discountedPrice` يُرجعان فقط إذا كان المنتج في بانر
+- **إزالة حقل `originalPrice`:** لم يعد ضرورياً لأن `pricePerUnit` يحتوي على السعر الأساسي
 - إضافة حقول `from` و`to` للتحكم في توفر البانر
 - تحديث نقاط نهاية المستخدم لتصفية البانرات حسب نطاق التاريخ
 - إضافة التحقق لمنع تفعيل البانرات التي انتهى تاريخ انتهائها
